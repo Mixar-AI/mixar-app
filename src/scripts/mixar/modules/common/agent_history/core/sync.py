@@ -37,6 +37,25 @@ class ArchiveSync:
         self._discovery_owner = None
         self._discovery_at = 0.0
         self._discovered = []
+        self._refiled = set()
+
+    def _refile_claimed(self, owner, claimed):
+        """Re-file archives of guests this account claimed (``claimed_owner_ids``).
+
+        The sign-in re-files them at claim time; a 4.3.x desktop did not, so
+        its guest archives fail every later batch of that session for good.
+        Once per guest id; any owner the server did not name still fails closed.
+        """
+        if not isinstance(claimed, list):
+            return
+        fresh = [guest for guest in claimed
+                 if isinstance(guest, str) and guest != owner and guest not in self._refiled]
+        self._refiled.update(fresh)
+        for guest in fresh:
+            try:
+                store.reassign_owner(guest, owner)
+            except Exception as exc:
+                logging.getLogger(__name__).warning('Agent archive: claimed guest re-file failed (%s)', _reason(exc))
 
     def _known_sessions(self):
         """Keep active tabs immediate; discover older archives at a bounded rate."""
@@ -196,6 +215,7 @@ class ArchiveSync:
                 if self.owner and self.owner != owner:
                     self._notice('archive_owner_changed'); return
                 self.owner = owner
+                self._refile_claimed(owner, result.get('claimed_owner_ids'))
                 acknowledgements = []
                 healthy = True
                 for packet in result.get('sessions', []):

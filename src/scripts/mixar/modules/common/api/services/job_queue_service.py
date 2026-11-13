@@ -163,6 +163,8 @@ class JobQueueService(BaseService):
                 (e.g. World Labs worlds); None keeps the backend default.
             timeout: Request timeout in seconds.
         """
+        from mixar.modules.common.job_queue.core.blocked_features import check_direct_submit
+        check_direct_submit()  # Only a restricted connection's script, around the queue.
         _require_auth()
         idempotency_key = idempotency_key or str(uuid.uuid4())
         body = {

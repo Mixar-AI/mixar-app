@@ -343,7 +343,9 @@ def test_update_events_carry_versions_and_outcomes_only():
 
     payloads = [call.args[1] for call in captured.call_args_list]
     assert set(payloads[0]) == {"target_version", "outcome"}
-    assert set(payloads[1]) == {"target_version", "signature_verified", "attempt_id"}
+    assert set(payloads[1]) == {
+        "target_version", "signature_verified", "attempt_id", "trigger"}
+    assert payloads[1]["trigger"] == "click"  # the default: Restart & Update
     assert set(payloads[2]) == {"target_version", "outcome", "stage"}
 
 

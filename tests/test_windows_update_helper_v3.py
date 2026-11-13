@@ -7,8 +7,8 @@
 The helper runs from the staging directory, which every local account can
 write to, and cmd.exe looks a bare program name up in the current directory
 first — so every tool is invoked by its System32 path, delayed expansion is
-forced off (it would strip the ``!`` of ``/qb!``), and the pre-install
-re-verify requires the exact certificate the app verified.
+forced off, and the pre-install re-verify requires the exact certificate the
+app verified.
 """
 
 import ntpath
@@ -138,7 +138,7 @@ def test_connectors_are_ended_after_mixar_exits_and_before_the_lock_wait():
     assert "$q.CreationDate -gt $c.CreationDate" in win_installer._PS_END_CONNECTORS
     # Log lines carry basename and pid, never a path.
     assert "$p.ExecutablePath+" not in win_installer._PS_END_CONNECTORS
-    assert "helper_version=4" in script
+    assert "helper_version=8" in script
 
 
 def test_delayed_expansion_is_forced_off():
@@ -153,7 +153,7 @@ def test_a_missing_powershell_falls_back_to_msiexec():
     assert 'if not exist "%PWSH%" goto nopowershell' in install
     assert 'if not "%INSTALL_EXIT%"=="9009" goto installed' in install
     fallback = install[install.index(":nopowershell"):]
-    assert '"%SYS32%\\msiexec.exe" /i "%MSI%" /qb!' in fallback
+    assert '"%SYS32%\\msiexec.exe" /i "%MSI%" /passive' in fallback
 
 
 def test_the_signer_is_pinned_only_when_the_signature_is_rechecked():
@@ -184,7 +184,11 @@ def test_the_previous_msi_log_is_kept_before_the_installer_runs():
     rotate = 'if exist "%MSILOG%" move /y "%MSILOG%" "%MSIPREVLOG%" >nul 2>&1'
 
     assert rotate in script
-    assert 'set "MSIPREVLOG=C:\\ProgramData\\Mixar\\Updates' in script
+    prev = win_installer.helper_environment(
+        installer_path=r"C:\ProgramData\Mixar\Updates\Mixar-3.4.0.msi",
+        staging_dir=r"C:\ProgramData\Mixar\Updates", version="3.4.0",
+        relaunch_candidates=[])["MSIPREVLOG"]
+    assert prev == r"C:\ProgramData\Mixar\Updates\msi-install.prev.log"
     assert script.index(":signature_ok") < script.index(rotate)
     assert script.index(rotate) < script.index("-Verb RunAs")
     assert script.index(rotate) < script.index(":nopowershell")
@@ -209,7 +213,7 @@ def test_the_helper_is_started_by_absolute_cmd_without_autorun(monkeypatch, tmp_
     argv = started[0]
     assert argv[:3] == [r"D:\Win\System32\cmd.exe", "/d", "/c"]
     assert ntpath.isabs(argv[0])
-    script = Path(argv[3]).read_text(encoding="cp1252")
+    script = Path(argv[3]).read_text(encoding="ascii")
     assert 'set "SYS32=D:\\Win\\System32"' in script
     assert f'set "SIGNER={THUMBPRINT.upper()}"' in script
 

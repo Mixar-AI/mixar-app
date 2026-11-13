@@ -19,8 +19,13 @@ relaunches Mixar. While it is there, nothing may run from the install:
   the helper's ``open`` only brings that stale instance forward.
 
 So the startup check (:func:`check_startup`) makes such a Mixar say
-"finishing an update" and quit, and :func:`staging.purge_stale` leaves
-the directory alone (:func:`live_marker`).
+"finishing an update" and quit — only a launch of the copy the helper is
+installing (the marker's ``target``; another copy, such as a build beside
+the installed app, starts as usual) — and :func:`staging.purge_stale` leaves
+the directory alone (:func:`live_marker`). The launch it turns away
+leaves its PID in ``update-reopen-requests.txt`` (:func:`request_reopen`):
+the helper waits for it to exit before swapping or reopening, and an
+install on quit, which otherwise leaves Mixar closed, reopens it.
 
 A marker counts only while it names a LIVE helper: its PID is running,
 with the creation time recorded at spawn where both can be read (Windows
@@ -43,7 +48,7 @@ import time
 
 from mixar.config.logging_config import get_logger
 
-from ..constants import HELPER_MARKER_MAX_AGE_S, HELPER_MARKER_NAME
+from ..constants import HELPER_MARKER_MAX_AGE_S, HELPER_MARKER_NAME, HELPER_REOPEN_NAME
 
 logger = get_logger(__name__)
 
@@ -98,8 +103,12 @@ def process_identity(pid: int):
     return True, (_mac_started(pid) if sys.platform == "darwin" else None)
 
 
-def write(directory: str, helper_pid: int, target_version: str, attempt_id: str) -> bool:
+def write(directory: str, helper_pid: int, target_version: str, attempt_id: str,
+          target: str = "") -> bool:
     """Record the helper just spawned. Never raises; False when not written.
+
+    *target* is the install location it replaces (``InstallLocation.target``):
+    only launches of that copy are turned away.
 
     Written to a temporary name and renamed over, so a reader never sees
     half a file.
@@ -117,6 +126,7 @@ def write(directory: str, helper_pid: int, target_version: str, attempt_id: str)
             "helper_created": created,
             "target_version": target_version or "",
             "attempt_id": attempt_id or "",
+            "target": target or "",
             "written_at": time.time(),
         }
         with open(temporary, "w", encoding="utf-8") as handle:
@@ -141,6 +151,30 @@ def _remove_file(path: str) -> None:
 def remove(directory: str) -> None:
     """Delete the marker in *directory*, if any."""
     _remove_file(marker_path(directory))
+
+
+def reopen_path(directory: str) -> str:
+    return os.path.join(directory, HELPER_REOPEN_NAME)
+
+
+def request_reopen(directory: str, pid: int) -> bool:
+    """This launch was turned away: ask the helper to reopen Mixar when done.
+
+    Appends *pid*, so the helper also waits for this process to exit before
+    it swaps or reopens anything. Never raises; False when not written.
+    """
+    try:
+        with open(reopen_path(directory), "a", encoding="ascii") as handle:
+            handle.write(f"{int(pid)}\n")
+    except (OSError, TypeError, ValueError) as e:
+        logger.warning("Could not ask the update helper to reopen Mixar: %s", e)
+        return False
+    return True
+
+
+def clear_reopen_requests(directory: str) -> None:
+    """Forget requests left by an earlier attempt (before a new helper starts)."""
+    _remove_file(reopen_path(directory))
 
 
 def read(directory: str):
@@ -213,8 +247,31 @@ def guards_staging(directory: str) -> bool:
     return _judge(directory)[1] is not False
 
 
-def check_startup(running_version: str):
+def _copy_key(path: str) -> str:
+    path = os.path.normpath(os.path.realpath(path))
+    # APFS and NTFS are case-insensitive by default.
+    return path.casefold() if sys.platform == "darwin" or os.name == "nt" else path
+
+
+def same_copy(marker_target, running_target) -> bool:
+    """Is the copy a helper installs (*marker_target*) the one running?
+    Unknown on either side (a marker from before ``target``, a translocated
+    app) counts as yes: turning a launch away is the safe side."""
+    if not marker_target or not running_target:
+        return True
+    try:
+        return _copy_key(str(marker_target)) == _copy_key(str(running_target))
+    except (OSError, ValueError):
+        return True
+
+
+def check_startup(running_version: str, running_target: str = ""):
     """The live marker that must stop this launch, or None.
+
+    The returned record carries the staging ``directory`` it was found in.
+    A live marker installing another copy than *running_target* stops
+    nothing (the staging directory is per user; that helper never touches
+    this copy, and the purge guard still protects its files).
 
     Deletes a stale marker on the way; keeps one it cannot judge. A marker
     whose target is the version running stops nothing and is kept: that is
@@ -235,9 +292,13 @@ def check_startup(running_version: str):
             logger.info("Removing stale update marker in %s", directory)
             remove(directory)
             continue
+        if not same_copy(record.get("target"), running_target):
+            logger.info("Update helper is installing %s; this copy starts as usual",
+                        record.get("target"))
+            continue
         if installer._same_version(record.get("target_version", ""), running_version):
             logger.info("Update helper for %s still running; this is that build",
                         running_version)
             continue
-        return record
+        return dict(record, directory=directory)
     return None

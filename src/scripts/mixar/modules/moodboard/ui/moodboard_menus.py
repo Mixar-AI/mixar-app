@@ -14,7 +14,7 @@ from bpy.types import Menu
 
 from ..core.node_templates import template_available
 
-from mixar.modules.common.i18n import n_
+from mixar.modules.common.i18n import iface_, n_
 from mixar.modules.common.utils.mixie_space_utils import (
     MIXIE_SPACE_AVAILABLE,
     get_selected_moodboard_items,
@@ -54,12 +54,20 @@ class MIXIE_MT_moodboard_context_menu(Menu):
         )
         try:
             from mixar.modules.moodboard.core.media_utils import (
+                moodboard_added_time,
                 selected_exportable_media,
             )
 
             exportable_media = selected_exportable_media(scene)
         except Exception:
             exportable_media = []
+
+        if len(exportable_media) == 1:
+            added = moodboard_added_time(exportable_media[0])
+            label = (iface_("Added: {time}").format(time=added)
+                     if added else iface_("Added: Unknown"))
+            layout.label(text=label, translate=False, icon='TIME')
+            layout.separator()
 
         if selected_links:
             layout.operator(

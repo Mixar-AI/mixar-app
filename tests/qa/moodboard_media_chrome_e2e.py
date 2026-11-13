@@ -38,11 +38,17 @@ def center(qa, host, initial=False):
 from mixar.modules.moodboard.constants import MOODBOARD_IMAGE_BASE_SIZE
 if {initial!r}:
     a=region.view2d.region_to_view(0,0)
-    b=region.view2d.region_to_view(1000,0)
+    # A tile of 1000 region pixels fits a retina drawer (pixel_size 2) but
+    # overflows a 1x drawer, where its action row lands outside the region
+    # and the dump drops Export; size it to the drawer instead.
+    b=region.view2d.region_to_view(min(1000,int(region.width*.7)),0)
     media.scale=(b[0]-a[0])/MOODBOARD_IMAGE_BASE_SIZE
 w=media.scale*MOODBOARD_IMAGE_BASE_SIZE
 h=w*media.image.size[1]/media.image.size[0]
-cx,cy=region.view2d.region_to_view(region.width*.52,region.height*.48)
+# .58: at the zoomed-in step the tile must clear the floating tool rail on the
+# left (its pencil would land inside the title crop) and the drawer's right
+# edge (Export would be clipped out of the dump) on a 1x-DPI drawer.
+cx,cy=region.view2d.region_to_view(region.width*.58,region.height*.48)
 media.position_x,media.position_y=cx-w/2,cy-h/2
 area.tag_redraw()
 bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=2)
@@ -70,14 +76,16 @@ def capture_title(qa, host, media_id, index):
 
 
 EXPECTED_TIPS = {
-    # Introspection exports uiBut.tip (the RNA description), while the hover
-    # popup executes the custom native tooltip callback. Inspect the captured
-    # popups below to verify that callback does not repeat the RNA description.
-    OPS[0]: "Rename this image or video in place. Enter applies the new name, "
-            "Escape keeps the old one",
-    OPS[1]: "Open this image or video in the preview window. "
-            "An open preview window is reused and shows this instead",
-    OPS[2]: "Save selected images or copy selected videos to disk",
+    # Introspection exports the button's owned native tooltip text (the one the
+    # hover popup paints, `mixar_button_tooltip_owned_text`), falling back to
+    # the RNA description only for buttons without one. These are the media
+    # row's own tips from mixie_draw_moodboard_media_actions.cc; inspect the
+    # captured popups below to verify the popup shows exactly this text.
+    OPS[0]: "Rename\n\nEdit the name of this image or video in place, right here "
+            "above it. Enter applies, Escape keeps the old name.",
+    OPS[1]: "Preview\n\nOpen this image or video in the preview window. An open "
+            "preview window is reused and shows this instead.",
+    OPS[2]: "Export\n\nSave this image or video to disk.",
 }
 
 

@@ -284,10 +284,10 @@ class MixieChatMessage(PropertyGroup):
     # #1251 import picker: comma-separated extensions offered by the native
     # open dialog. Picker configuration only — never a path.
     import_formats: StringProperty(default="", maxlen=120, options={'SKIP_SAVE'})
-    # The steering labels only (constants.HINT_STEER / HINT_QUEUED), drawn
-    # and translated by mixie_chat_sender_label. Never a failure label: a
-    # refused or undelivered message is explained by one agent message
-    # (core/send_failure.py).
+    # Never written: user bubbles carry no delivery label, neither for a
+    # held or steered send nor for a failure (a refused or undelivered
+    # message is explained by one agent message, core/send_failure.py).
+    # mixie_chat_sender_label still reads it and draws nothing when empty.
     delivery_hint: StringProperty(default="", maxlen=32, options={'SKIP_SAVE'})
 
     # Collection slots

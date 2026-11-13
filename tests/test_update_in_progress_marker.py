@@ -396,8 +396,11 @@ def _label(script, name):
 def test_windows_helper_deletes_the_marker_on_every_exit_path():
     script = _windows_script()
     delete = 'del /f /q "%MARKER%" >nul 2>&1'
-    marker = os.path.join(r"C:\ProgramData\Mixar\Updates", HELPER_MARKER_NAME)
-    assert f'set "MARKER={marker}"' in script
+    marker = "C:\\ProgramData\\Mixar\\Updates\\" + HELPER_MARKER_NAME
+    assert win_installer.helper_environment(
+        installer_path=r"C:\ProgramData\Mixar\Updates\Mixar-3.4.0.msi",
+        staging_dir=r"C:\ProgramData\Mixar\Updates", version="3.4.0",
+        relaunch_candidates=[])["MARKER"] == marker
 
     timeout = _label(script, "timeout")
     assert timeout.index(delete) < timeout.index("exit /b 2")

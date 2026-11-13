@@ -423,7 +423,7 @@ echo Found Python: %PYTHON_BIN%
 REM --- [7/8] Config File ---
 echo [7/8] Generating runtime configuration for bundle...
 set "BUNDLE_CONFIG_DIR=%BUILD_ENV_DIR%\bin\%BLENDER_VERSION%\config"
-"!PYTHON_BIN!" -s "%ROOT_DIR%\scripts\generate_config.py" --output "%BUNDLE_CONFIG_DIR%\mixar.json"
+"!PYTHON_BIN!" -s -B "%ROOT_DIR%\scripts\generate_config.py" --output "%BUNDLE_CONFIG_DIR%\mixar.json"
 if !ERRORLEVEL! neq 0 (
     echo Error: Failed to generate runtime configuration
     exit /b 1
@@ -437,10 +437,12 @@ set "REQUIREMENTS_FILE=%SCRIPT_DIR%..\python_requirements.txt"
 REM Bootstrap pip if not available (Blender's embedded Python may lack it)
 REM Ignore user-site packages so unrelated tools cannot satisfy or conflict with
 REM bundled dependencies; import checks must inspect the embedded installation.
-"!PYTHON_BIN!" -s -m pip --version >nul 2>&1
+REM -B / --no-compile: the install ships no bytecode. The app caches it per user
+REM (PyConfig.pycache_prefix), so shipped .pyc files would never be read.
+"!PYTHON_BIN!" -s -B -m pip --version >nul 2>&1
 if !ERRORLEVEL! neq 0 (
     echo Bootstrapping pip with ensurepip...
-    "!PYTHON_BIN!" -s -m ensurepip --upgrade
+    "!PYTHON_BIN!" -s -B -m ensurepip --upgrade
     if !ERRORLEVEL! neq 0 (
         echo Error: Failed to bootstrap pip in embedded Python
         exit /b 1
@@ -450,28 +452,32 @@ if !ERRORLEVEL! neq 0 (
 echo Site-packages: %SITE_PACKAGES%
 if not exist "%SITE_PACKAGES%" mkdir "%SITE_PACKAGES%"
 
-"!PYTHON_BIN!" -s -m pip install --upgrade --target "%SITE_PACKAGES%" -r "%REQUIREMENTS_FILE%"
+"!PYTHON_BIN!" -s -B -m pip install --upgrade --no-compile --target "%SITE_PACKAGES%" -r "%REQUIREMENTS_FILE%"
 if !ERRORLEVEL! neq 0 (
     echo Error: Failed to install Python packages
     exit /b 1
 )
 
 REM Verify critical packages are importable by Blender's Python
-"!PYTHON_BIN!" -s -c "import websocket; print('  websocket-client:', websocket.__version__)"
+"!PYTHON_BIN!" -s -B -c "import websocket; print('  websocket-client:', websocket.__version__)"
 if !ERRORLEVEL! neq 0 (
     echo Error: websocket-client installed but not importable — site-packages path mismatch
     exit /b 1
 )
-"!PYTHON_BIN!" -s -c "import truststore; print('  truststore:', truststore.__version__)"
+"!PYTHON_BIN!" -s -B -c "import truststore; print('  truststore:', truststore.__version__)"
 if !ERRORLEVEL! neq 0 (
     echo Error: truststore installed but not importable — enterprise TLS trust would silently fall back to certifi
     exit /b 1
 )
-"!PYTHON_BIN!" "%ROOT_DIR%\scripts\check_python_runtime.py"
+"!PYTHON_BIN!" -B "%ROOT_DIR%\scripts\check_python_runtime.py"
 if !ERRORLEVEL! neq 0 (
-    echo Error: Bundled MCP runtime dependencies failed to import
+    echo Error: Bundled MCP or PDF runtime dependencies failed to import
     exit /b 1
 )
+REM The install ships no bytecode: a reused build tree keeps __pycache__ from
+REM older builds, and ensurepip (only when the embedded Python lacks pip) runs
+REM pip in a child Python without -B. Sweep whatever is left.
+for /d /r "%PY_BASE%\%BLENDER_VERSION%" %%D in (__pycache__) do if exist "%%D" rmdir /s /q "%%D"
 echo Successfully installed and verified Python packages
 
 echo.

@@ -132,6 +132,9 @@ def _load_checkpoint_fixture(monkeypatch, tmp_path):
     bpy = MagicMock(name="bpy")
     bpy.data.filepath = str(project_dir / "lamp.mixar")
     bpy.data.scenes = []
+    # The document window every file op runs in (tests replace the list).
+    bpy.context.window_manager.windows = [
+        SimpleNamespace(screen=SimpleNamespace(is_temporary=False, areas=[]), name="main")]
     monkeypatch.setitem(sys.modules, "bpy", bpy)
 
     session = FakeSession()
@@ -159,6 +162,14 @@ def _load_checkpoint_fixture(monkeypatch, tmp_path):
         for key, value in attrs.items():
             setattr(module, key, value)
         monkeypatch.setitem(sys.modules, name, module)
+    # The real read-window guard, over the stubbed lifecycle's purge.
+    windows_name = "mixar.modules.agent_bubble.core.bubble_windows"
+    sys.modules["mixar.modules.agent_bubble.core"].__path__ = []
+    windows_spec = importlib.util.spec_from_file_location(
+        windows_name, _MODULES_ROOT / "agent_bubble" / "core" / "bubble_windows.py")
+    windows_module = importlib.util.module_from_spec(windows_spec)
+    monkeypatch.setitem(sys.modules, windows_name, windows_module)
+    windows_spec.loader.exec_module(windows_module)
 
     module_name = "mixar.modules.space_mixie_chat.core.turn_checkpoints"
     spec = importlib.util.spec_from_file_location(module_name, _CORE_ROOT / "turn_checkpoints.py")

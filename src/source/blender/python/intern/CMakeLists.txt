@@ -106,6 +106,7 @@ set(SRC
   bpy_rna_anim.hh
   bpy_rna_callback.hh
   bpy_mixar_stall.hh
+  bpy_mixar_pycache.hh
   bpy_rna_context.hh
   bpy_rna_data.hh
   bpy_rna_driver.hh

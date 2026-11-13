@@ -744,9 +744,12 @@ void wm_event_do_notifiers(bContext *C)
 
     if (clear_info_stats) {
       /* Only do once since adding notifiers is slow when there are many. */
-      ViewLayer *view_layer = CTX_data_view_layer(C);
-      ED_info_stats_clear(wm, view_layer);
-      wm_event_add_notifier_intern(wm, CTX_wm_window(C), NC_SPACE | ND_SPACE_INFO, nullptr);
+      /* Workspace/layout notifiers above can change the context. Resolve statistics from
+       * this window, not the callback context, and tolerate a missing scene/view layer. */
+      if (ViewLayer *view_layer = WM_window_get_active_view_layer(&win)) {
+        ED_info_stats_clear(wm, view_layer);
+        wm_event_add_notifier_intern(wm, &win, NC_SPACE | ND_SPACE_INFO, nullptr);
+      }
     }
 
     if (do_anim) {
