@@ -518,11 +518,50 @@ def test_png_save_uses_fast_lossless_compression_and_restores_settings(preview, 
 
     preview.bpy.data.images.get.return_value = SimpleNamespace(has_data=True, save_render=save)
     if save_fails:
-        with pytest.raises(RuntimeError, match="save failed"):
+        # Blender's own message (image name, path) never leaves: only the code.
+        with pytest.raises(RuntimeError, match="^missing_pixels$"):
             preview._read_png(scene)
     else:
         assert preview._read_png(scene) == b"png"
     assert (settings.file_format, settings.compression) == ("JPEG", 77)
+
+
+def test_a_finished_render_is_read_although_has_data_says_no(preview):
+    """Blender 5.3: once the UI render job ends, the Render Result reports
+    has_data False and size [0, 0], yet save_render writes the render's pixels."""
+    preview.start(preview.bpy.context, KEY)
+    preview.bpy.data.images.get.return_value = SimpleNamespace(
+        has_data=False, size=[0, 0],
+        save_render=lambda path, scene: Path(path).write_bytes(b"pixels"))
+    preview._finish(KEY, True)
+    result = preview.poll(KEY)
+    assert result["status"] == "done"
+    assert result["image_url"] == "data:image/png;base64,cGl4ZWxz"
+
+
+def _no_pixels_save(path, scene):
+    raise RuntimeError(f"Image 'Render Result' does not have any image data: {path}")
+
+
+@pytest.mark.parametrize("render_result", [
+    None,                                                       # no Render Result at all
+    SimpleNamespace(has_data=False, save_render=_no_pixels_save),   # nothing to save
+    SimpleNamespace(has_data=False, save_render=lambda path, scene: None),  # no file
+    SimpleNamespace(has_data=False,
+                    save_render=lambda path, scene: Path(path).write_bytes(b"")),  # empty
+], ids=["missing", "save_raises", "no_file", "empty_file"])
+def test_a_render_without_pixels_is_missing_pixels(preview, render_result):
+    scene = preview.bpy.context.scene
+    preview.bpy.data.images.get.return_value = render_result
+    with pytest.raises(RuntimeError, match="^missing_pixels$"):
+        preview._read_png(scene)
+    assert scene.render.image_settings.file_format == "JPEG"
+    preview.bpy.data.images.get.side_effect = None
+    preview.start(preview.bpy.context, KEY)
+    preview._finish(KEY, True)
+    result = preview.poll(KEY)
+    assert result["status"] == "failed" and result["error"] == "preview_image_unavailable"
+    assert "Render Result" not in str(result) and "image_url" not in result
 
 
 def test_the_route_pin_is_released_and_the_scene_flushed_before_the_job_starts(preview, monkeypatch):

@@ -145,11 +145,14 @@ def _remove_render_handlers():
             handlers.remove(callback)
 
 
-def _read_png(scene, require_loaded=True) -> bytes:
+def _read_png(scene) -> bytes:
     image = bpy.data.images.get("Render Result")
-    # In a --background worker the Render Result holds pixels that has_data
-    # does not report (no image buffer is acquired); save_render reads them.
-    if image is None or (require_loaded and not image.has_data):
+    # has_data is not a pixel check for the Render Result: it reports only an
+    # acquired image buffer. A --background worker never acquires one, and since
+    # Blender 5.3 neither does the UI process once the render job has ended
+    # (has_data False, size [0, 0]) although the render holds its pixels.
+    # save_render reads them; it failing or writing nothing is "no pixels".
+    if image is None:
         raise RuntimeError("missing_pixels")
     with tempfile.TemporaryDirectory(prefix="mixar_preview_") as folder:
         path = folder + "/preview.png"
@@ -158,12 +161,21 @@ def _read_png(scene, require_loaded=True) -> bytes:
         try:
             settings.file_format = "PNG"
             settings.compression = PNG_COMPRESSION
-            image.save_render(path, scene=scene)
+            try:
+                image.save_render(path, scene=scene)
+            except Exception as exc:
+                # Blender's message names the image and the path; keep the code.
+                raise RuntimeError("missing_pixels") from exc
         finally:
             settings.file_format = fmt
             settings.compression = compression
-        with open(path, "rb") as handle:
-            pixels = handle.read(MAX_PNG_BYTES + 1)
+        try:
+            with open(path, "rb") as handle:
+                pixels = handle.read(MAX_PNG_BYTES + 1)
+        except OSError as exc:
+            raise RuntimeError("missing_pixels") from exc
+    if not pixels:
+        raise RuntimeError("missing_pixels")
     if len(pixels) > MAX_PNG_BYTES:
         raise RuntimeError("image_too_large")
     return pixels
