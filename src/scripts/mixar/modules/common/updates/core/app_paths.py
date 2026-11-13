@@ -41,11 +41,19 @@ class InstallLocation:
     macOS, the install directory on Windows.  ``relaunch_candidates`` is
     tried in order after the update — the first that exists wins, so a
     Windows install that moves to a new directory still comes back up.
+
+    ``needs_elevation`` is THE gate for installing without asking: True
+    when replacing ``target`` raises an administrator prompt. An install
+    on quit or at launch runs only while it is False; one that needs the
+    prompt keeps waiting for Restart & Update. Unknown counts as True.
     """
 
-    __slots__ = ("target", "writable", "reason", "relaunch_candidates", "kind")
+    __slots__ = (
+        "target", "writable", "reason", "relaunch_candidates", "kind", "needs_elevation",
+    )
 
-    def __init__(self, target, writable, reason="", relaunch_candidates=(), kind=""):
+    def __init__(self, target, writable, reason="", relaunch_candidates=(), kind="",
+                 needs_elevation=True):
         self.target = target
         self.writable = writable
         self.reason = reason
@@ -53,6 +61,7 @@ class InstallLocation:
         # Windows: "msi" (the copy Windows Installer registered), "portable"
         # (any other copy) or "unknown" (the registry could not be read).
         self.kind = kind
+        self.needs_elevation = bool(needs_elevation)
 
     def __repr__(self) -> str:  # pragma: no cover - diagnostics only
         return (
@@ -111,7 +120,10 @@ def _macos_location() -> InstallLocation:
             rpt_("No permission to update {path}").format(path=parent),
         )
 
-    return InstallLocation(bundle, True, "", relaunch_candidates=[bundle])
+    # The swap is two renames in a directory this user may write: no prompt.
+    return InstallLocation(
+        bundle, True, "", relaunch_candidates=[bundle], needs_elevation=False,
+    )
 
 
 # ============================================================================
@@ -262,16 +274,35 @@ def _windows_location() -> InstallLocation:
     # Deliberately no write check: a per-machine MSI is *expected* to live
     # in a directory the user cannot write, and msiexec supplies the
     # elevation. Testing os.access here would refuse every normal install.
+    # Every Windows install is per-machine, so every one raises the UAC
+    # prompt (needs_elevation): it updates only from Restart & Update. A
+    # per-user install that msiexec can upgrade without the prompt is what
+    # would set it False here.
     return InstallLocation(
         install_dir, True, "",
         relaunch_candidates=_windows_relaunch_candidates(install_dir),
-        kind=kind,
+        kind=kind, needs_elevation=True,
     )
 
 
 # ============================================================================
 # Public API
 # ============================================================================
+
+
+def running_target() -> str:
+    """This copy's ``InstallLocation.target`` — its ``.app`` bundle on macOS,
+    its directory on Windows — without the registry or permission checks;
+    ``""`` when it cannot be told (a translocated app, another platform)."""
+    try:
+        binary = _binary_path()
+        if sys.platform == "darwin":
+            return "" if _TRANSLOCATION_MARKER in binary else _macos_bundle(binary)
+        if os.name == "nt":
+            return os.path.dirname(os.path.abspath(binary))
+    except Exception:  # noqa: BLE001 - unknown
+        logger.debug("Could not resolve the running copy", exc_info=True)
+    return ""
 
 
 def get_install_location() -> InstallLocation:

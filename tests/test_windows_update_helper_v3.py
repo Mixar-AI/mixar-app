@@ -138,7 +138,7 @@ def test_connectors_are_ended_after_mixar_exits_and_before_the_lock_wait():
     assert "$q.CreationDate -gt $c.CreationDate" in win_installer._PS_END_CONNECTORS
     # Log lines carry basename and pid, never a path.
     assert "$p.ExecutablePath+" not in win_installer._PS_END_CONNECTORS
-    assert "helper_version=5" in script
+    assert "helper_version=6" in script
 
 
 def test_delayed_expansion_is_forced_off():

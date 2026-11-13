@@ -65,6 +65,18 @@ MSI_PREV_LOG_NAME = "msi-install.prev.log"
 # leaves the helper and its installer alone (``core/install_marker.py``).
 HELPER_MARKER_NAME = "update-in-progress.json"
 
+# A Mixar turned away by that marker appends its PID here. The helper then
+# waits for those PIDs to exit before it swaps or reopens anything, and an
+# install on quit (which otherwise leaves Mixar closed) reopens Mixar for
+# them when it is done.
+HELPER_REOPEN_NAME = "update-reopen-requests.txt"
+
+# Written by the download worker once an installer is staged and verified:
+# what was checked (size, mtime, signature) and how silent installs of it
+# went. A launch after a crash or force quit installs from it without a
+# re-download or re-hash (``core/staged_record.py``).
+STAGED_RECORD_NAME = "staged-update.json"
+
 # The logs are evidence of a failed attempt and are never purged.
 # update.log is appended to by every attempt, so once it grows past the
 # first size it is cut back to its last HELPER_LOG_KEEP_BYTES.
@@ -172,6 +184,12 @@ HELPER_INSTALL_MARGIN_S = 540
 HELPER_MARKER_MAX_AGE_S = (
     HELPER_WAIT_FOR_EXIT_S + HELPER_WAIT_FOR_LOCKS_S + HELPER_INSTALL_MARGIN_S
 )
+# The macOS helper never swaps the bundle once the marker it was started
+# with could have gone stale: past this (a minute inside the age cap,
+# counted from the helper's own start, which precedes the marker's
+# written_at) a Mixar opened meanwhile is no longer turned away and may be
+# running from the bundle, so the helper gives up (stage=expired) instead.
+HELPER_SWAP_DEADLINE_S = HELPER_MARKER_MAX_AGE_S - 60
 # How long a Mixar opened mid-install shows "finishing an update" before
 # it quits — well inside HELPER_WAIT_FOR_LOCKS_S, so on Windows the files it
 # holds are released before the helper gives up on them.
@@ -188,7 +206,48 @@ MID_INSTALL_QUIT_DELAY_S = 5.0
 # install directory) before the lock wait instead of waiting for them.
 # 5 runs the MSI with /passive instead of /qb!, so Restart Manager's
 # files-in-use prompt can never block an unattended update.
-HELPER_VERSION = 5
+# 6 records the trigger and can leave Mixar closed (install on quit), then
+# reopens it only for a launch turned away meanwhile (relaunch_kind=skipped).
+# The macOS helper writes helper_version too (from 6); installing on quit
+# or at launch it waits up to HELPER_WAIT_FOR_LOCKS_S for every Mixar
+# process still running from the bundle (stage=locked, locks=) and gives
+# up past HELPER_SWAP_DEADLINE_S (stage=expired).
+HELPER_VERSION = 6
+
+# What started an install (``update.install_started`` / ``install_result``
+# ``trigger``, echoed by the helper): the Restart & Update click, a normal
+# quit, or the launch after a session that never quit normally.
+TRIGGER_CLICK = "click"
+TRIGGER_QUIT = "quit"
+TRIGGER_LAUNCH = "launch"
+TRIGGERS = (TRIGGER_CLICK, TRIGGER_QUIT, TRIGGER_LAUNCH)
+
+# The helper's bounds on the PIDs in HELPER_REOPEN_NAME: how long it waits
+# for them to exit (they quit MID_INSTALL_QUIT_DELAY_S after their toast),
+# and, installing on quit, how long it gives a launch that read the marker
+# just before it went to leave its request.
+HELPER_REOPEN_WAIT_S = 30
+HELPER_REOPEN_GRACE_S = 2
+
+# Per-user setting (``add_config``; Edit > Preferences > System > Updates):
+# install a staged update when Mixar quits, or at the next launch when it
+# never quit normally. On unless the user turns it off.
+INSTALL_ON_QUIT_CONFIG_KEY = "install_updates_on_quit"
+
+# A staged version stops installing by itself (quit or launch) once this
+# many attempts failed; Restart & Update still offers it.
+SILENT_INSTALL_MAX_FAILURES = 2
+# A launch installs a staged version at most this often: a launch install
+# that did not take must never turn every launch into a quit.
+LAUNCH_INSTALL_MAX_ATTEMPTS = 1
+# How long the launch that installs shows "Mixar is finishing an update"
+# before it quits. Opening a file or editing anything in that time cancels.
+LAUNCH_INSTALL_QUIT_DELAY_S = 3.0
+# A launch installs only a download verified this recently (the record's
+# ``written_at``; every update check that offers the version re-verifies and
+# rewrites it). An older one waits for the update check, which re-verifies
+# it or, when the backend no longer offers it, deletes it.
+STAGED_RECORD_MAX_AGE_S = 24 * 3600
 
 # ============================================================================
 # STATE MACHINE

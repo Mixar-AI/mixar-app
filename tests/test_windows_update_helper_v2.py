@@ -302,7 +302,7 @@ def test_helper_result_carries_the_attempt_fields():
 
     for line in ("version=%VERSION%", "stage=%~1", "exit=%~2",
                  "from_version=%FROM_VERSION%", "attempt_id=%ATTEMPT%",
-                 "helper_version=5", "wait_s=%WAITED%"):
+                 "helper_version=6", "trigger=%TRIGGER%", "wait_s=%WAITED%"):
         assert f'echo {line}' in record, line
     assert 'set "FROM_VERSION=3.3.6"' in script
     assert 'set "ATTEMPT=0123abcd"' in script
@@ -329,7 +329,8 @@ def test_helper_records_the_registry_and_relaunches_from_it_first():
 def test_helper_exit_status_is_the_installers():
     script = _script()
 
-    assert script.count("exit /b %INSTALL_EXIT%") == 2
+    # :relaunched, the no-candidate fallback and :stayclosed (install on quit).
+    assert script.count("exit /b %INSTALL_EXIT%") == 3
     assert 'set "INSTALL_EXIT=1"' in script.split(":waitloop")[0]
     # A failed launch is never exit 0.
     assert "if($null -eq $p -or $null -eq $p.ExitCode){exit 1}" in win_installer._PS_INSTALL

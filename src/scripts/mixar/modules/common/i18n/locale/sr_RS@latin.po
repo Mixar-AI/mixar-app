@@ -4043,6 +4043,24 @@ msgstr "Ponovo pokreni radi ažuriranja"
 msgid "Updating…"
 msgstr "Ažuriranje…"
 
+msgid "Updates"
+msgstr ""
+
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
+
 msgid "{count} credit"
 msgstr ""
 

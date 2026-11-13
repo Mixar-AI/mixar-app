@@ -79,6 +79,14 @@ def report_previous_update_result() -> None:
     outcome, reason = verdict["outcome"], verdict["failure_reason"]
 
     _capture_result(result, verdict, running)
+    if outcome in ("failed", "no_effect") and reason != "interrupted":
+        _count_failure(result.get("staging_dir", ""), target)
+
+    if reason == "interrupted":
+        # A logout or shutdown stopped the helper and it put the app back
+        # as it was: nothing the user has to act on. The update is still
+        # staged and installs at the next quit.
+        return
 
     if outcome == "success":
         _push_update_outcome_toast(
@@ -111,6 +119,19 @@ def report_previous_update_result() -> None:
         body = rpt_("{reason} You can download the update from the downloads page.").format(
             reason=_failure_reason(result, reason))
     _push_update_outcome_toast("error", n_("Update was not installed"), body)
+
+
+def _count_failure(directory, version) -> None:
+    """One more failed attempt at *version*: installs nobody asked for stop
+    after ``SILENT_INSTALL_MAX_FAILURES`` (``silent_install``)."""
+    if not directory:
+        return
+    from . import staged_record
+
+    try:
+        staged_record.bump(directory, "failures", version)
+    except Exception:  # noqa: BLE001 - bookkeeping only
+        logger.debug("Could not count the failed update attempt", exc_info=True)
 
 
 def _as_int(value):
@@ -159,9 +180,11 @@ def _capture_result(result, verdict, running) -> None:
         "installed_version": result.get("installed_version") or None,
         "relaunch_matched": verdict["relaunch_matched"],
         "relaunch_kind": relaunch_kind if relaunch_kind in (
-            "registry", "candidate", "fallback", "none") else None,
+            "registry", "candidate", "fallback", "none", "skipped") else None,
         "locking_processes": _basenames(result.get("locks")) or None,
         "wait_s": _as_int(result.get("wait_s")),
+        # Helpers before install-on-quit only ever ran from the click.
+        "trigger": _trigger(result.get("trigger")),
     }
     try:
         from ...analytics.update_events import capture_update_result
@@ -172,6 +195,12 @@ def _capture_result(result, verdict, running) -> None:
         )
     except Exception:  # noqa: BLE001 - telemetry is fail-open
         logger.debug("Update result telemetry failed", exc_info=True)
+
+
+def _trigger(value) -> str:
+    from ..constants import TRIGGER_CLICK, TRIGGERS
+
+    return value if value in TRIGGERS else TRIGGER_CLICK
 
 
 def _no_effect_reason(reason, result, running) -> str:

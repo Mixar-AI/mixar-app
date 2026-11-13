@@ -4,6 +4,7 @@
 
 """Fixtures shared by the standalone (outside-Blender) test files."""
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,23 @@ def _isolated_connector_directory(monkeypatch, tmp_path):
     next 15 minutes. A test that wants a specific directory sets its own.
     """
     monkeypatch.setenv("MIXAR_MCP_DISCOVERY_DIR", str(tmp_path / "mixar-mcp"))
+
+
+@pytest.fixture(autouse=True)
+def _no_update_helper_waiting():
+    """Start and leave every test with no update helper waiting.
+
+    ``install_start`` refuses a second helper per process, and the tests
+    start one after another in a process that never quits.
+    """
+    def clear():
+        module = sys.modules.get("mixar.modules.common.updates.core.install_start")
+        if module is not None:
+            module._started["proc"] = None
+
+    clear()
+    yield
+    clear()
 
 
 @pytest.fixture

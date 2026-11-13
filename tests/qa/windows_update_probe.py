@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 _NO_WINDOW = 0x08000000  # subprocess.CREATE_NO_WINDOW, defined on Windows only
 
@@ -276,26 +277,70 @@ def run_connector_case(module, root, python):
     return {'result': record, 'returncode': process.returncode}
 
 
-def run_finish_case(module, root, *, install_exit='0', msi_log_text=None):
-    """The post-install step alone: registry first, then the MSI's error."""
+def finish_env(module, root, *, install_exit='0', relaunch_mode='1', reopen=True):
+    """The variables the batch sets before the post-install step, for *root*.
+
+    *relaunch_mode* '1' is Restart & Update, '0' an install on quit; *reopen*
+    False leaves REOPEN unset (the step must cope). The grace before reading
+    the reopen list is 0 here, the wait for turned-away launches 20 s.
+    """
+    env = dict(os.environ, VERSION='9.9.9', STAGE='install', INSTALL_EXIT=install_exit,
+               MSILOG=str(root / 'msi-install.log'), RELAUNCH='',
+               RESULT=str(root / 'update-result.txt'), RELAUNCHMODE=relaunch_mode,
+               REOPEN=str(root / module.HELPER_REOPEN_NAME), REOPENGRACE='0', REOPENWAIT='20')
+    if not reopen:
+        env.pop('REOPEN')
+    return env
+
+
+def run_finish_case(module, root, *, install_exit='0', msi_log_text=None, relaunch_mode='1',
+                    turned_away=False, reopen=True, python=None):
+    """The post-install step alone: registry first, then the MSI's error.
+
+    Installed on quit (*relaunch_mode* '0') Mixar stays closed (exit 4,
+    ``relaunch_kind=skipped``) unless a launch was turned away meanwhile
+    (*turned_away*: a live PID in the reopen list, which the step waits for
+    before the same registry relaunch).
+    """
     root = Path(root).resolve() / 'User Name'
     location = root / 'Registered Mixar'
     location.mkdir(parents=True, exist_ok=True)
     (location / 'mixar-launcher.exe').write_bytes(b'MIXAR_QA_ONLY')
-    msi_log = root / 'msi-install.log'
     if msi_log_text is not None:
-        msi_log.write_text(msi_log_text, encoding='utf-8')
+        (root / 'msi-install.log').write_text(msi_log_text, encoding='utf-8')
     result, started = root / 'update-result.txt', root / 'started.txt'
-    env = dict(os.environ, VERSION='9.9.9', STAGE='install', INSTALL_EXIT=install_exit,
-               MSILOG=str(msi_log), RELAUNCH='', RESULT=str(result),
-               QA_LOCATION=str(location), QA_STARTED=str(started))
-    process = _powershell(FINISH_SHIM + module._PS_FINISH, env)
+    env = finish_env(module, root, install_exit=install_exit, relaunch_mode=relaunch_mode,
+                     reopen=reopen)
+    env.update(QA_LOCATION=str(location), QA_STARTED=str(started))
+    reopen_list = root / module.HELPER_REOPEN_NAME
+    holder = None
+    if turned_away:
+        # Outlives PowerShell's start-up, so only a real wait sees it exit.
+        holder = subprocess.Popen([str(python or sys.executable), '-c', 'import time; time.sleep(5)'],
+                                  creationflags=_NO_WINDOW)
+        reopen_list.write_text(f'{holder.pid}\n', encoding='utf-8')
+    try:
+        process = _powershell(FINISH_SHIM + module._PS_FINISH, env)
+        waited = holder is None or holder.poll() is not None
+    finally:
+        if holder is not None:
+            holder.kill()
     record = _record(result)
+    stderr = process.stderr.decode('utf-8', 'replace')
+    # An unset or empty path must never reach -LiteralPath (a binding error).
+    assert 'LiteralPath' not in stderr, stderr
+    assert not reopen_list.exists(), 'the reopen list outlived the post-install step'
+    assert waited, 'relaunched without waiting for the turned-away launch'
     launcher = str(location / 'mixar-launcher.exe')
-    assert process.returncode == 0, process.stderr
-    assert started.read_text(encoding='utf-8-sig').split() == [launcher], started
-    assert record.get('relaunch_kind') == 'registry', record
-    assert record.get('relaunch') == launcher, record
+    if relaunch_mode == '1' or turned_away:
+        assert process.returncode == 0, (process.returncode, stderr)
+        assert started.read_text(encoding='utf-8-sig').splitlines() == [launcher], started
+        assert record.get('relaunch_kind') == 'registry', record
+        assert record.get('relaunch') == launcher, record
+    else:
+        assert process.returncode == 4, (process.returncode, stderr)
+        assert record.get('relaunch_kind') == 'skipped', record
+        assert not started.exists(), 'installed on quit, yet Mixar was started'
     assert (record.get('installed_version'), record.get('install_location')) == (
         '9.9.9', str(location)), record
     return record

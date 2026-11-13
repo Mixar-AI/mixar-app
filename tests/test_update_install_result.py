@@ -277,6 +277,8 @@ def test_result_event_carries_the_diagnostics(monkeypatch):
         "helper_version": 2, "install_kind": "msi", "installed_version": "3.3.6",
         "relaunch_matched": True, "relaunch_kind": "registry",
         "locking_processes": "mixar.exe,python.exe,..evil", "wait_s": 63,
+        # No trigger recorded: a helper from before install-on-quit.
+        "trigger": "click",
     }
     # Paths recorded by the helper stay on the machine.
     assert not any("\\" in str(value) for value in props.values())

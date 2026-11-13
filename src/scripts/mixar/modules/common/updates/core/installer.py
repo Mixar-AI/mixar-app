@@ -24,8 +24,8 @@ import sys
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_, rpt_
 
-from ..constants import INSTALLER_EXTENSIONS, SELF_INSTALL_TYPES
-from . import app_paths, staging, verify
+from ..constants import INSTALLER_EXTENSIONS, SELF_INSTALL_TYPES, TRIGGER_CLICK
+from . import app_paths, staging
 
 logger = get_logger(__name__)
 
@@ -94,6 +94,7 @@ def check_eligibility(update_info) -> Eligibility:
 def begin_install(
     *, installer_path, staging_dir, version, eligibility, verified,
     signer_thumbprint="", from_version="", attempt_id="",
+    relaunch=True, trigger=TRIGGER_CLICK,
 ):
     """Spawn the detached helper that installs *installer_path*.
 
@@ -104,10 +105,15 @@ def begin_install(
         verified: True when the staged installer's signature was checked
             in-app.  The helper re-checks only in that case, so an
             unsigned local build still updates.
-        signer_thumbprint: the certificate that check accepted (Windows);
-            the helper's re-check requires exactly it.
-        from_version / attempt_id: echoed into the helper's result file so
-            the next launch can report which attempt it was (Windows).
+        signer_thumbprint: the signer that check accepted (``state``'s
+            ``signer_thumbprint``): the certificate thumbprint on Windows,
+            the running app's Team ID on macOS. The helper's re-check
+            requires exactly it.
+        from_version / attempt_id / trigger: echoed into the helper's
+            result file so the next launch can report which attempt it was
+            and what started it.
+        relaunch: False for an install on quit — the helper leaves Mixar
+            closed unless a launch was turned away meanwhile.
 
     Returns:
         The helper's ``subprocess.Popen`` — the caller keeps it so a quit
@@ -133,6 +139,8 @@ def begin_install(
             install_dir=location.target,
             from_version=from_version,
             attempt_id=attempt_id,
+            relaunch=relaunch,
+            trigger=trigger,
         )
 
     if sys.platform == "darwin":
@@ -143,8 +151,14 @@ def begin_install(
             staging_dir=staging_dir,
             target_bundle=location.target,
             version=version,
-            expected_team=verify.team_id(location.target) or "",
+            # Read by the signature check on the download thread, so no
+            # codesign runs here (this is on the quit path).
+            expected_team=signer_thumbprint if verified else "",
             require_signature=verified,
+            relaunch=relaunch,
+            trigger=trigger,
+            from_version=from_version,
+            attempt_id=attempt_id,
         )
 
     raise OSError("No update helper for this platform")
@@ -185,7 +199,11 @@ def consume_result(staging_dir):
 
 
 # Where the helper stopped before running an installer -> failure_reason.
-_STAGE_REASONS = {"locked": "locked", "wait": "timeout", "verify": "signature"}
+_STAGE_REASONS = {
+    "locked": "locked", "wait": "timeout", "verify": "signature",
+    # A logout or shutdown stopped the macOS helper; the app was left intact.
+    "interrupted": "interrupted",
+}
 # Windows Installer exit codes worth telling apart; any other is msi_error.
 _EXIT_REASONS = {"1602": "uac_declined", "1618": "another_install"}
 

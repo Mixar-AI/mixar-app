@@ -18,15 +18,16 @@ thread with ``bpy.app.timers.register``.
 import hashlib
 import os
 import threading
-import uuid
 
 import bpy
 
 from mixar.config.logging_config import get_logger
 from mixar.modules.common.i18n import n_
 
-from ..constants import RETRYABLE_FAILURE_REASONS, InstallState
-from . import download, install_gate, install_marker, installer, staging, verify
+from ..constants import (
+    RETRYABLE_FAILURE_REASONS, STAGED_RECORD_NAME, TRIGGER_CLICK, InstallState,
+)
+from . import download, install_gate, install_start, installer, staged_record, staging, verify
 from .failure import capture_download_outcome, failure_details
 # apply_and_restart's messages when the Windows pre-quit gate stopped it
 # (the toast saying why is up); re-exported for the operator.
@@ -104,9 +105,11 @@ def _prepare_staging(version, extension):
     """Resolve the staging directory and the installer path inside it."""
     directory = staging.resolve_staging_dir()
     path = staging.installer_path(directory, version, extension)
-    # Keep the file we are about to (re)use; drop every other leftover,
-    # including helpers from an attempt that never ran.
-    staging.purge_stale(directory, keep_filenames=(os.path.basename(path),))
+    # Keep the file we are about to (re)use, and the record of how silent
+    # installs of it went; drop every other leftover, including helpers
+    # from an attempt that never ran.
+    staging.purge_stale(
+        directory, keep_filenames=(os.path.basename(path), STAGED_RECORD_NAME))
     return path
 
 
@@ -156,7 +159,15 @@ def _worker(info, eligibility, running_binary):
         if verdict == verify.UNVERIFIED:
             logger.warning("Installer signature not verified: %s", detail)
 
-        state.set_ready(path, verdict == verify.VERIFIED, signer)
+        verified = verdict == verify.VERIFIED
+        # Before READY: an install on quit reads the record's counters.
+        staged_record.write_ready(
+            os.path.dirname(path), version=version, installer_path=path,
+            installer_type=info.installer_type, download_url=info.download_url,
+            sha256=info.download_sha256, verified=verified, signer=signer,
+            target=eligibility.location.target if eligibility.location else "",
+        )
+        state.set_ready(path, verified, signer)
         logger.info("Update %s ready to install (%s)", version, verdict)
 
     except download.UpdateDownloadCancelled:
@@ -368,49 +379,24 @@ def apply_and_restart():
     if blocked:
         return False, blocked
 
-    from .update_checker import get_runtime_version
-
-    attempt_id = uuid.uuid4().hex
     global _helper_proc
     try:
-        _helper_proc = installer.begin_install(
+        _helper_proc = install_start.start_helper(
             installer_path=path,
-            staging_dir=os.path.dirname(path),
             version=info.latest_version,
             eligibility=eligibility,
             verified=state.signature_verified,
-            signer_thumbprint=state.signer_thumbprint,
-            from_version=get_runtime_version() or "",
-            attempt_id=attempt_id,
+            signer=state.signer_thumbprint,
+            trigger=TRIGGER_CLICK,
+            relaunch=True,
         )
     except Exception as e:  # noqa: BLE001 - nothing has changed yet
         logger.error("Could not start the update helper: %s", e, exc_info=True)
         state.set_install_failed(n_("Could not start the updater"))
         return False, n_("Could not start the updater")
 
-    # A Mixar opened mid-install quits instead of running half-replaced
-    # files or purging the helper's script; failing to say so never blocks.
-    install_marker.write(
-        os.path.dirname(path), _helper_proc.pid, info.latest_version, attempt_id)
-    # A connector an AI app starts while we are gone must wait for the
-    # helper's relaunch, not cold-start the old or half-replaced binary.
-    try:
-        from mixar.modules.mcp_bridge.core import installation as connector_installation
-
-        connector_installation.mark_updating()
-    except Exception:  # noqa: BLE001 - the marker is a guard, never a blocker
-        logger.debug("Could not write the connector's updating marker", exc_info=True)
-
     install_gate.reset()
     state.set_installing()
-    try:
-        from ...analytics.update_events import capture_update_started
-
-        capture_update_started(
-            info.latest_version, state.signature_verified, attempt_id=attempt_id,
-        )
-    except Exception:  # noqa: BLE001 - telemetry is fail-open
-        logger.debug("Update start telemetry failed", exc_info=True)
 
     logger.info("Update helper running — quitting to install %s", info.latest_version)
     # Delayed so this operator returns first: the helper is already waiting
@@ -451,22 +437,9 @@ def _abort_pending_install():
     """Kill the waiting helper and return the UI to a retryable READY."""
     global _helper_proc
     proc, _helper_proc = _helper_proc, None
-    if proc is not None and proc.poll() is None:
-        try:
-            proc.kill()
-        except Exception:  # noqa: BLE001 - already exited, or access denied
-            logger.debug("Could not kill the update helper", exc_info=True)
-
-    try:
-        from mixar.modules.mcp_bridge.core import installation as connector_installation
-
-        connector_installation.clear_updating()  # connectors may cold-start again
-    except Exception:  # noqa: BLE001 - it expires on its own
-        logger.debug("Could not clear the connector's updating marker", exc_info=True)
+    install_start.stop_helper(proc, get_update_state().installer_path)
 
     state = get_update_state()
-    if state.installer_path:
-        install_marker.remove(os.path.dirname(state.installer_path))
     # The staged installer is untouched and still verified — go back to
     # READY so the next click simply tries again.
     if state.installer_path:
@@ -483,12 +456,16 @@ def _abort_pending_install():
 def read_previous_result():
     """Read (and clear) the result the helper left from the last attempt.
 
-    Returns the parsed dict, or ``None``.  Resolving the staging directory
-    creates it if missing, which is harmless and means the very first run
-    simply finds nothing.
+    Returns the parsed dict, or ``None``; ``staging_dir`` says where it
+    was found (never reported).  Resolving the staging directory creates it
+    if missing, which is harmless and means the very first run simply
+    finds nothing.
     """
     try:
         directory = staging.resolve_staging_dir()
     except OSError:
         return None
-    return installer.consume_result(directory.path)
+    result = installer.consume_result(directory.path)
+    if result is not None:
+        result["staging_dir"] = directory.path
+    return result

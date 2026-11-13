@@ -39,7 +39,10 @@ Design notes, each one a failure this replaces:
   Relaunch runs whatever the installer returned (a declined UAC prompt
   must leave the user with the version they already had), and prefers the
   Uninstall key's ``InstallLocation`` over the guessed candidates, which
-  remain the fallback when PowerShell cannot run.
+  remain the fallback when PowerShell cannot run. An install on quit
+  (helper v6, ``RELAUNCHMODE=0``; nothing starts one yet, every Windows
+  install needs the UAC prompt) leaves Mixar closed and records
+  ``relaunch_kind=skipped`` — unless a launch was turned away meanwhile.
 - **The outcome is written down.**  ``update-result.txt`` is the only way
   the relaunched app can tell the user that an update it started did not
   finish.  Beyond ``version``/``stage``/``exit`` it carries the attempt
@@ -76,14 +79,27 @@ from mixar.config.logging_config import get_logger
 from ..constants import (
     HELPER_LOG_NAME,
     HELPER_MARKER_NAME,
+    HELPER_REOPEN_GRACE_S,
+    HELPER_REOPEN_NAME,
+    HELPER_REOPEN_WAIT_S,
     HELPER_VERSION,
     HELPER_WAIT_FOR_EXIT_S,
     HELPER_WAIT_FOR_LOCKS_S,
     MSI_LOG_NAME,
     MSI_PREV_LOG_NAME,
+    TRIGGER_CLICK,
+    TRIGGERS,
 )
 from .app_paths import windows_system_dir
 from .staging import result_path
+# The PowerShell steps; re-exported because the tests read them from here.
+from .win_helper_ps import (  # noqa: F401
+    _PS_END_CONNECTORS,
+    _PS_FINISH,
+    _PS_INSTALL,
+    _PS_LOCKS,
+    _PS_VERIFY,
+)
 
 logger = get_logger(__name__)
 
@@ -106,124 +122,6 @@ _CREATE_BREAKAWAY_FROM_JOB = 0x01000000
 # a script that does something unintended.
 _UNSAFE_BATCH_CHARS = ('"', "%", "^", "&", "|", "<", ">", "\r", "\n")
 
-_PS_INSTALL = (
-    "$q=[char]34;"
-    "$a=@('/i',($q+$env:MSI+$q),'/passive','/norestart','REBOOT=ReallySuppress',"
-    "'LAUNCHAPP=0','/l*v',($q+$env:MSILOG+$q));"
-    "try{"
-    "$p=Start-Process -FilePath ($env:SYS32+'\\msiexec.exe') -ArgumentList $a "
-    "-Verb RunAs -Wait -PassThru -ErrorAction Stop;"
-    # A launch failure must never become `exit $null` (success). Preserve
-    # msiexec's actual status, including success-with-reboot (3010).
-    "if($null -eq $p -or $null -eq $p.ExitCode){exit 1};"
-    "exit $p.ExitCode"
-    "}catch{"
-    # PowerShell can wrap the Win32 exception; normalise UAC cancellation
-    # to MSI's existing user-cancelled result so the next-start toast agrees.
-    "$e=$_.Exception;"
-    "while($e -and -not ($e -is [System.ComponentModel.Win32Exception]))"
-    "{$e=$e.InnerException};"
-    "if($e -and $e.NativeErrorCode -eq 1223){exit 1602};"
-    "[Console]::Error.WriteLine($_.Exception.Message);exit 1"
-    "}"
-)
-
-# Valid AND, when the app verified one, signed by exactly that certificate
-# (-ne compares case-insensitively). An empty %SIGNER% keeps Valid-only.
-_PS_VERIFY = (
-    "$s=Get-AuthenticodeSignature -LiteralPath $env:MSI;"
-    "if($s.Status -ne 'Valid'){exit 1};"
-    "if($env:SIGNER -and $s.SignerCertificate.Thumbprint -ne $env:SIGNER){exit 1};"
-    "exit 0"
-)
-
-# Exit 3 when any process runs a binary from the install directory, writing
-# their basenames (never paths) to %LOCKS% as a ready-made result line.
-# Anything else (no CIM, an error) is 0/1 and the install goes ahead, as it
-# did before this check existed.
-_PS_LOCKS = (
-    "try{"
-    "$d=$env:INSTALLDIR.TrimEnd('\\')+'\\';"
-    "$n=@(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop|"
-    "Where-Object {$_.ExecutablePath -and "
-    "$_.ExecutablePath.StartsWith($d,[StringComparison]::OrdinalIgnoreCase)}|"
-    "ForEach-Object {$_.Name -replace '[^A-Za-z0-9._-]',''}|Sort-Object -Unique);"
-    "if($n.Count -gt 0){"
-    "Set-Content -LiteralPath $env:LOCKS -Value ('locks='+($n -join ',')) -Encoding ASCII;"
-    "Write-Output ('Still running from the install directory: '+($n -join ', '));exit 3};"
-    "exit 0"
-    "}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}"
-)
-
-# End every python running from the install directory that is NOT Mixar's
-# own background work (one with a Mixar binary among its live ancestors):
-# that is a Mixar connector an AI app respawned since the app's own check.
-# Each end (or failure to) is one log line with basename and pid, never a
-# path. The exit code is informational; the lock wait follows regardless.
-_PS_END_CONNECTORS = (
-    "try{"
-    "$d=$env:INSTALLDIR.TrimEnd('\\')+'\\';"
-    "$all=@(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop);"
-    "$by=@{};foreach($p in $all){$by[[int]$p.ProcessId]=$p};"
-    "$mixar=@('mixar.exe','mixar-launcher.exe','blender.exe','blender-launcher.exe');"
-    "foreach($p in $all){"
-    "if(-not $p.ExecutablePath -or "
-    "-not $p.ExecutablePath.StartsWith($d,[StringComparison]::OrdinalIgnoreCase)){continue};"
-    "if($p.Name -notlike 'python*'){continue};"
-    "$own=$false;$c=$p;$seen=@{};"
-    "while($c -and -not $seen.ContainsKey([int]$c.ProcessId)){"
-    "$seen[[int]$c.ProcessId]=$true;"
-    "$q=$by[[int]$c.ParentProcessId];"
-    # A parent younger than its child is a reused PID, not an ancestor.
-    "if(-not $q -or ($q.CreationDate -and $c.CreationDate -and "
-    "$q.CreationDate -gt $c.CreationDate)){break};"
-    "if($mixar -contains $q.Name.ToLower()){$own=$true;break};"
-    "$c=$q};"
-    "if($own){continue};"
-    "try{Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop;"
-    "Write-Output ('Ended Mixar connector '+$p.Name+' (pid '+$p.ProcessId+')')}"
-    "catch{Write-Output ('Could not end Mixar connector '+$p.Name+' (pid '+$p.ProcessId+'): '"
-    "+$_.Exception.Message)}};"
-    "exit 0"
-    "}catch{[Console]::Error.WriteLine($_.Exception.Message);exit 1}"
-)
-
-# After the installer (or instead of it): record what Windows Installer now
-# says is installed and where, the MSI's first error code, and relaunch —
-# the registered InstallLocation first, so the copy that comes back is the
-# one the MSI upgraded. Exit 0 only once something was started; the batch
-# falls back to its own candidate list otherwise.
-_PS_FINISH = (
-    "$o=@();$e=$null;"
-    "try{"
-    "$k=@(Get-ItemProperty -Path "
-    "'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',"
-    "'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',"
-    "'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' "
-    "-ErrorAction SilentlyContinue|"
-    "Where-Object {$_.DisplayName -eq 'Mixar' -and $_.WindowsInstaller -eq 1});"
-    "$e=@($k|Where-Object {$_.DisplayVersion -eq $env:VERSION})+$k|Select-Object -First 1"
-    "}catch{};"
-    "$loc='';"
-    "if($e){$loc=[string]$e.InstallLocation;$o+=('installed_version='+$e.DisplayVersion)};"
-    "$o+=('install_location='+$loc);"
-    "if($env:STAGE -eq 'install' -and $env:INSTALL_EXIT -notin '0','3010' -and "
-    "(Test-Path -LiteralPath $env:MSILOG)){"
-    "$m=Select-String -LiteralPath $env:MSILOG -Pattern 'Error (\\d{4})\\.'|Select-Object -First 1;"
-    "if($m){$o+=('msi_error='+$m.Matches[0].Groups[1].Value)}};"
-    "$c=@();"
-    "if($loc){foreach($x in 'mixar-launcher.exe','mixar.exe','blender-launcher.exe')"
-    "{$c+=,@((Join-Path $loc $x),'registry')}};"
-    "foreach($x in ($env:RELAUNCH -split '\\|')){if($x){$c+=,@($x,'candidate')}};"
-    "$rc=1;"
-    "foreach($p in $c){if(Test-Path -LiteralPath $p[0] -PathType Leaf){"
-    "try{Start-Process -FilePath $p[0] -ErrorAction Stop;"
-    "$o+=('relaunch='+$p[0]);$o+=('relaunch_kind='+$p[1]);$rc=0;break}catch{}}};"
-    "if($rc -ne 0){$o+='relaunch_kind=none'};"
-    "Add-Content -LiteralPath $env:RESULT -Value $o -Encoding UTF8;"
-    "exit $rc"
-)
-
 _POWERSHELL = '"%PWSH%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command'
 
 _SCRIPT_TEMPLATE = '''@echo off
@@ -240,6 +138,11 @@ set "MSIPREVLOG={msi_prev_log}"
 set "RESULT={result}"
 set "LOCKS={locks}"
 set "MARKER={marker}"
+set "REOPEN={reopen}"
+set "REOPENWAIT={reopen_wait_s}"
+set "REOPENGRACE={reopen_grace_s}"
+set "RELAUNCHMODE={relaunch_mode}"
+set "TRIGGER={trigger}"
 set "PID={pid}"
 set "VERSION={version}"
 set "FROM_VERSION={from_version}"
@@ -249,7 +152,7 @@ set "RELAUNCH={relaunch_env}"
 set "INSTALL_EXIT=1"
 set "STAGE="
 
-echo [%DATE% %TIME%] Mixar update helper started for %VERSION% (from %FROM_VERSION%, attempt %ATTEMPT%) >>"%LOG%" 2>&1
+echo [%DATE% %TIME%] Mixar update helper started for %VERSION% (from %FROM_VERSION%, attempt %ATTEMPT%, trigger %TRIGGER%) >>"%LOG%" 2>&1
 
 rem ---- wait for the running Mixar to exit -------------------------------
 rem CSV output is matched on the quoted PID field, so a PID that also occurs
@@ -270,6 +173,7 @@ goto waitloop
 echo [%DATE% %TIME%] Mixar (pid %PID%) still running after {wait_s}s - aborting >>"%LOG%" 2>&1
 call :result wait timeout
 del /f /q "%MARKER%" >nul 2>&1
+del /f /q "%REOPEN%" >nul 2>&1
 exit /b 2
 
 :gone
@@ -341,10 +245,18 @@ rem marker goes first: the Mixar about to start must not find it naming us.
 del /f /q "%MARKER%" >nul 2>&1
 rem Runs whatever the installer decided. The registered InstallLocation is
 rem tried first; the fixed candidates below only when PowerShell cannot run.
+rem Installed on quit, Mixar stays closed (4) unless a launch was turned away.
 {powershell} "{ps_finish}" >>"%LOG%" 2>&1
 if "%ERRORLEVEL%"=="0" goto relaunched
+if "%ERRORLEVEL%"=="4" goto stayclosed
+if not "%RELAUNCHMODE%"=="1" if not exist "%REOPEN%" goto stayclosed
+del /f /q "%REOPEN%" >nul 2>&1
 {relaunch}
 echo [%DATE% %TIME%] No Mixar executable found to relaunch >>"%LOG%" 2>&1
+exit /b %INSTALL_EXIT%
+
+:stayclosed
+echo [%DATE% %TIME%] Installed on quit - Mixar stays closed >>"%LOG%" 2>&1
 exit /b %INSTALL_EXIT%
 
 :relaunched
@@ -360,6 +272,7 @@ set "STAGE=%~1"
 >>"%RESULT%" echo from_version=%FROM_VERSION%
 >>"%RESULT%" echo attempt_id=%ATTEMPT%
 >>"%RESULT%" echo helper_version={helper_version}
+>>"%RESULT%" echo trigger=%TRIGGER%
 >>"%RESULT%" echo wait_s=%WAITED%
 goto :eof
 '''
@@ -418,8 +331,16 @@ def build_script(
     from_version="",
     attempt_id="",
     system_dir="",
+    relaunch=True,
+    trigger=TRIGGER_CLICK,
 ):
-    """Return the helper batch script text (pure — exercised directly by tests)."""
+    """Return the helper batch script text (pure — exercised directly by tests).
+
+    *relaunch* False is an install on quit: Mixar is reopened only for a
+    launch that was turned away while the helper worked.
+    """
+    if trigger not in TRIGGERS:
+        raise ValueError(f"Unknown update trigger: {trigger!r}")
     return _SCRIPT_TEMPLATE.format(
         system_dir=system_dir or windows_system_dir(),
         log=os.path.join(staging_dir, HELPER_LOG_NAME),
@@ -429,6 +350,11 @@ def build_script(
         result=result_path(staging_dir),
         locks=os.path.join(staging_dir, "mixar-update-locks.txt"),
         marker=os.path.join(staging_dir, HELPER_MARKER_NAME),
+        reopen=os.path.join(staging_dir, HELPER_REOPEN_NAME),
+        reopen_wait_s=int(HELPER_REOPEN_WAIT_S),
+        reopen_grace_s=int(HELPER_REOPEN_GRACE_S),
+        relaunch_mode="1" if relaunch else "0",
+        trigger=trigger,
         pid=int(pid),
         version=version,
         from_version=from_version,
@@ -463,6 +389,8 @@ def launch(
     install_dir="",
     from_version="",
     attempt_id="",
+    relaunch=True,
+    trigger=TRIGGER_CLICK,
 ):
     """Write the helper script and start it detached.
 
@@ -494,6 +422,8 @@ def launch(
         from_version=from_version,
         attempt_id=attempt_id,
         system_dir=system_dir,
+        relaunch=relaunch,
+        trigger=trigger,
     )
     # cp1252 matches cmd.exe's default code page. The script is ASCII unless
     # a path is not, and strict encoding makes that fail here rather than

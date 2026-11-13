@@ -321,9 +321,11 @@ def test_macos_helper_restores_the_old_bundle_if_the_swap_fails():
 def test_macos_helper_checks_the_signing_team_before_replacing_anything():
     script = _macos_script()
 
-    verify_at = script.index("codesign --verify")
+    team_at = script.index('INSTALLED_TEAM=$(team_of "$TARGET")')
+    verify_at = script.index('"$CODESIGN" --verify --strict "$SOURCE"')
     swap_at = script.index('mv "$TARGET" "$OLD"')
-    assert verify_at < swap_at
+    assert team_at < verify_at < swap_at
+    assert "CODESIGN=/usr/bin/codesign" in script
     assert "ABCDE12345" in script
 
 

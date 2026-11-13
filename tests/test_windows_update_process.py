@@ -160,6 +160,28 @@ def test_finish_records_the_msi_error(tmp_path):
     assert record['msi_error'] == '1925'
 
 
+def test_finish_after_an_install_on_quit_stays_closed(tmp_path):
+    from tests.qa.windows_update_probe import run_finish_case
+
+    record = run_finish_case(win_installer, tmp_path, relaunch_mode='0')
+    assert record['relaunch_kind'] == 'skipped'
+
+
+def test_finish_after_an_install_on_quit_reopens_a_turned_away_launch(tmp_path):
+    from tests.qa.windows_update_probe import run_finish_case
+
+    record = run_finish_case(win_installer, tmp_path, relaunch_mode='0', turned_away=True,
+                             python=sys.executable)
+    assert record['relaunch_kind'] == 'registry'
+
+
+@pytest.mark.parametrize('relaunch_mode', ['1', '0'])
+def test_finish_copes_with_no_reopen_path(tmp_path, relaunch_mode):
+    from tests.qa.windows_update_probe import run_finish_case
+
+    run_finish_case(win_installer, tmp_path, relaunch_mode=relaunch_mode, reopen=False)
+
+
 @pytest.mark.parametrize('matching', [True, False])
 def test_reverify_accepts_only_the_pinned_signer(tmp_path, matching):
     from tests.qa.windows_update_probe import run_signer_case
