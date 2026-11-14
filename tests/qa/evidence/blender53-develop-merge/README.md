@@ -3,6 +3,10 @@
 
 # Develop integration on Blender 5.3
 
+**Latest report:** [develop 4.4.7 integration](../blender53-develop-447/README.md)
+records the later `b042cdd60` merge, native splats, Mac/Linux/Windows checks,
+and the remaining platform and visual-review limits.
+
 **Later sync:** develop `a57ff48a8` removes the Claude subscription provider
 and bumps Mixar to 4.4.6. Its removal is preserved, including deletion of the
 provider replay; general BYOK pause/remove coverage remains. The evidence below

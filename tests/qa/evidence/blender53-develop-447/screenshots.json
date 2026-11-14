@@ -1,0 +1,85 @@
+{
+  "review_method": "Every selected original PNG was opened with view_image and inspected. Files copied byte-for-byte; no cropping, resizing or pixel edits.",
+  "images": [
+    {
+      "file": "linux-composer-native.png",
+      "sha256": "b83755d83080642df583e6fc2b8e959fbb89c4dd6c1e7f85dbe8ad21d66c13d7",
+      "bytes": 305198,
+      "width": 1600,
+      "height": 1000,
+      "client_commit": "34a6797f4bf392ec173caf1128ba4336e431c30e",
+      "reviewed": true,
+      "supports": "Native desktop capture: dark composer, legible controls and scene layout. No controlled backdrop probe; no blur or translucency qualification."
+    },
+    {
+      "file": "linux-native-ply.png",
+      "sha256": "da95f50fdb9b8ac1580677a26c4b9af18f2d25861d07859dd4b097472c594a4f",
+      "bytes": 635764,
+      "width": 1440,
+      "height": 837,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Fully shaded imported 400-point PLY cloud with selection outline, after shader compilation settled."
+    },
+    {
+      "file": "linux-preview-cpu.png",
+      "sha256": "8398781ca7263573e927c6dc3ca8445c642cec70fc94918c7f46069b7239571e",
+      "bytes": 74611,
+      "width": 320,
+      "height": 240,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Local engine=splat preview: visible pink cloud; metadata reports actual CPU, 320x240, 8 samples, 0.664 seconds."
+    },
+    {
+      "file": "linux-legacy-migrated.png",
+      "sha256": "97ec89ba8cd18789db01bac37c243f375585221b5b306eab97a0868b7e76a0a6",
+      "bytes": 857836,
+      "width": 1440,
+      "height": 837,
+      "client_commit": "34a6797f4bf392ec173caf1128ba4336e431c30e",
+      "reviewed": true,
+      "supports": "Visible native splats after opening a saved legacy KIRI fixture; conversion state and collider retention asserted by replay."
+    },
+    {
+      "file": "mac-composer-buffer.png",
+      "sha256": "6f516292be7e1e54d47ec3ac8b22e0f801af7bfc4033e22927867f0015c1f624",
+      "bytes": 72516,
+      "width": 1356,
+      "height": 460,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Framebuffer capture: neutral composer, readable two-line draft, tabs and controls. Does not prove OS-composited translucency."
+    },
+    {
+      "file": "mac-legacy-migrated.png",
+      "sha256": "3b6dcfc1946fda1237645c56f5005cbbc74e8dc71d8efe2a1bcea7be2ff1fb87",
+      "bytes": 3880221,
+      "width": 3024,
+      "height": 1712,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Visible pink native splat cloud after saved legacy KIRI file migration on the normal committed build."
+    },
+    {
+      "file": "mac-preview-cpu.png",
+      "sha256": "e89fa88e09a5e259e0ead4d455f54a00fd010e1de38f1ff5fb99e449e640057b",
+      "bytes": 74577,
+      "width": 320,
+      "height": 240,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Normal committed build: actual CPU preview, 320x240, 8 samples, 1.536 seconds. AUTO restored and source unchanged."
+    },
+    {
+      "file": "windows-composer-native.png",
+      "sha256": "20fc20ca67812ef0fc68646e1ae3aabb2f22ac8fc86768f63164c9527b76f611",
+      "bytes": 224502,
+      "width": 1312,
+      "height": 784,
+      "client_commit": "34a6797f4bf392ec173caf1128ba4336e431c30e",
+      "reviewed": true,
+      "supports": "Reviewed AUTH-12 native desktop: preserved synthetic transcript and draft, neutral text field, blurred scene behind sharp island controls. Remaining Windows visual review is pending."
+    }
+  ]
+}
