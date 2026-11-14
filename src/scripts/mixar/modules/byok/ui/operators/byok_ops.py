@@ -39,7 +39,9 @@ from .byok_dialog_support import (
     saving as _saving,
     prefill_from_prompt as _prefill_from_prompt,
     saved_provider_model as _saved_provider_model,
+    settle_stale_result,
     toast_if_closed,
+    wipe_form_secrets as _wipe_form_secrets,
 )
 from .byok_state_ops import (
     _apply_cached_state,
@@ -54,18 +56,6 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
-
-def _wipe_form_secrets(wm):
-    """Remove transient API/token material from the live WindowManager."""
-    for attr in (
-        'byok_form_api_key',
-        'byok_form_local_custom_key',
-    ):
-        try:
-            setattr(wm, attr, '')
-        except Exception:
-            pass
-
 
 # ---------------------------------------------------------------------------
 # Dialog entry point
@@ -339,13 +329,13 @@ def _on_save_done(success: bool, data, err, epoch=None):
     """Main-thread save callback."""
     try:
         wm = bpy.context.window_manager
+        if epoch is not None and epoch != credential_state.current_epoch():
+            logger.debug("BYOK save landed after an account change; result dropped")
+            settle_stale_result(wm)
+            return
         if success:
-            applied = _apply_cached_state(wm, data or {}, epoch)
+            _apply_cached_state(wm, data or {}, epoch)
             _wipe_form_secrets(wm)
-            if not applied:
-                logger.debug("BYOK save landed after logout; echo dropped")
-                wm.byok_dialog_state = 'IDLE'
-                return
             # The echo is the server's word: move the island now (reads issued
             # before it are dropped), and let the refresh confirm.
             preference_state.invalidate_reads()
@@ -364,9 +354,6 @@ def _on_save_done(success: bool, data, err, epoch=None):
             key_prompt.notify_saved()
             byok_dialog_support.settle_sign_in_notice()
         else:
-            if epoch is not None and epoch != credential_state.current_epoch():
-                wm.byok_dialog_state = 'IDLE'
-                return  # another account by now; nothing of this save remains
             if data:
                 # The PUT landed but the device-store write did not: adopt
                 # the server's state so the card and the "Key needed on this
@@ -445,9 +432,7 @@ def _on_delete_done(success: bool, removed_count: int, err, epoch=None):
     try:
         wm = bpy.context.window_manager
         if epoch is not None and epoch != credential_state.current_epoch():
-            # Logged out (or into another account) meanwhile: this result
-            # belongs to an account the mirror no longer shows.
-            wm.byok_dialog_state = 'IDLE'
+            settle_stale_result(wm)
             return
         if success:
             # The server confirmed "inactive": the mirror stays LOADED (a

@@ -167,14 +167,16 @@ def materialize(record: Optional[Dict[str, Any]]) -> tuple:
 
 def persist_changes(record: Dict[str, Any], changes: Dict[str, Any], user_id: Optional[str] = None) -> bool:
     """Apply what a turn learned. Codex: renewed tokens go INTO the CLI's
-    file (`codex_auth.write_back`), never into the store; ``expired``
+    file (`codex_auth.write_back`), never into the store, and only while the
+    file still holds the refresh token the renewal spent; ``expired``
     becomes the revoked token's fingerprint (or clears it). Other providers
     merge into the stored record."""
     if record.get("provider") != CODEX_PROVIDER_ID:
         return update(changes, user_id)
     ok = True
     if changes.get("key"):
-        ok = codex_auth.write_back(record.get("auth_path"), changes["key"], changes.get("refresh_token"))
+        ok = codex_auth.write_back(record.get("auth_path"), changes["key"], changes.get("refresh_token"),
+                                   renewed_from=record.get("refresh_token"))
     if "expired" in changes:
         fp = codex_auth.fingerprint(record.get("refresh_token")) if changes["expired"] else None
         ok = update({"expired_fingerprint": fp}, user_id) and ok
