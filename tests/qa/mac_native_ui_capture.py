@@ -204,6 +204,7 @@ def start(path, expected, role='island', timeout=10):
     assert path.parent.is_dir() and not path.exists() and not path.is_symlink(), 'capture needs a new owned path'
     assert not path.with_suffix('.capture.json').exists(), 'capture receipt already exists'
     observation = observe(expected, role)
+    assert observation['screen_capture_preflight'], 'QA app Screen Recording unavailable; no capture started'
     with _lock:
         _state = dict(observation, done=False, available=False, path=str(path))
     _worker = threading.Thread(target=_capture, args=(path, observation, timeout),

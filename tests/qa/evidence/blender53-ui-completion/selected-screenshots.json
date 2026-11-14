@@ -1,0 +1,54 @@
+{
+  "status": "Selected reviewed originals; not complete platform qualification",
+  "images": [
+    {
+      "file": "windows-idle-draft.png",
+      "sha256": "e9c6774c9ca1a7aa60aeaff56db16f15996a191e23dc7b9132bd3d71f1fcf63b",
+      "runtime": "1a9e791e3",
+      "scope": "Windows Vulkan; committed three-line draft",
+      "original": "build/qa/blender53-ui-completion/windows/evidence/ui-completion-d7c962ffb/workflow-corrected/windows_workflow_ui_e2e/native/003-populated-idle-buffer/desktop.png"
+    },
+    {
+      "file": "windows-tooltip-125.png",
+      "sha256": "451bca611ed016edcb31460b6d8aa29887af54f15aeb0342fa0c89e6e3549893",
+      "runtime": "1a9e791e3",
+      "scope": "Windows Vulkan; fresh 125% tooltip",
+      "original": "build/qa/blender53-ui-completion/windows/evidence/ui-completion-d7c962ffb/workflow-corrected/windows_workflow_ui_e2e/native/001-fresh-chat-tooltip-125/desktop.png"
+    },
+    {
+      "file": "windows-texturing-compact.png",
+      "sha256": "fe2e30927dec032d8c756052108b7eee4f68c7467ab7a13d14c8ebc8d45fc811",
+      "runtime": "1a9e791e3",
+      "scope": "Windows Vulkan; compact Texturing layout",
+      "original": "build/qa/blender53-ui-completion/windows/evidence/ui-completion-d7c962ffb/workflow-corrected/windows_workflow_ui_e2e/native/009-texturing-compact/desktop.png"
+    },
+    {
+      "file": "windows-splats-tab.png",
+      "sha256": "9acee13937bc71d34f89ad588d51f7d375c4df791a5f983f19849283fdfae64a",
+      "runtime": "1a9e791e3",
+      "scope": "Windows Vulkan; Splats tab local catalog UI fixture",
+      "original": "build/qa/blender53-ui-completion/windows/evidence/ui-completion-d7c962ffb/workflow-corrected/island_all_tabs_e2e/native/004-pane-SPLAT/desktop.png"
+    },
+    {
+      "file": "mac-red-native-user.png",
+      "sha256": "4172cbc0848fb610f01d89225e51c15daf3d3fffdaae164be9f4bc06e3e084e7",
+      "runtime": "1a9e791e3",
+      "scope": "User-supplied native screenshot of staged red backdrop; incomplete manual series",
+      "original": "build/qa/blender53-ui-completion/mac/manual-native/red-native-user.png"
+    },
+    {
+      "file": "windows-board-125-fixed.png",
+      "sha256": "128179bab27620ad567f76d790e8fadf0554428ada4552d0991848364b62b6d1",
+      "runtime": "58b795ae6",
+      "scope": "Windows Vulkan; Board menu opens at former resize-edge overlap, toolbar remains visible",
+      "original": "build/qa/blender53-ui-completion/windows/evidence/ui-completion-d7c962ffb/hit-zones-final/windows_moodboard_hit_zones_e2e/native/006-board-1.25-after/window_14876968.png"
+    },
+    {
+      "file": "windows-engine-resize-fixed.png",
+      "sha256": "14b3bcabc9bfd40b7bf5f4a82b9e51dc16e086920a826d67db25f91ae263048f",
+      "runtime": "58b795ae6",
+      "scope": "Windows Vulkan; native Engine toolbar resize preserved",
+      "original": "build/qa/blender53-ui-completion/windows/evidence/ui-completion-d7c962ffb/hit-zones-final/windows_moodboard_hit_zones_e2e/native/015-engine-toolbar-expanded/window_14876968.png"
+    }
+  ]
+}

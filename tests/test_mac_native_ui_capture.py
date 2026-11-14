@@ -99,3 +99,12 @@ def test_controller_denial_stops_before_any_app_observation(capture, monkeypatch
     with pytest.raises(AssertionError, match='Screen Recording unavailable'):
         capture.capture_controller(App(), tmp_path/'forbidden.png', {'pid': 41})
     assert not list(tmp_path.iterdir())
+
+
+def test_app_denial_stops_before_starting_capture_worker(capture, monkeypatch, tmp_path):
+    monkeypatch.setattr(capture, 'observe', lambda *args: observation())
+    monkeypatch.setattr(capture.threading, 'Thread',
+                        lambda *args, **kwargs: pytest.fail('denied app must not start capture'))
+    with pytest.raises(AssertionError, match='Screen Recording unavailable'):
+        capture.start(tmp_path/'forbidden.png', {'pid': 41})
+    assert not list(tmp_path.iterdir())
