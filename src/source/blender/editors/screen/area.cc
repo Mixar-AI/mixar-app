@@ -1450,6 +1450,16 @@ static bool region_azone_edge_poll(const ScrArea *area,
     return false;
   }
 
+  /* Zen's fixed Move/Rotate/Scale pill has no user-resizable strip. Its
+   * transparent TOOLS region still spans a full-height column; a native
+   * resize azone there can steal a painted Moodboard button's press before
+   * overlay region routing. Keep Engine resizing and hidden-toolbar reveal. */
+  if (!is_hidden && region->overlap && region->regiontype == RGN_TYPE_TOOLS &&
+      ui::mixar_area_floats_viewport_chrome(area))
+  {
+    return false;
+  }
+
   /* Mixar Zen moodboard drawer: View3D `TOOL_PROPS` is a fixed-width overlay,
    * not a user-resized strip. The overlapping transparent-region edge azone
    * (`pad_in` ≈ 8 UI units / v2d aspect) covers the grip's leading half, so a
