@@ -53,12 +53,31 @@ def test_profile_draws_sign_in_before_tools():
     ns = dict(NAMESPACE)
     layout = MagicMock()
     ns['draw_profile_sign_in'] = lambda layout, state: layout.record_sign_in()
+    ns['draw_profile_reauth'] = lambda layout, state: layout.record_reauth()
     exec(compile(ast.Module(body=[draw], type_ignores=[]), '<profile draw>', 'exec'), ns)
     ns['draw'](SimpleNamespace(layout=layout), SimpleNamespace(window_manager=wm()))
     assert [call[0] for call in layout.mock_calls] == ['record_sign_in', 'mixar_profile_card']
     layout.reset_mock()
     ns['draw'](SimpleNamespace(layout=layout), SimpleNamespace(window_manager=wm(mixie_chat_is_guest=False)))
     assert [call[0] for call in layout.mock_calls] == ['mixar_profile_card']
+    # AUTH-08: an account whose session expired explains it above its card.
+    layout.reset_mock()
+    ns['draw'](SimpleNamespace(layout=layout), SimpleNamespace(window_manager=wm(
+        mixie_chat_is_guest=False, mixie_chat_session_expired=True)))
+    assert [call[0] for call in layout.mock_calls] == ['record_reauth', 'mixar_profile_card']
+
+
+@pytest.mark.parametrize("pending", [False, True])
+def test_expired_account_profile_says_so_with_cancel_or_retry(pending):
+    layout = MagicMock()
+    login_panel.draw_profile_reauth(layout, wm(
+        mixie_chat_is_guest=False, mixie_chat_session_expired=True,
+        mixie_chat_is_logging_in=pending))
+    labels = [c.kwargs.get('text') for c in layout.mock_calls if c[0].endswith('label')]
+    ops = [c.args[0] for c in layout.mock_calls if c[0].endswith('operator')]
+    assert 'Session expired' in labels
+    assert ('Continue in your browser' in labels) is pending
+    assert ops == ['mixie_chat.cancel_login' if pending else 'mixie_chat.login']
 
 
 @pytest.mark.parametrize("guest", [False, True])

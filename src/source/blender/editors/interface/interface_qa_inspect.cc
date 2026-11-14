@@ -32,6 +32,7 @@
 #include "UI_interface_c.hh"
 
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_types.hh"
 
 #include "interface_intern.hh"
@@ -416,45 +417,46 @@ std::string Mixar_ui_qa_inspect_json(const wmWindowManager *wm)
          ",\"awaiting_draw\":" + (cat_stats.awaiting_draw ? "true" : "false") +
          ",\"next_frame_seconds\":" + std::to_string(cat_stats.next_frame_seconds) +
          "},\"chat_animation\":{\"ticks\":" + std::to_string(chat_stats.ticks) +
-         ",\"scheduled\":" + (chat_stats.scheduled ? "true" : "false") + "},\"windows\":[";
-  bool first_win = true;
-  for (const wmWindow &win_ref : wm->windows) {
-    const wmWindow *win = &win_ref;
-    if (!first_win) {
-      out += ',';
-    }
-    first_win = false;
-    out += "{\"ptr\":" + std::to_string(uintptr_t(win)) +
-           ",\"size\":[" + std::to_string(int(win->sizex)) + ',' +
-           std::to_string(int(win->sizey)) + "]}";
-  }
-  out += "],\n\"widgets\":[";
+         ",\"scheduled\":" + (chat_stats.scheduled ? "true" : "false") + "},\n\"widgets\":[";
 
+  /* Per window: `skipped` (wm_draw_update does not draw it: not on screen, so
+   * no widgets and nothing to capture) and `pending` (one of its regions
+   * awaits a redraw, so its export is incomplete). */
+  std::string windows;
   bool first_widget = true;
   bool pending = false;
   for (const wmWindow &win_ref : wm->windows) {
     const wmWindow *win = &win_ref;
     const bScreen *screen = WM_window_get_active_screen(win);
-    if (screen == nullptr) {
-      continue;
-    }
-    for (const ScrArea &area : screen->areabase) {
-      for (const ARegion &region : area.regionbase) {
-        qa_dump_region(out, pending, first_widget, win, &area, &region, false);
+    /* A skipped window never clears its redraw tags until shown again (the
+     * island resting as a pill), so it must not hold the dump pending. */
+    const bool skipped = screen == nullptr || Mixar_window_draw_skipped(win);
+    bool win_pending = false;
+    if (!skipped) {
+      for (const ScrArea &area : screen->areabase) {
+        for (const ARegion &region : area.regionbase) {
+          qa_dump_region(out, win_pending, first_widget, win, &area, &region, false);
+        }
+      }
+      /* Global areas: topbar / statusbar. */
+      for (const ScrArea &area : win->global_areas.areabase) {
+        for (const ARegion &region : area.regionbase) {
+          qa_dump_region(out, win_pending, first_widget, win, &area, &region, false);
+        }
+      }
+      /* Screen-level temporary regions: popups, menus, dropdowns, tooltips. */
+      for (const ARegion &region : screen->regionbase) {
+        qa_dump_region(out, win_pending, first_widget, win, nullptr, &region, true);
       }
     }
-    /* Global areas: topbar / statusbar. */
-    for (const ScrArea &area : win->global_areas.areabase) {
-      for (const ARegion &region : area.regionbase) {
-        qa_dump_region(out, pending, first_widget, win, &area, &region, false);
-      }
-    }
-    /* Screen-level temporary regions: popups, menus, dropdowns, tooltips. */
-    for (const ARegion &region : screen->regionbase) {
-      qa_dump_region(out, pending, first_widget, win, nullptr, &region, true);
-    }
+    pending |= win_pending;
+    windows += std::string(windows.empty() ? "" : ",") + "{\"ptr\":" +
+               std::to_string(uintptr_t(win)) + ",\"size\":[" + std::to_string(int(win->sizex)) +
+               ',' + std::to_string(int(win->sizey)) + "],\"skipped\":" +
+               (skipped ? "true" : "false") + ",\"pending\":" + (win_pending ? "true" : "false") +
+               '}';
   }
-  out += pending ? "\n],\"pending\":true}" : "\n],\"pending\":false}";
+  out += "\n],\"windows\":[" + windows + "],\"pending\":" + (pending ? "true" : "false") + '}';
   return out;
 }
 

@@ -102,3 +102,74 @@ def test_save_after_logout_does_not_refresh_picker(callbacks):
 
     assert pending == []
     assert wm.mixar_agent_model_byok_active is False
+
+
+def _submit(kind):
+    """A dialog request as the operators send it: epoch-bound, then counted."""
+    from mixar.modules.byok.core import byok_client
+    if kind == "save":
+        return byok_client._track(byok_ops._save_callback())
+    epoch = credential_state.current_epoch()
+    return byok_client._track(
+        lambda ok, n, err: byok_ops._on_delete_done(ok, n, err, epoch=epoch))
+
+
+def _land(done, kind, success):
+    if kind == "save":
+        done(success, {"byok_active": True} if success else None, None if success else "rejected")
+    else:
+        done(success, 1 if success else 0, None if success else "rejected")
+
+
+def _dialog(wm, state, key):
+    wm.byok_dialog_state, wm.byok_form_api_key = state, key
+    wm.byok_form_local_custom_key, wm.byok_last_error = "", ""
+
+
+OUTCOMES = [("save", True), ("save", False), ("delete", True), ("delete", False)]
+
+
+@pytest.mark.parametrize("outcome", OUTCOMES)
+def test_a_late_result_for_the_previous_account_leaves_the_next_accounts_save_alone(
+        callbacks, outcome):
+    """AUTH-17: account A's save/remove lands after logout while B's own save
+    is in flight. It must not flip B's SAVING to IDLE (that stops the redraw
+    pump, so B's Done never draws) nor wipe the key B just typed."""
+    from mixar.modules.byok.core import byok_client
+    wm, pending = callbacks
+    kind, success = outcome
+    late = _submit(kind)
+    credential_state.clear(wm)  # logout: A's epoch is now stale
+    byok_client.reset_in_flight()
+    _dialog(wm, "SAVING", "sk-typed-by-B")
+    own = byok_client._track(lambda *a: None)  # B's save, counted after the reset
+    try:
+        _land(late, kind, success)
+        assert wm.byok_dialog_state == "SAVING" and wm.byok_form_api_key == "sk-typed-by-B"
+        assert wm.byok_last_error == "" and pending == []
+    finally:
+        own.release()
+
+
+@pytest.mark.parametrize("outcome", OUTCOMES)
+@pytest.mark.parametrize("change", ["guest_sign_in", "card_removal"])
+def test_a_late_result_after_an_account_change_without_logout_releases_the_dialog(
+        callbacks, outcome, change):
+    """A guest's sign-in (`invalidate_agent_settings`: epoch bump + in-flight
+    reset, no dialog reset) or the chat card's Use credits removal
+    (`clear(loaded=True)`) bumps the epoch under a dialog closed with Esc
+    mid-request. Its late result is dropped, but the dialog it left busy is
+    released — else the redraw pump spins on SAVING for good."""
+    from mixar.modules.byok.core import byok_client
+    wm, pending = callbacks
+    kind, success = outcome
+    _dialog(wm, "SAVING" if kind == "save" else "REMOVING", "sk-typed-by-the-guest")
+    late = _submit(kind)
+    if change == "guest_sign_in":
+        credential_state.clear()
+        byok_client.reset_in_flight()
+    else:
+        credential_state.clear(wm, loaded=True)
+    _land(late, kind, success)
+    assert wm.byok_dialog_state == "IDLE" and wm.byok_form_api_key == ""
+    assert not byok_client.mutation_in_flight() and pending == []
