@@ -28,7 +28,7 @@ from . import shape
 
 MAX_PROMPT = 6000
 MAX_IMAGES = 4
-MAX_RULE = 4000
+MAX_RULE = 6400
 
 
 def main_window():
