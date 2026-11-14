@@ -116,3 +116,16 @@ def draw_profile_sign_in(layout, wm):
     action.scale_y = CARD_ROW_CTA
     draw_browser_sign_in(action, wm, card=True)
     layout.separator()
+
+
+def draw_profile_reauth(layout, wm):
+    """An account whose session expired: the shared feedback ("Session
+    expired", or the failure) and the browser sign-in in flight or a retry,
+    above the native card that still names the account."""
+    from mixar.modules.common.ui.constants import CARD_ROW_CTA
+
+    draw_login_feedback(layout, wm)
+    action = layout.column(align=True)
+    action.scale_y = CARD_ROW_CTA
+    draw_browser_sign_in(action, wm, card=True)
+    layout.separator()

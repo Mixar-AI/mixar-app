@@ -222,7 +222,7 @@ def read_auth_file(path: Optional[str]) -> CodexCredentials:
 
 
 def write_back(path: Optional[str], access_token: str, refresh_token: Optional[str] = None,
-               id_token: Optional[str] = None) -> bool:
+               id_token: Optional[str] = None, *, renewed_from: Optional[str] = None) -> bool:
     """Persist renewed tokens INTO the CLI's file, in its own layout.
 
     Only the token fields (and ``last_refresh``, as the CLI stamps it) change;
@@ -230,7 +230,9 @@ def write_back(path: Optional[str], access_token: str, refresh_token: Optional[s
     file uses. Written atomically (temp file in the same directory, then
     replace) with owner-only permissions. Returns False when the file is
     gone or not JSON — the sign-in was removed underneath us; nothing is
-    created from scratch.
+    created from scratch — and, given ``renewed_from`` (the refresh token the
+    renewal spent), when the file no longer holds it: a newer ``codex login``
+    replaced the sign-in during the refresh and is never overwritten.
     """
     resolved = resolve_auth_path(path)
     try:
@@ -241,6 +243,13 @@ def write_back(path: Optional[str], access_token: str, refresh_token: Optional[s
     if not isinstance(data, dict):
         return False
     target = data["tokens"] if isinstance(data.get("tokens"), dict) else data
+    if renewed_from is not None and _string(target.get("refresh_token")) != renewed_from:
+        return False
+    # The check narrows the race with a concurrent `codex login`, it does not
+    # close it: a login landing between this read and `os.replace` below is
+    # still overwritten. There is no cross-process lock that the Codex CLI and
+    # Mixar both honour, so the window is only kept short: one in-memory edit
+    # and a temp-file write.
     target["access_token"] = access_token
     if refresh_token:
         target["refresh_token"] = refresh_token

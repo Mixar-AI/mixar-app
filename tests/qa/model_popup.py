@@ -19,7 +19,19 @@ PICK = {'surface': 'model_card_row'}
 SETTINGS_ROW = {'surface': 'model_card_footer'}
 THINKING = {'surface': 'model_card_disclosure'}
 WM = 'bpy.context.window_manager'
-OPEN = f"bool(drv.find(**{CARD!r}))"
+# The dump omits every region awaiting a redraw (custom targets included), so
+# a missing card means "shut" only when the island windows read settled: None
+# while one is pending. One dump per read; only Agent Bubble windows count, so
+# a viewport that redraws every frame elsewhere cannot hold the read pending.
+# Builds without per-window flags fall back to the dump-wide one.
+STATE = ("(lambda raw, bubble: None if any(w.get('pending', raw.get('pending')) "
+         "for w in raw.get('windows', ()) if w['ptr'] in bubble) "
+         f"else any(w.get('surface') == {CARD['surface']!r} for w in raw['widgets']))("
+         "__import__('json').loads(bpy.data.window_managers[0].mixar_qa_ui_dump), "
+         "{w.as_pointer() for w in bpy.data.window_managers[0].windows "
+         "if any(a.type == 'AGENT_BUBBLE' for a in w.screen.areas)})")
+OPEN = f"{STATE} is True"
+SHUT = f"{STATE} is False"
 
 
 def chip(qa):
@@ -28,8 +40,13 @@ def chip(qa):
                          "wm.mixar_agent_chip_name, wm.mixar_agent_source_state]"))
 
 
-def is_open(qa):
-    return bool(qa.eval(f"result={OPEN}"))
+def is_open(qa, timeout=3):
+    end = time.monotonic() + timeout
+    while (state := qa.eval(f"result={STATE}")) is None:
+        if time.monotonic() >= end:
+            raise AssertionError("the UI dump stayed pending: card state unknown")
+        time.sleep(.05)
+    return state
 
 
 def open_popup(qa):
@@ -54,7 +71,7 @@ def press_on_card(qa, key):
 def close_popup(qa):
     if is_open(qa):
         press_on_card(qa, 'ESC')
-        qa.wait(f"not {OPEN}", timeout=5)
+        qa.wait(SHUT, timeout=5)
 
 
 def open_tab(qa):

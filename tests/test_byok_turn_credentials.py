@@ -16,6 +16,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "src" / "scripts"
 if str(SCRIPTS) not in sys.path:
@@ -278,11 +280,12 @@ def test_prepare_reads_the_store_off_thread_and_calls_back_on_main():
     assert "schedule_on_main(_deliver" in src
     assert "refresher=codex_auth.refresh_access_token" in src
     assert "key_store.materialize(record)" in src
-    assert "key_store.persist_changes(live, resolution.record_changes)" in src
+    assert "key_store.persist_changes(live, changes, user_id)" in src
     # The key field is sealed on the same worker thread, after the Codex
-    # write-back, and the catch-all fallback is keyless — never plaintext.
-    assert src.index("key_store.persist_changes(live, resolution.record_changes)") < src.index("resolution = sealed(resolution)")
-    assert src.index("resolution = sealed(resolution)") < src.index("except Exception as exc:  # noqa: BLE001 — never block the turn")
+    # write-back (`serve`), and the catch-all fallback is keyless — never plaintext.
+    assert "resolution = sealed(serve(record, active_provider=active_provider))" in src
+    assert src.index("key_store.persist_changes(live, changes, user_id)") < src.index("resolution = sealed(serve(")
+    assert src.index("resolution = sealed(serve(") < src.index("except Exception as exc:  # noqa: BLE001 — never block the turn")
 
 
 def test_codex_turn_reads_the_cli_file_and_writes_a_renewal_back(monkeypatch, tmp_path):
@@ -331,3 +334,130 @@ def test_key_material_never_reaches_a_log_line():
         for line in src.splitlines():
             if "logger." in line:
                 assert "api_key" not in line and "refresh_token" not in line and "access_token" not in line, line
+
+
+# ---------------------------------------------------------------------------
+# The sign-in changes while its refresh is in flight (KEY-22)
+# ---------------------------------------------------------------------------
+
+def _live_jwt(seconds: float) -> str:
+    import time
+
+    return _jwt({"exp": time.time() + seconds})
+
+
+def _sign_in(path, access, refresh):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"tokens": {"access_token": access, "refresh_token": refresh,
+                                           "account_id": "acct"}}))
+    path.chmod(0o600)
+
+
+def _race(monkeypatch, tmp_path, during):
+    """A Codex turn whose sign-in is stale (it must refresh) and whose
+    `during(auth_file, record)` runs while the refresh grant is in flight."""
+    auth_file = tmp_path / "old" / "auth.json"
+    _sign_in(auth_file, EXPIRED, "rt-old")
+    record = key_store.make_record("codex", None, auth_path=str(auth_file))
+    spent = []
+
+    def refresh(refresh_token):
+        spent.append(refresh_token)
+        during(auth_file, record)
+        return RefreshOutcome("ok", access_token="at-renewed", refresh_token="rt-renewed")
+
+    monkeypatch.setattr(codex_auth, "refresh_access_token", refresh)
+    monkeypatch.setattr(key_store, "update", lambda changes, user_id=None: True)
+    loaded = {"byok_is_active": True, "byok_state_loaded": True, "byok_current_provider": "codex"}
+    seen, _ = _run_prepare(monkeypatch, loaded, record)
+    return seen, auth_file, spent
+
+
+def test_a_sign_in_removed_during_its_refresh_refuses_the_turn(monkeypatch, tmp_path):
+    seen, auth_file, spent = _race(monkeypatch, tmp_path, lambda f, _r: f.unlink())
+    assert spent == ["rt-old"]
+    assert seen == [({}, {"message": codex_auth.MSG_FILE_MISSING, "code": BYOK_CODEX_EXPIRED_CODE})]
+    assert not auth_file.exists()                       # never recreated
+
+
+def test_a_sign_in_that_turns_unwritable_during_its_refresh_refuses_the_turn(monkeypatch, tmp_path):
+    import os
+
+    def lock(f, _r):
+        f.parent.chmod(0o500)
+
+    try:
+        seen, auth_file, spent = _race(monkeypatch, tmp_path, lock)
+        if os.access(str(auth_file.parent), os.W_OK):
+            pytest.skip("directory permissions are not enforced here (root?)")
+        assert spent == ["rt-old"]                      # one grant, never a second one
+        assert seen == [({}, {"message": codex_auth.MSG_FILE_NOT_WRITABLE,
+                              "code": BYOK_CODEX_REFRESH_FAILED_CODE})]
+        assert json.loads(auth_file.read_text())["tokens"]["refresh_token"] == "rt-old"
+    finally:
+        (tmp_path / "old").chmod(0o700)
+
+
+def test_a_newer_codex_login_during_the_refresh_is_kept_and_sent(monkeypatch, tmp_path):
+    current = _live_jwt(3 * CODEX_REFRESH_MARGIN_S)
+
+    def login(f, _r):
+        _sign_in(f, current, "rt-cli")
+
+    seen, auth_file, spent = _race(monkeypatch, tmp_path, login)
+    assert spent == ["rt-old"]
+    assert seen == [({"byok_key": current, "byok_account_id": "acct"}, None)]
+    assert json.loads(auth_file.read_text())["tokens"]["refresh_token"] == "rt-cli"   # not overwritten
+
+
+def test_a_reference_switched_during_the_refresh_sends_the_new_sign_in(monkeypatch, tmp_path):
+    current = _live_jwt(3 * CODEX_REFRESH_MARGIN_S)
+    other = tmp_path / "new" / "auth.json"
+
+    def switch(_f, record):
+        _sign_in(other, current, "rt-other")
+        record["auth_path"] = str(other)                # the store now names another file
+
+    seen, auth_file, spent = _race(monkeypatch, tmp_path, switch)
+    assert spent == ["rt-old"]
+    assert seen == [({"byok_key": current, "byok_account_id": "acct"}, None)]
+    # The renewal still lands in the file it renewed: its CLI is not signed out.
+    assert json.loads(auth_file.read_text())["tokens"]["refresh_token"] == "rt-renewed"
+    assert json.loads(other.read_text())["tokens"]["refresh_token"] == "rt-other"
+
+
+def test_a_failed_write_back_never_spends_the_refresh_token_twice(monkeypatch, tmp_path):
+    """The write-back fails while the file still reads as writable (a Windows
+    sharing lock, a full disk): the file keeps the token the renewal spent, so
+    the second pass refuses instead of refreshing it again (a reuse the
+    endpoint answers as revoked)."""
+    import os
+
+    def fail_replace(*_a, **_k):
+        raise OSError("sharing violation")
+
+    monkeypatch.setattr(os, "replace", fail_replace)
+    seen, auth_file, spent = _race(monkeypatch, tmp_path, lambda _f, _r: None)
+    assert spent == ["rt-old"]
+    assert seen == [({}, {"message": codex_auth.MSG_FILE_NOT_WRITABLE,
+                          "code": BYOK_CODEX_REFRESH_FAILED_CODE})]
+    assert json.loads(auth_file.read_text())["tokens"]["refresh_token"] == "rt-old"
+    assert [p.name for p in auth_file.parent.iterdir()] == ["auth.json"]   # temp file removed
+
+
+def test_a_sign_in_that_changes_under_every_renewal_is_served_as_it_is_now(monkeypatch, tmp_path):
+    """Two renewals in a row are superseded by new logins: the third state is
+    served without renewing again — its token when still valid, else an
+    accurate "expired" refusal, never a "not writable" one."""
+    logins = iter([(EXPIRED, "rt-cli-1"), (_live_jwt(3 * CODEX_REFRESH_MARGIN_S), "rt-cli-2")])
+    state = {}
+
+    def relogin(f, _r):
+        access, refresh = next(logins)
+        state["current"] = access
+        _sign_in(f, access, refresh)
+
+    seen, auth_file, spent = _race(monkeypatch, tmp_path, relogin)
+    assert spent == ["rt-old", "rt-cli-1"]
+    assert seen == [({"byok_key": state["current"], "byok_account_id": "acct"}, None)]
+    assert json.loads(auth_file.read_text())["tokens"]["refresh_token"] == "rt-cli-2"
