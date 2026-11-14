@@ -427,8 +427,10 @@ def _apply_settings(scene, set_value, width=0, height=0, engine="", max_faces=0,
         # have changed the preference this session without saving it.
         gpu = (render_device.use_gpu() if use_gpu is None
                else bool(use_gpu) and render_device.gpu_enabled())
+        # The private scene can inherit GPU from startup or a saved file.
+        # An explicit CPU choice must override that value for this job too.
+        set_value(scene.cycles, "device", "GPU" if gpu else "CPU")
         if gpu:
-            set_value(scene.cycles, "device", "GPU")
             # Denoise where it renders: the CPU OpenImageDenoise kernel crashed
             # Mixar mid-preview (CPUInputProcessKernel_run_f32, Sky Temple QA
             # run, Oct 30) with the GPU rendering.

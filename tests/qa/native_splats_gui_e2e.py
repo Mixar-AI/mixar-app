@@ -4,6 +4,8 @@
 """Free native splat GUI replay in an isolated QA app, with no backend calls.
 
 Requires QA_HARNESS, QA_SCENARIO_OUT, MIXAR_QA_PORT and optionally QA_CLIENT_ROOT.
+QA_SPLAT_PREVIEW_DEVICE optionally selects CPU/GPU/AUTO for the preview only,
+restoring the original scene preference; unset uses production defaults.
 Reuses headless fixture writers. Drive File > Import, the real file browser,
 viewport selection/hide/delete/undo, and File > Open legacy-file migration.
 Read all emitted PNGs; state success alone does not establish visual quality.
@@ -74,10 +76,8 @@ def import_file(qa, out, path, expected):
     return value
 
 
-def inspection_preview(qa, out):
+def _inspection_preview(qa, out, key):
     """Exercise the same local entry point used by engine=splat agent captures."""
-    import uuid
-    key = uuid.uuid4().hex
     module = "__import__('mixar.modules.space_mixie_chat.core.preview_render',fromlist=['poll'])"
     baseline = qa.eval(READ)
     settings = "result={'engine':drv.main_window().scene.render.engine,'camera':str(drv.main_window().scene.camera),'world':str(drv.main_window().scene.world),'objects':len(bpy.data.objects),'scenes':len(bpy.data.scenes)}"
@@ -106,6 +106,52 @@ result=value
     value['source_unchanged'] = True
     (out / 'inspection-engine-splat.json').write_text(json.dumps(value, indent=2))
     return value
+
+
+def inspection_preview(qa, out):
+    import uuid
+    key = uuid.uuid4().hex
+    device = os.environ.get('QA_SPLAT_PREVIEW_DEVICE', '').upper()
+    assert device in ('', 'CPU', 'GPU', 'AUTO'), device
+    original = qa.eval("result=drv.main_window().scene.mixar_paint_preferences.default_render_device")
+    scope = {'request_device': device or 'production-default', 'original_preference': original,
+             'key': key, 'automatic_fallback': False}
+    try:
+        if device:
+            qa.eval(f"drv.main_window().scene.mixar_paint_preferences.default_render_device={device!r}\nresult=True")
+        result = _inspection_preview(qa, out, key)
+        scope['effective_device'] = result['render']['device']
+        if device == 'CPU':
+            assert scope['effective_device'] == 'CPU', scope
+        result['device_scope'] = scope
+        return result
+    finally:
+        # Cancel only a worker belonging to this exact replay request. A failed
+        # bounded wait must not leave a process rendering after the case ends.
+        scope['cleanup'] = qa.eval(f"""
+from mixar.modules.space_mixie_chat.core import preview_render as p
+from mixar.modules.common.render_worker import supervisor
+job=p._job
+cleanup={{'cancelled_worker':None,'native_pending':False}}
+if job is not None and job['key']=={key!r}:
+    if job.get('worker'):
+        cleanup['cancelled_worker']=job['worker']
+        cleanup['state_before_cancel']=supervisor.poll(job['worker'])
+        supervisor.cancel(job['worker'])
+        p.poll({key!r})
+    else:
+        cleanup['native_pending']=True
+result=cleanup
+""")
+        if scope['cleanup']['native_pending']:
+            # The guarded native fallback is the only remaining render, so its
+            # ordinary Escape action cannot cancel another controller's job.
+            qa.press('ESC', window=viewport_keyboard(qa))
+            qa.wait("not bpy.app.is_job_running('RENDER')", timeout=10)
+        qa.eval(f"drv.main_window().scene.mixar_paint_preferences.default_render_device={original!r}\nresult=True")
+        scope['preference_restored'] = qa.eval("result=drv.main_window().scene.mixar_paint_preferences.default_render_device") == original
+        (out / 'inspection-device-scope.json').write_text(json.dumps(scope, indent=2))
+        assert scope['preference_restored'], scope
 
 
 def run(qa):
@@ -191,7 +237,7 @@ result=[list(row) for row in matrix]
         assert qa.eval("result=bpy.data.node_groups.get('KIRI_3DGS_Render_GN') is None")
         result['stages']['legacy_file'] = migrated
         result['stages']['inspection_preview'] = qa.step('native-engine-splat-preview', inspection_preview, qa, out)
-        result['ok'] = True
+        result['completed'] = True
         return result
     finally:
         (out / 'native-splats-gui.json').write_text(json.dumps(result, indent=2))

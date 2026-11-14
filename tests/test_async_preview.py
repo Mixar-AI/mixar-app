@@ -98,7 +98,7 @@ def test_start_is_native_async_idempotent_and_reports_the_job(preview):
     assert first["status"] == "running"
     assert first["job_id"] == KEY and first["scene_session"] == "sess-1"
     render = first["render"]
-    assert (render["engine"], render["device"], render["samples"]) == ("CYCLES", "GPU", 32)
+    assert (render["engine"], render["device"], render["samples"]) == ("CYCLES", "CPU", 32)
     assert (render["width"], render["height"]) == (768, 576)
     assert render["elapsed_seconds"] is None
     preview.bpy.app.is_job_running.return_value = True
