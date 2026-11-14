@@ -43,6 +43,8 @@ def _settle(qa):
 
 def _frame(qa, expected, role, value=None):
     """Own-process AppKit frame fixture, never a claim of native drag input."""
+    qa.wait(f"bpy.app.driver_namespace[{KEY!r}]['native']['geometry_ready']({expected!r},{role!r})",
+            timeout=3)
     return qa.eval(f'''
 import ctypes as ct
 ns=bpy.app.driver_namespace[{KEY!r}]['native']

@@ -49,6 +49,13 @@
       "runtime": "58b795ae6",
       "scope": "Windows Vulkan; native Engine toolbar resize preserved",
       "original": "build/qa/blender53-ui-completion/windows/evidence/ui-completion-d7c962ffb/hit-zones-final/windows_moodboard_hit_zones_e2e/native/015-engine-toolbar-expanded/window_14876968.png"
+    },
+    {
+      "file": "mac-blue-native-user.png",
+      "sha256": "0e68eb99b23193281d989482b8aa11d2de546992dfc5757585291cde9b700d50",
+      "runtime": "1a9e791e3",
+      "scope": "User-supplied native blue-backdrop screenshot; red/blue empty-island pair reviewed; remaining manual lifecycle/contrast series pending",
+      "original": "build/qa/blender53-ui-completion/mac/manual-native/blue-native-user.png"
     }
   ]
 }

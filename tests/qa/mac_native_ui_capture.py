@@ -39,6 +39,11 @@ class Rect(ct.Structure):
 _lock = threading.Lock()
 _state = {'done': True, 'available': False, 'reason': 'not started'}
 _worker = None
+_last_geometry = {}
+
+
+class GeometryPending(AssertionError):
+    """AppKit and WindowServer have not published the same frame yet."""
 
 
 def _identity(expected):
@@ -153,7 +158,9 @@ def observe(expected, role='island'):
         cg = observer.cg_window(number)
         if cg:
             assert cg['pid'] == identity['pid'] and cg['number'] == number, 'native window ownership changed'
-            assert all(abs(a-b) <= 1 for a, b in zip(cg['bounds'], bounds)), 'CG/AppKit geometry disagreement'
+            if not all(abs(a-b) <= 1 for a, b in zip(cg['bounds'], bounds)):
+                raise GeometryPending(f'CG/AppKit geometry disagreement for {number}: '
+                                      f'CG={cg["bounds"]}, AppKit={bounds}')
         windows.append({'number': number, 'title': title, 'role': kind, 'bounds_points': bounds,
                         'backing_scale': backing, 'cg': cg,
                         'material': observer.material(win) if bubble else None})
@@ -161,6 +168,23 @@ def observe(expected, role='island'):
     return {'identity': identity, 'window': windows[0],
             'screen_capture_preflight': bool(observer.cg.CGPreflightScreenCaptureAccess()),
             'permission_requested': False}
+
+
+def geometry_ready(expected, role='island'):
+    """Read-only probe for a bounded controller wait; never repeats an action."""
+    try:
+        observed = observe(expected, role)
+    except GeometryPending:
+        _last_geometry.pop(role, None)
+        return False
+    window = observed['window']
+    if window['cg'] is None:
+        _last_geometry.pop(role, None)
+        return False
+    signature = (window['number'], tuple(window['bounds_points']), window['backing_scale'])
+    previous = _last_geometry.get(role)
+    _last_geometry[role] = signature
+    return previous == signature
 
 
 def _capture(path, observation, timeout):

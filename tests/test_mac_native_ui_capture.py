@@ -108,3 +108,26 @@ def test_app_denial_stops_before_starting_capture_worker(capture, monkeypatch, t
     with pytest.raises(AssertionError, match='Screen Recording unavailable'):
         capture.start(tmp_path/'forbidden.png', {'pid': 41})
     assert not list(tmp_path.iterdir())
+
+
+def test_geometry_probe_requires_two_matching_observations_after_transition(capture, monkeypatch):
+    stable = {'window': {'number': 12, 'bounds_points': [5, 7, 100, 50],
+                         'backing_scale': 2, 'cg': {'number': 12}}}
+    observations = iter([capture.GeometryPending('native frame still settling'), stable, stable,
+                         {'window': dict(stable['window'], number=13)},
+                         {'window': dict(stable['window'], number=13)}])
+    def observe(*args):
+        value = next(observations)
+        if isinstance(value, Exception):
+            raise value
+        return value
+    monkeypatch.setattr(capture, 'observe', observe)
+    assert [capture.geometry_ready({}) for _ in range(5)] == [False, False, True, False, True]
+
+
+def test_geometry_probe_does_not_hide_wrong_process(capture, monkeypatch):
+    def observe(*args):
+        raise AssertionError('wrong QA process')
+    monkeypatch.setattr(capture, 'observe', observe)
+    with pytest.raises(AssertionError, match='wrong QA process'):
+        capture.geometry_ready({})

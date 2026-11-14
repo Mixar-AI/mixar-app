@@ -43,12 +43,18 @@ that replay. These results are separate from the earlier UI pass.
   queried by a stale widget type, and an attachment-menu outside click could
   accidentally open a folder picker. Original failures remain evidence;
   corrected scenarios require fresh state and visual verification.
+- Immediately after recreating the Mac island, AppKit and WindowServer briefly
+  disagreed on its geometry. The first staging attempt failed and restored all
+  fixtures. The observer now waits up to three seconds for two agreeing native
+  snapshots before setting a frame; ownership failures still stop immediately
+  and no input action is retried. Fresh staging succeeds; its user screenshot
+  remains pending.
 
 ## Current platform evidence
 
 | Platform | Established | Still pending |
 | --- | --- | --- |
-| macOS / Metal / Apple M4 | All eight tabs and scene drafts; Zen, Engine, Texturing and menus; real native pill/island drag and restore state; framebuffer images reviewed. Shared toolbar candidate builds successfully | Complete native compositor screenshot series, final composer interaction and shared-toolbar GUI replays |
+| macOS / Metal / Apple M4 | All eight tabs and scene drafts; Zen, Engine, Texturing and menus; real native pill/island drag and restore state; framebuffer images reviewed. User-supplied red/blue native pair passes empty-island backdrop response and blur review. Shared toolbar candidate builds successfully | Remaining native lifecycle and bright/dark screenshot series, final composer interaction and shared-toolbar GUI replays |
 | Linux / NVIDIA L4 / X11 | OpenGL and Vulkan native compositor, lifecycle and broad UI pass; 88 original screenshots reviewed. Subsequent shared-toolbar fix passes its targeted OpenGL replay with 17 native originals reviewed; both cleanup receipts verified | None within this matrix; Wayland Vulkan remains unqualified |
 | Windows / Tesla T4 / Vulkan | Ten final cases pass state and scoped vision: tabs, scene drafts, composer, menus/workspaces, Moodboard controls/help and shared-toolbar fix. All final images accounted for; owned cleanup and four lane releases verified | None within this matrix; known visibility limits remain below |
 
@@ -76,11 +82,16 @@ failure: the test expects `CinemaPillOnB`, while unchanged drawer code uses
 
 Mac Screen Recording remains disabled at the user's request. The harness stages
 controlled views and records owned-process identity, native material and geometry;
-the user supplies native screenshots. The first red-backdrop image shows tinted,
-blurred background beneath sharp controls. A red/blue pair and bright/dark
-readability views are still required. Framebuffer images are not native glass
-evidence, and a manually supplied screenshot is not an automatically synchronized
-native capture.
+the user supplies native screenshots. The reviewed red/blue pair shows the island
+changing tint with the backdrop, strongly attenuating the fine bands beneath it
+and retaining sharp foreground controls. Four unchanged control/chrome anchors
+confirm the framing offset between the images; no resizing or warping is used.
+The [scoped visual review](mac-red-blue-visual-review.json) and
+[descriptive pixel measurements](mac-red-blue-metrics.json) preserve the limits:
+these are uncalibrated screenshot values, not optical transmittance or an
+automatic capture pass. Recreated/moved/resized and pill views, bright/dark
+populated readability, and normal-scene restoration still need manual images.
+Framebuffer images cannot establish native glass behavior.
 
 The first Windows workflow review accounts for 115 PNG paths: 111 distinct
 images and four exact duplicates. All images were reviewed in indexed sheets
@@ -101,8 +112,9 @@ Selected unchanged native originals show the Windows
 [committed draft](windows-idle-draft.png), [125% tooltip](windows-tooltip-125.png),
 [compact Texturing layout](windows-texturing-compact.png) and
 [Splats tab](windows-splats-tab.png). The latter uses a local QA catalog fixture,
-not a provider submission. The [Mac red backdrop](mac-red-native-user.png) is the
-user-supplied image; it is only one stage of the pending manual series.
+not a provider submission. The [Mac red backdrop](mac-red-native-user.png) and
+[blue backdrop](mac-blue-native-user.png) are unchanged user-supplied originals;
+their reviewed pair covers only the empty-island stage of the manual series.
 [Hashes and capture scope](selected-screenshots.json) accompany these originals.
 
 [Windows results](windows-results.json) and [detailed scope](windows-details.md)
@@ -129,7 +141,7 @@ Engine drawing stalls are distinguished in the detailed report.
 the resize-dispatch guard and replay bindings. Mac's automatic native capture
 case requires an existing Screen Recording grant and cannot pass from manual
 images or framebuffer substitutes. The manual staging and capture helpers have
-16 passing ownership, permission and failure-cleanup tests; these are not a
+18 passing ownership, permission, geometry-settling and failure-cleanup tests; these are not a
 native GUI verdict.
 
 Full local run records, original diagnostics, screenshot hashes and review
