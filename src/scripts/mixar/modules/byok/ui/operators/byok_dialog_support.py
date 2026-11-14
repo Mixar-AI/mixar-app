@@ -46,6 +46,27 @@ def turn_in_flight(context) -> bool:
         return False
 
 
+def wipe_form_secrets(wm):
+    """Remove transient API/token material from the live WindowManager."""
+    for attr in ('byok_form_api_key', 'byok_form_local_custom_key'):
+        try:
+            setattr(wm, attr, '')
+        except Exception:
+            pass
+
+
+def settle_stale_result(wm) -> None:
+    """A save / removal answered for an account the mirror no longer shows
+    (logout, a guest's sign-in, the chat card's removal). Release the dialog
+    it left busy (else the redraw pump spins on SAVING) and the key typed
+    for it — unless a newer request is counted: after a logout the next
+    account's own save holds the dialog, and its SAVING / form are its own."""
+    if (getattr(wm, 'byok_dialog_state', '') in ('SAVING', 'REMOVING')
+            and not byok_client.mutation_in_flight()):
+        wipe_form_secrets(wm)
+        wm.byok_dialog_state = 'IDLE'
+
+
 def saving(wm) -> bool:
     return getattr(wm, 'byok_dialog_state', '') == 'SAVING'
 

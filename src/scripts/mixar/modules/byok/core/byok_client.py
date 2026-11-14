@@ -411,14 +411,20 @@ def _put_sealed(provider, model, api_key, base_url, supports_vision, account_id,
             base_url=base_url, supports_vision=supports_vision,
             account_id=account_id,
         )
-        return _translate(response)
+        success, data, err = _translate(response)
     except Exception as e:
         if envelope is not None and not retried and is_stale_transport_key(e):
             transport_seal.invalidate()
             return _put_sealed(provider, model, api_key, base_url, supports_vision,
                                account_id, retried=True)
-        logger.warning("BYOK save_credentials failed: %s", e)
-        return _translate_exception(e)
+        success, data, err = _translate_exception(e)
+    if api_key and len(api_key) >= 8 and err:
+        # Shown, toasted and logged: never with the key it may echo (a short
+        # local key like "x" is no secret and would mangle the message).
+        err = err.replace(api_key, "••••")
+    if not success:
+        logger.warning("BYOK save_credentials failed: %s", err)
+    return success, data, err
 
 
 def error_code(exc: Exception) -> str:
