@@ -125,7 +125,7 @@ result = dict(order=list(s._provider_order), providers=[i[0] for i in s.get_prov
         detail = next((t[1] for t in tabs if t[0] == shown), '')
         check(detail != 'settings', "keyboard never lands on an action tab", key=key, shown=shown, tabs=tabs)
     mp.press_on_card(qa, 'ESC')
-    qa.wait(f"not {mp.OPEN}", timeout=5)
+    qa.wait(mp.SHUT, timeout=5)
 
     progress(qa, '5. click-away reaches the composer')
     # 5. click-away reaches the composer
@@ -141,7 +141,7 @@ result = dict(order=list(s._provider_order), providers=[i[0] for i in s.get_prov
     check(not (kx0 <= x <= kx1), "a composer point outside the card", composer=composer[0]['rect'], card=card['rect'])
     before = progress(qa, '5. before click-away')
     qa.cmd('click_xy', window=card['window'], x=x, y=(cy0 + cy1) // 2)
-    qa.wait(f"not {mp.OPEN}", timeout=5)
+    qa.wait(mp.SHUT, timeout=5)
     check(progress(qa, '5. after click-away') == before, "a click-away picks nothing")
     qa.press('ESC')  # leave the composer's text edit
 
