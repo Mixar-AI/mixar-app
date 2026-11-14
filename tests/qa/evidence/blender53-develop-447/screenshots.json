@@ -79,7 +79,57 @@
       "height": 784,
       "client_commit": "34a6797f4bf392ec173caf1128ba4336e431c30e",
       "reviewed": true,
-      "supports": "Reviewed AUTH-12 native desktop: preserved synthetic transcript and draft, neutral text field, blurred scene behind sharp island controls. Remaining Windows visual review is pending."
+      "supports": "Reviewed AUTH-12 native desktop: preserved synthetic transcript and draft, neutral text field, blurred scene behind sharp island controls."
+    },
+    {
+      "file": "windows-vulkan-glass.png",
+      "sha256": "783a454dda2ed8aaf39fc7d546f77441169d35e0d985ca036ab3ef8f5ca6e950",
+      "bytes": 211670,
+      "width": 1312,
+      "height": 784,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Actual Vulkan native desktop: blurred cube behind sharp readable transcript, rounded island and neutral gray composer."
+    },
+    {
+      "file": "windows-vulkan-bright.png",
+      "sha256": "d299b223e4b516277a76b087a4ca96c4dbf660996a16fbe49b8d4f37a3de7f36",
+      "bytes": 36335,
+      "width": 678,
+      "height": 407,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Default neutral transcript over bright backdrop; paired bright/dark native probes establish opacity 0.8784."
+    },
+    {
+      "file": "windows-legacy-migrated.png",
+      "sha256": "41731f5cece82290bc64cea1bff868e0c52cb455950216c0d908172387b2f20a",
+      "bytes": 642959,
+      "width": 1280,
+      "height": 669,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Settled visible native cloud after saved legacy KIRI fixture migration; real GUI import and conversion state asserted."
+    },
+    {
+      "file": "windows-preview-cpu.png",
+      "sha256": "b3b503f02432a4d3fcae231200057f754d9efaed2caa3062cef7a322a8088b41",
+      "bytes": 74770,
+      "width": 320,
+      "height": 240,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Visible cloud from production engine=splat CPU request; actual CPU 5.336s, source unchanged and AUTO restored."
+    },
+    {
+      "file": "mac-metal-splat.png",
+      "sha256": "673cf3844fa0f0db9e5eedc8ef3a4cf097c6df75e34f459bbdd57fd31c4a8362",
+      "bytes": 76891,
+      "width": 320,
+      "height": 240,
+      "client_commit": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "reviewed": true,
+      "supports": "Explicit Apple M4 Metal GPU, CPU disabled, GPU denoising, 320x240, 8 samples, 1.596s after cache warming. Headless fixture only; no fresh full GUI GPU-worker qualification."
     }
   ]
 }

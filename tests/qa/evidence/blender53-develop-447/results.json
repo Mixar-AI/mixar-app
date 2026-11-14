@@ -1,6 +1,6 @@
 {
   "record_date": "2026-11-14",
-  "status": "Focused state checks pass; selected screenshots reviewed. Windows remaining visual review pending; hardware and fixture gaps retained.",
+  "status": "Focused state and visual checks pass; all 481 Windows PNG paths accounted for. Hardware, latency and fixture limits retained.",
   "revisions": {
     "mixar_version": "4.4.7",
     "blender_version": "5.3.0",
@@ -98,7 +98,7 @@
     },
     "limits": [
       "Framebuffer screenshots do not establish native OS translucency.",
-      "Cycles Metal hardware rendering is unqualified; see metal_diagnostic."
+      "Small explicit Metal headless outputs passed after long compilation; first-use latency and fresh full GUI GPU-worker path remain unqualified."
     ]
   },
   "windows": {
@@ -123,22 +123,50 @@
       "automatic_fallback": false
     },
     "visual_review": {
-      "status": "PARTIAL; remaining transfer approval pending",
-      "reviewed_unique_images": 31,
-      "reviewed_scope": [
-        "startup",
-        "AUTH-08",
-        "AUTH-10",
-        "AUTH-12"
+      "status": "COMPLETE_WITH_SCOPE_LIMITS",
+      "reviewed_png_paths": 481,
+      "scope_counts": {
+        "auth_codex_hidden_ui": 108,
+        "glass_lifecycle": 174,
+        "opacity": 130,
+        "native_splats_vulkan_ui": 69
+      },
+      "review_method": "Original images and exact SHA256 duplicate mapping; opacity uses 18 inspected contact sheets with native-size island and small-window views, reduced desktop layouts, plus full originals. Initial 5 headless guard-failure images remain diagnostic.",
+      "findings": "No unintended green composer or missing glass reproduced. Sharp text, blur, rounded corners, move/resize/recreate/save/load, hidden/pill restore, settled splat editing and migration verified within fixture scope.",
+      "opacity_by_renderer": {
+        "OpenGL": {
+          "default": 0.8784,
+          "custom": 0.949,
+          "opaque": 1.0
+        },
+        "Vulkan": {
+          "default": 0.8784,
+          "custom": 0.949,
+          "opaque": 1.0
+        }
+      },
+      "representatives": [
+        "windows-composer-native.png",
+        "windows-vulkan-glass.png",
+        "windows-vulkan-bright.png",
+        "windows-legacy-migrated.png",
+        "windows-preview-cpu.png"
       ],
-      "representative": "windows-composer-native.png",
-      "remaining": "Remaining GUI/native-splat/Vulkan/glass screenshots have state receipts but are not claimed visually reviewed.",
-      "blocker": "Automatic approval review rejected the canonical private S3 transit transfer twice; no bypass attempted."
+      "transfer": "User-approved private transit completed; archive deleted and absence verified.",
+      "distinct_image_hashes": 352,
+      "byte_identical_duplicate_paths": 129,
+      "diagnostic_guard_failure_paths": 5,
+      "cold_compile_limited_paths": 5,
+      "unreviewed_paths": 0,
+      "digest_mismatches": 0
     },
     "limits": [
       "KEY-22 has 13 applicable cases; Windows directory ACL denial and owner-only ACL confinement are untested.",
       "CUDA disabled in this local build; CUDA/OptiX and GPU Cycles rendering unqualified.",
-      "Synthetic credit labels do not certify live account balances."
+      "Synthetic credit labels do not certify live account balances.",
+      "Initial headless launch missed the memory-store guard; its 5 renders remain diagnostic. Corrected guarded rerun passed all 6 cases.",
+      "Cold default EEVEE captures are not settled shading proof; explicit CPU replay provides settled comparisons.",
+      "Fixture resets can leave a compact unlabeled chip and stale thumbnails; native/fresh captures restore the model label. No refresh-timing or animation-performance claim."
     ]
   },
   "fixes": {
@@ -186,9 +214,36 @@
       "binary_files": 152,
       "bytes": 132765152
     },
-    "conclusion": "Not established as a splat-specific or GPU-denoising-only regression. No Blender 5.2 control; new versus preexisting remains unclassified. Cache progress does not prove eventual success.",
-    "gpu_render_visual_pass": false,
-    "owned_children_terminated": true
+    "conclusion": "Initial 120s probes timed out; a longer same-cache follow-up completed. See followup: evidence supports compiler latency, not permanent deadlock; no 5.2 baseline.",
+    "gpu_render_visual_pass": true,
+    "owned_children_terminated": true,
+    "followup": {
+      "revision": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "device": "Apple M4 METAL GPU enabled, CPU disabled; GPU denoising enabled",
+      "size": [
+        320,
+        240
+      ],
+      "samples": 8,
+      "cube_render_seconds": 160.32,
+      "warm_cube_render_seconds": 1.044,
+      "splat_render_seconds": 1.596,
+      "outputs_reviewed": 3,
+      "returncodes": [
+        0,
+        0,
+        0
+      ],
+      "cache": "Same isolated cache, already partially populated by prior probes; not a pristine-cache benchmark.",
+      "classification": "Functional GPU fixture pass with significant first-use compiler latency.",
+      "limits": [
+        "No Blender 5.2 comparison.",
+        "No fresh full GUI production-default GPU-worker replay.",
+        "Small 400-point fixture; not large-world or general GPU qualification.",
+        "First-use 160s delay is not a responsiveness pass."
+      ],
+      "owned_children_stopped": true
+    }
   },
   "standalone": {
     "affected_tests_passed": 629,
@@ -236,12 +291,21 @@
       "shared_blender_52_pins_unchanged": true,
       "owned_app_workers_stopped": true,
       "owned_scheduled_tasks_removed": 6,
-      "lanes_released": 4
+      "lanes_released": 4,
+      "transit_archive_deleted_and_absence_verified": true
     },
     "mac": {
       "owned_final_app_stopped": true,
       "owned_metal_diagnostic_children_exited": true
     }
   },
-  "evidence_policy": "Sanitized summary and eight original PNGs only. No credential stores, profiles, raw observations, account identifiers, job/control tokens or full fixture data included."
+  "evidence_policy": "Sanitized summary and 13 original PNGs only. No credential stores, profiles, raw observations, account identifiers, job/control tokens or full fixture data included.",
+  "harness": {
+    "pr": 80,
+    "commit": "c1aa715565ba730a178dc0050555801d6b0cc2cd",
+    "focused_tests_passed": 61,
+    "subtests_passed": 29,
+    "catalog_cases": 475,
+    "coverage": "HARNESS-15 and CPU-only IN-16 verified on macOS, Linux and Windows; no expansion of unexecuted GPU cases."
+  }
 }
