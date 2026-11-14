@@ -122,6 +122,12 @@ void MIXAR_OT_bubble_pill_voice(wmOperatorType *ot);
  * over a frozen Sketch viewport continues after a pill control is clicked. */
 void agent_bubble_return_key_to_host();
 
+/* `window` is the minimised island's resting pill (macOS/Windows: the pill
+ * window; Linux: the island window itself while collapsed). The open
+ * island's small status pill is excluded. */
+struct wmWindow;
+bool agent_bubble_is_resting_pill_window(const wmWindow *window);
+
 /** \} */
 
 }  // namespace blender
