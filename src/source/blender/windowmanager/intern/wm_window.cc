@@ -1307,7 +1307,10 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
            * xfwm4 frames a DIALOG at first map and later ignores Motif
            * decoration changes once the rounded bounding shape exists. */
           Mixar_GHOST_RequestNextWindowCustomDecoration();
-          if (gpu_backend == GPU_BACKEND_OPENGL) {
+          /* Both OpenGL and Vulkan composite the captured X11 host behind
+           * the island's RGBA UI. Without the request Vulkan uses opaque beds
+           * and never becomes a consumer of the host frost. */
+          if (gpu_backend == GPU_BACKEND_OPENGL || STREQ(WM_ghost_backend(), "X11")) {
             gpu_settings.flags |= GHOST_gpuTransparent;
           }
           break;

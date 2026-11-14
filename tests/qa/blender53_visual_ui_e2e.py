@@ -37,6 +37,7 @@ FIELD = {'area_type': 'AGENT_BUBBLE', 'prop': 'mixie_chat_input'}
 TABS = {'AGENT': 'Agent chat', 'THREE_D': '3D generation',
         'IMAGE': 'Image generation', 'VIDEO': 'Video generation',
         'SPLAT': 'Gaussian Splat world generation',
+        'ADDON': 'Build a Blender add-on with the agent',
         'GENERATIONS': 'Your generations and connected asset libraries',
         'QUEUE': 'Generation queue'}
 
@@ -50,8 +51,10 @@ def draft(qa, lines):
 
 
 def blur(qa):
-    window = qa.find(**FIELD)['widgets'][0]['window']
-    qa.cmd('press', key='ESC', window=window)
+    # A header click commits the current edit. Escape intentionally cancels
+    # back to the draft at focus entry, so it cannot represent idle text.
+    qa.click(area_type='AGENT_BUBBLE', region_type='HEADER',
+             op='WM_OT_context_set_enum', text=TABS['AGENT'])
 
 
 def capture(qa, out, label, island=False):
@@ -72,6 +75,11 @@ def capture(qa, out, label, island=False):
         data = urlopen(os.environ['QA_DESKTOP_URL'], timeout=45).read()
         assert data.startswith(b'\x89PNG'), 'sandbox desktop did not return PNG'
         (out / (label + '-desktop.png')).write_bytes(data)
+    elif sys.platform == 'darwin' and island:
+        # Capture the live region textures. The full-window snap tags every
+        # region and can invalidate its own island-header target on Metal.
+        from chat_refine_lifecycle_e2e import capture as region_capture
+        region_capture(qa, out, label + '-buffer')
     else:
         args = {'path': str(out / (label + '-buffer.png'))}
         if island:
@@ -113,16 +121,19 @@ def run(stage, qa=None):
                 "    for a in w.screen.areas:a.tag_redraw()\nresult=True")
         qa.wait("bool(drv.find(prop='mixie_chat_input',area_type='AGENT_BUBBLE',region_type='TOOLS'))", timeout=10)
         draft(qa, ['Focused composer', 'Second line', 'Third line'])
+        qa.wait("drv.main_window().scene.mixie_chat_input=='Focused composer\\nSecond line\\nThird line'", timeout=5)
         capture(qa, out, 'populated-focused', True)
     elif stage == 'idle':
         blur(qa)
+        qa.wait("drv.main_window().scene.mixie_chat_input=='Focused composer\\nSecond line\\nThird line'", timeout=5)
         capture(qa, out, 'populated-idle', True)
         qa.click(area_type='AGENT_BUBBLE', surface='chat_steps_header')
         qa.wait("not next(m for m in drv.main_window().scene.mixie_chat_messages if m.bubble_id=='qa-ui-agent').steps_collapsed", timeout=5)
         capture(qa, out, 'expanded-steps', True)
     elif stage.startswith('tab:'):
         tab = stage.split(':', 1)[1]
-        qa.click(area_type='AGENT_BUBBLE', text=TABS[tab])
+        qa.step('open-' + tab, qa.click, area_type='AGENT_BUBBLE',
+                region_type='HEADER', op='WM_OT_context_set_enum', text=TABS[tab])
         qa.wait(f"bpy.context.window_manager.mixar_bubble_tab=={tab!r}", timeout=10)
         capture(qa, out, 'tab-' + tab.lower(), True)
     elif stage == 'menus':
