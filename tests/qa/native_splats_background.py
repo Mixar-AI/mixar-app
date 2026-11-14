@@ -28,7 +28,6 @@ from mixar.modules.moodboard.core import splat_lifecycle, splat_legacy, splat_na
 from mixar.modules.moodboard.core.splat_import import import_splat_file
 
 out = pathlib.Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/mixar-native-splats'))
-out.mkdir(parents=True, exist_ok=True)
 results = {}
 
 
@@ -235,6 +234,9 @@ def kiri_world():
     collider['wl_role'] = 'collider'
     coll.objects.link(collider)
     bpy.context.scene.render.use_lock_interface = True
+    # Flush the authored location/rotation before capturing the expectation;
+    # save/load and conversion evaluate the transform themselves.
+    bpy.context.view_layer.update()
     return splat.matrix_world.copy()
 
 
@@ -263,13 +265,19 @@ def case_kiri_file_converts():
     return {'lit': lit, 'attributes': sorted(attrs)}
 
 
-for case in (case_spz_import, case_raw_ply_import, case_non_splat_ply_refused, case_renders,
-             case_delete_purges_collider, case_kiri_file_converts):
-    check(case.__name__, case)
+def main():
+    out.mkdir(parents=True, exist_ok=True)
+    for case in (case_spz_import, case_raw_ply_import, case_non_splat_ply_refused, case_renders,
+                 case_delete_purges_collider, case_kiri_file_converts):
+        check(case.__name__, case)
 
-(out / 'result.json').write_text(json.dumps(results, indent=2))
-failed = [k for k, v in results.items() if not v['ok']]
-print('NATIVE_SPLATS', 'FAIL' if failed else 'PASS', json.dumps(
-    {k: (v['ok'], v['detail'] if v['ok'] else v['detail']) for k, v in results.items()}))
-for k in failed:
-    print(results[k]['trace'])
+    (out / 'result.json').write_text(json.dumps(results, indent=2))
+    failed = [k for k, v in results.items() if not v['ok']]
+    print('NATIVE_SPLATS', 'FAIL' if failed else 'PASS', json.dumps(
+        {k: (v['ok'], v['detail']) for k, v in results.items()}))
+    for k in failed:
+        print(results[k]['trace'])
+
+
+if __name__ == '__main__':
+    main()
