@@ -48,7 +48,7 @@ def test_retina_secret_mask_uses_widget_pixels_without_double_scaling(monkeypatc
         app=SimpleNamespace(is_job_running=lambda _: False),
         context=SimpleNamespace(window_manager=SimpleNamespace(mixar_window_resizing=False),
                                 temp_override=lambda **kwargs: nullcontext())))
-    block, frame = observe.image(win, [{"secret": True, "w": 1, "rect": [10, 10, 30, 30]}])
+    block, frame = observe.image(win, [{"secret": True, "w": 1, "rect": [10, 10, 30, 30]}], set())
     with Image.open(io.BytesIO(base64.b64decode(block["data"]))) as image:
         assert image.getpixel((20, 80)) == (0, 0, 0)
         assert image.getpixel((40, 60)) == (255, 0, 0)

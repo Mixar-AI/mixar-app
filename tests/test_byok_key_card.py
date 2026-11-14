@@ -288,7 +288,7 @@ def test_the_dialog_operator_takes_the_prefill_and_resends_on_save():
     invoke = src[src.index("def invoke("):src.index("def execute(")]
     assert "_prefill_from_prompt(wm, key_prompt.take())" in invoke
     assert invoke.index("_wipe_form_secrets(wm)") < invoke.index("_prefill_from_prompt(")
-    saved = src[src.index("def _on_save_done("):src.index("def _on_save_done(") + 1500]
+    saved = src[src.index("def _on_save_done("):src.index("# Remove (two-click confirm)")]
     success = saved[:saved.index("else:")]
     assert "key_prompt.notify_saved()" in success and "wm.byok_dialog_state = 'SAVED'" in success
     for method in ("def execute(", "def cancel("):

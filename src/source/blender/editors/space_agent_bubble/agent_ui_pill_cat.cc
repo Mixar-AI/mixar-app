@@ -28,6 +28,8 @@
 
 #include "../interface/interface_qa_inspect.hh"
 
+#include "agent_bubble_intern.hh"
+
 #include "agent_ui_cat_activity.hh"
 #include "agent_ui_cat_style.hh"
 #include "agent_ui_pill_cat.hh"
@@ -242,7 +244,7 @@ void agent_ui_pill_cat_clear()
 
 namespace {
 
-void pill_cat_qa_targets(const wmWindow * /*win*/,
+void pill_cat_qa_targets(const wmWindow *win,
                          const ScrArea *area,
                          const ARegion *region,
                          std::vector<MixarQATarget> &r_targets)
@@ -253,14 +255,9 @@ void pill_cat_qa_targets(const wmWindow * /*win*/,
   if (area->spacetype != SPACE_AGENT_BUBBLE || region->regiontype != RGN_TYPE_HEADER) {
     return;
   }
-  bool has_body = false;
-  for (ARegion &other : area->regionbase) {
-    if (ELEM(other.regiontype, RGN_TYPE_WINDOW, RGN_TYPE_TOOLS)) {
-      has_body = true;
-      break;
-    }
-  }
-  if (has_body) {
+  /* The resting pill's own window, on every platform: Linux collapses the
+   * island into the pill in the same window, so its regions can't tell. */
+  if (!agent_bubble_is_resting_pill_window(win)) {
     return;
   }
 
