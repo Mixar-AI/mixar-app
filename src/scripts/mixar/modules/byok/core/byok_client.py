@@ -344,7 +344,7 @@ def resave_stored_key(
     model, same provider) and the model card resuming a paused key (``model``
     None: the record's own). The server re-validates like a fresh save.
     Worker thread: load the record, read / renew a Codex sign-in exactly as
-    before a turn (`turn_credentials.resolve`, renewals written back to the
+    before a turn (`turn_credentials.serve`, renewals written back to the
     file), seal through `_put_sealed`, update the record's ``model`` on 200.
     Refused before anything is sent when this device holds no key, the
     record names no model or the provider is Local (its endpoint is not in
@@ -354,7 +354,7 @@ def resave_stored_key(
     epoch = _account_epoch()
 
     def _work():
-        from . import codex_auth, key_store, turn_credentials
+        from . import key_store, turn_credentials
 
         user_id = key_store.current_user_id()
         record = key_store.load(user_id)
@@ -364,18 +364,9 @@ def resave_stored_key(
         target = (model or record.get("model") or "").strip()
         if not target:
             return False, None, _NO_STORED_KEY_MSG
-        live, problem = key_store.materialize(record)
-        if problem is not None:
-            return False, None, problem
-        resolution = turn_credentials.resolve(live, refresher=codex_auth.refresh_access_token)
+        resolution = turn_credentials.serve(record, user_id=user_id)
         if resolution.blocked:
             return False, None, resolution.error
-        if resolution.record_changes and not key_store.persist_changes(
-                live, resolution.record_changes, user_id):
-            # The grant rotated the refresh token and the file could not take
-            # it: the next turn will refresh with a stale token and read as
-            # revoked. Say so in the log; the turn path has the same gap.
-            logger.warning("BYOK Codex renewal could not be written back to the sign-in file")
         api_key = resolution.fields.get(BYOK_TURN_KEY_FIELD)
         if not api_key:
             return False, None, _NO_STORED_KEY_MSG

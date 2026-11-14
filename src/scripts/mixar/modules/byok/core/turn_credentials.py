@@ -26,6 +26,13 @@ command is dispatched from the main-thread callback (`turn_transport._send`).
                         file that cannot take them (not writable) is never
                         refreshed — the grant rotates the refresh token and
                         losing it would sign the Codex CLI out too
+      changed during  → (`serve`) the file vanished, became unwritable or
+      the refresh       was replaced by a newer `codex login`, or this
+                        device now names another file: the renewal is not
+                        used; the turn is resolved once more from the
+                        sign-in as it is now (refused when it cannot serve).
+                        A refresh token is never spent twice: a file still
+                        holding the spent one refuses as not writable
       refresh revoked → refuse (sign-in expired); that sign-in is remembered
                         by fingerprint until `codex login` replaces it
       refresh network → current token if still valid, else refuse (retryable)
@@ -146,6 +153,68 @@ def _resolve_codex(record: dict, token: Optional[str], now: Optional[float],
     )
 
 
+def serve(record: Optional[dict], *, active_provider: Optional[str] = None,
+          user_id: Optional[str] = None) -> Resolution:
+    """`resolve` this device's ``record`` for a request and persist what it
+    learned. Blocking (file reads, a Codex refresh): worker threads only.
+
+    A Codex renewal serves the request only when it reached the sign-in it
+    renewed: the write-back landed (the file is still there, writable and not
+    replaced by a newer ``codex login`` meanwhile) and this device's record
+    still names that file. Otherwise the renewed token belongs to a sign-in
+    that is gone or superseded, so the request is resolved once more from
+    the record and file as they are NOW — never sent with the stale token.
+
+    A refresh token is spent at most once per request: a file that still
+    holds the token a renewal just spent could not take the renewal (a
+    permissions change, a full disk, a lock), and refreshing it again would
+    only be refused as a reuse. That refuses with the not-writable message
+    while the cause is still in front of the user — the CLI's own sign-in
+    now holds a spent token too — rather than sending this turn and failing
+    the next as "sign-in expired"."""
+    spent = set()
+    for _attempt in range(_SERVE_PASSES):
+        live, refusal = _current(record, spent)
+        if refusal is not None:
+            return refusal
+        resolution = resolve(live, refresher=codex_auth.refresh_access_token,
+                             active_provider=active_provider)
+        changes = resolution.record_changes
+        if not changes:
+            return resolution
+        persisted = key_store.persist_changes(live, changes, user_id)
+        if not changes.get("key") or live.get("provider") != CODEX_PROVIDER_ID:
+            return resolution
+        record = key_store.load(user_id)
+        if persisted and (record or {}).get("auth_path") == live.get("auth_path"):
+            return resolution
+        spent.add(live.get("refresh_token"))
+        logger.warning("BYOK Codex sign-in changed during its renewal; resolving it again")
+    # The sign-in changed under every renewal: serve it as it is now and
+    # renew no further (a fresh or still-valid token goes out, an expired
+    # one refuses as expired).
+    live, refusal = _current(record, spent)
+    if refusal is not None:
+        return refusal
+    return resolve(live, active_provider=active_provider)
+
+
+_SERVE_PASSES = 2
+
+
+def _current(record, spent):
+    """``(live, refusal)`` for the record and sign-in file as they are now."""
+    live, problem = key_store.materialize(record)
+    if problem is not None:
+        # The Codex sign-in file cannot serve the turn (codex logout,
+        # never logged in): refuse like an expired sign-in.
+        return None, Resolution(error=problem, code=BYOK_CODEX_EXPIRED_CODE)
+    if live and live.get("refresh_token") in spent:
+        return None, Resolution(error=codex_auth.MSG_FILE_NOT_WRITABLE,
+                                code=BYOK_CODEX_REFRESH_FAILED_CODE)
+    return live, None
+
+
 def sealed(resolution: Resolution) -> Resolution:
     """`resolution` with its key field sealed to the backend's transport key
     (`transport_seal`): the per-turn ``byok_key`` — a cloud key, a Local
@@ -196,17 +265,7 @@ def prepare(on_ready: Callable[[Dict[str, Any], Optional[Dict[str, str]]], None]
         record = None
         try:
             record = key_store.load()
-            live, problem = key_store.materialize(record)
-            if problem is not None:
-                # The Codex sign-in file cannot serve the turn (codex logout,
-                # never logged in): refuse like an expired sign-in.
-                resolution = Resolution(error=problem, code=BYOK_CODEX_EXPIRED_CODE)
-            else:
-                resolution = resolve(live, refresher=codex_auth.refresh_access_token,
-                                     active_provider=active_provider)
-                if resolution.record_changes:
-                    key_store.persist_changes(live, resolution.record_changes)
-                resolution = sealed(resolution)
+            resolution = sealed(serve(record, active_provider=active_provider))
         except Exception as exc:  # noqa: BLE001 — never block the turn on a store fault
             logger.warning("BYOK turn credentials unavailable: %s", type(exc).__name__)
             resolution = Resolution()  # keyless, never plaintext: the server decides
