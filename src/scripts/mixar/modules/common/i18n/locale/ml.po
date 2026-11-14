@@ -465,8 +465,8 @@ msgstr "മൂഡ്ബോർഡിൽ '{name}' തിരഞ്ഞെടുത�
 msgid "Select in Scene"
 msgstr "സീനിൽ തിരഞ്ഞെടുക്കുക"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "ഈ സ്പ്ലാറ്റ് ലോകത്തിന്റെ പ്രോക്സി ഹാൻഡിൽ വ്യൂപോർട്ടിൽ തിരഞ്ഞെടുക്കുക"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "കളക്ഷൻ"
@@ -474,8 +474,11 @@ msgstr "കളക്ഷൻ"
 msgid "That splat world is no longer in this file"
 msgstr "ആ സ്പ്ലാറ്റ് ലോകം ഈ ഫയലിൽ ഇനിയില്ല"
 
-msgid "This splat world has no proxy handle"
-msgstr "ഈ സ്പ്ലാറ്റ് ലോകത്തിന് പ്രോക്സി ഹാൻഡിലില്ല"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' തിരഞ്ഞെടുത്തു"
@@ -6755,8 +6758,8 @@ msgstr "പിന്തുണയില്ലാത്ത സ്പ്ലാറ�
 msgid "File not found: {path}"
 msgstr "ഫയൽ കണ്ടെത്തിയില്ല: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-ൽ നിന്ന് ഒബ്ജക്റ്റുകൾ ഇമ്പോർട്ട് ചെയ്തില്ല"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "ചിത്രം വായിക്കാനായില്ല: {error}"

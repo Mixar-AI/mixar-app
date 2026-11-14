@@ -465,8 +465,8 @@ msgstr "S'ha seleccionat '{name}' al moodboard"
 msgid "Select in Scene"
 msgstr "Seleccionar a l'escena"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Selecciona la nansa intermediària d'aquest món de splats al mirador"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Col·lecció"
@@ -474,8 +474,11 @@ msgstr "Col·lecció"
 msgid "That splat world is no longer in this file"
 msgstr "Aquest món de splats ja no és en aquest document"
 
-msgid "This splat world has no proxy handle"
-msgstr "Aquest món de splats no té cap nansa intermediària"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "S'ha seleccionat '{name}'"
@@ -6755,8 +6758,8 @@ msgstr "Tipus de fitxer de splat no compatible «{ext}» (s'esperava .spz o .ply
 msgid "File not found: {path}"
 msgstr "No s'ha trobat el fitxer: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "No s'ha importat cap objecte de {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "No s'ha pogut llegir la imatge: {error}"

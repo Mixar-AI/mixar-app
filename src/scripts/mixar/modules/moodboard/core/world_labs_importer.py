@@ -4,10 +4,10 @@
 
 """Import a generated World Labs world into the Blender scene.
 
-Brings the converted Gaussian-splat PLY (via the bundled KIRI 3DGS Render
-addon, which sets up the real-time splat render modifier) and the GLB collider
-mesh into a fresh ``WorldLabs_<name>`` collection so it reads as a self-
-contained environment/backdrop.
+Brings the converted Gaussian-splat PLY (as Blender's built-in splat object,
+see ``splat_native``) and the GLB collider mesh into a fresh
+``WorldLabs_<name>`` collection so it reads as a self-contained
+environment/backdrop.
 
 Must run on the main thread (it calls ``bpy.ops``).
 """
@@ -24,31 +24,27 @@ from mixar.modules.moodboard.core.splat_lifecycle import (
     finalize_splat_handles,
     note_splats_imported,
 )
+from mixar.modules.moodboard.core.splat_native import import_splat_ply
 
 logger = get_logger(__name__)
-
-# KIRI 3DGS Render v4.1.5 operators (Serpens-generated ids).
-#  - import: wm.ply_import + adds the KIRI_3DGS_Render_GN modifier.
-#  - proxy:  "Create Proxy From Active" — builds the render proxy so the splats
-#            display in colour instead of the green point-cloud preview.
-_KIRI_IMPORT_PLY_OP = "sna.dgs_render_import_ply_e0a3a"
-_KIRI_PROXY_OP = "sna.dgs_render_create_proxy_from_mesh_d5b41"
 
 # Orientation of CONVERTED World Labs splats: **+90deg X**, validated against
 # a real Marble 1.1 room (2026-08-10: at -90 the furniture hung from the
 # ceiling — a full interior is the only unambiguous evidence; outdoor spray
-# blobs and the old fixture misled a brief -90 detour). Why +90 and not
-# KIRI's raw-PLY -90: Marble SPZ stores the INRIA-style RDF frame, and our
+# blobs and the old fixture misled a brief -90 detour). Why +90 and not the
+# raw-PLY -90: Marble SPZ stores the INRIA-style RDF frame, and our
 # decoder's RUB->RDF step NEGATES Y/Z — so the temp PLY it emits is
-# effectively y-UP, and y-up -> Blender z-up is Rx(+90). KIRI's own
-# "Rotate for Blender Axes" (-90) applies to UNCONVERTED INRIA PLYs (y-down)
-# — that convention lives in ``RAW_PLY_ROT_EULER_DEG`` for the local .ply
-# import path. Don't add a Z yaw here: none was ever measured.
+# effectively y-UP, and y-up -> Blender z-up is Rx(+90). The -90 applies to
+# UNCONVERTED INRIA PLYs (y-down) — that convention lives in
+# ``RAW_PLY_ROT_EULER_DEG`` for the local .ply import path. Don't add a Z yaw
+# here: none was ever measured. Blender's own ``wm.spz_import`` assumes the
+# spec's RUB frame and lands Marble worlds 180deg about X from this, which is
+# why SPZ still goes through our converter.
 _SPLAT_ROT_EULER_DEG = (90.0, 0.0, 0.0)
 
 # Raw (unconverted) 3DGS PLYs — e.g. a user-supplied INRIA/graphdeco file in
 # the local splat import — keep the vendor y-DOWN frame, so they need the
-# opposite rotation (KIRI's own "Rotate for Blender Axes" convention).
+# opposite rotation.
 RAW_PLY_ROT_EULER_DEG = (-90.0, 0.0, 0.0)
 
 
@@ -103,58 +99,37 @@ def import_world_labs_world(
         if sem.get("ground_plane_offset") is not None:
             obj["wl_ground_plane_offset"] = float(sem["ground_plane_offset"])
 
-    # 2) Fix the world's ORIENTATION + POSITION first, splat and collider moving
+    # 2) Fix the world's ORIENTATION + POSITION, splat and collider moving
     #    together: reconcile the collider onto the splat (their import frames differ
     #    by Rx180), then ground the whole world (floor -> z=0, centre -> origin).
     _align_collider_to_splat(splat_objs, glb_objs)
     _recenter_world_to_ground(splat_objs, glb_objs)
 
-    # 3) ONLY NOW build the KIRI render proxy, on the splat in its FINAL pose — so
-    #    the proxy is created in place and never has to be moved afterwards.
-    proxy_objs = _enable_splat_render(splat_objs)
-
-    new_objects = splat_objs + proxy_objs + glb_objs
+    new_objects = splat_objs + glb_objs
     _move_to_collection(new_objects, collection)
-    _finalize_visibility(splat_objs, glb_objs, proxy_objs)
-    finalize_splat_handles(collection, splat_objs, proxy_objs)
-    _frame_objects(proxy_objs or splat_objs)
+    _finalize_visibility(glb_objs)
+    finalize_splat_handles(collection, splat_objs)
+    _frame_objects(splat_objs)
 
     note_splats_imported()
     logger.info(
-        "[WorldLabs] imported into '%s' (%d splat, %d proxy, %d collider)",
-        collection.name, len(splat_objs), len(proxy_objs), len(glb_objs),
+        "[WorldLabs] imported into '%s' (%d splat, %d collider)",
+        collection.name, len(splat_objs), len(glb_objs),
     )
     return [o.name for o in new_objects]
 
 
-def _finalize_visibility(splat_objs: list, glb_objs: list, proxy_objs: list) -> None:
-    """Show only the KIRI render proxy after import.
+def _finalize_visibility(glb_objs: list) -> None:
+    """Hide the collider; the splat is what the user sees and renders.
 
-    The proxy renders the Gaussians, so the heavy splat point-cloud mesh and the
-    collision mesh are both hidden in the viewport. Both stay in the file and
-    remain usable: the collider is still ray-cast for placement (Object.ray_cast
-    reads mesh data regardless of viewport visibility) and the splat mesh is only
-    eye-hidden (hide_set), so its geometry nodes still evaluate for the proxy.
-    Only hide the splat mesh when a proxy actually exists — otherwise keep it
-    visible so something shows.
+    The collider stays in the file and usable: placement still ray-casts it
+    (Object.ray_cast reads mesh data regardless of viewport visibility).
     """
-    has_proxy = bool(proxy_objs)
-    for obj in glb_objs:  # collider — never shown / rendered
+    for obj in glb_objs:
         try:
             obj.hide_render = True
             obj.hide_set(True)
         except Exception:  # noqa: BLE001 - no view layer / context
-            pass
-    if has_proxy:
-        for obj in splat_objs:  # point-cloud source — the proxy renders instead
-            try:
-                obj.hide_set(True)
-            except Exception:  # noqa: BLE001
-                pass
-    for obj in proxy_objs:  # the proxy is what stays visible
-        try:
-            obj.hide_set(False)
-        except Exception:  # noqa: BLE001
             pass
 
 
@@ -180,10 +155,7 @@ def _orient_splats(objects: list, euler_deg: tuple = None) -> None:
 
 
 def _world_bbox(objects: list):
-    """World-space AABB over the objects' bounding boxes → (min, max) or None.
-
-    Empties (the KIRI proxy) have no bound_box and are skipped.
-    """
+    """World-space AABB over the objects' bounding boxes → (min, max) or None."""
     corners = []
     for obj in objects:
         bb = getattr(obj, "bound_box", None)
@@ -263,14 +235,9 @@ def _splat_ground_and_center(splat_objs: list):
         return None
     chunks = []
     for obj in splat_objs:
-        me = getattr(obj, "data", None)
-        verts = getattr(me, "vertices", None) if me is not None else None
-        if not verts:
+        co = _local_points(obj, np)
+        if co is None:
             continue
-        n = len(verts)
-        co = np.empty(n * 3, dtype=np.float32)
-        verts.foreach_get("co", co)
-        co = co.reshape(n, 3).astype(np.float64)
         mw = np.array(obj.matrix_world, dtype=np.float64)
         chunks.append(co @ mw[:3, :3].T + mw[:3, 3])  # local -> world
     if not chunks:
@@ -289,6 +256,29 @@ def _splat_ground_and_center(splat_objs: list):
     return float(cen[0]), float(cen[1]), floor
 
 
+def _local_points(obj, np):
+    """Object-space point positions of a mesh or a point cloud, or None."""
+    data = getattr(obj, "data", None)
+    if data is None:
+        return None
+    verts = getattr(data, "vertices", None)
+    if verts is not None:
+        n = len(verts)
+        if not n:
+            return None
+        co = np.empty(n * 3, dtype=np.float32)
+        verts.foreach_get("co", co)
+        return co.reshape(n, 3).astype(np.float64)
+    attributes = getattr(data, "attributes", None)
+    position = attributes.get("position") if attributes is not None else None
+    n = len(position.data) if position is not None else 0
+    if not n:
+        return None
+    co = np.empty(n * 3, dtype=np.float32)
+    position.data.foreach_get("vector", co)
+    return co.reshape(n, 3).astype(np.float64)
+
+
 def _recenter_world_to_ground(splat_objs: list, glb_objs: list) -> None:
     """Bring the SPLAT floor onto the X-Y plane with its centre at the origin.
 
@@ -296,8 +286,7 @@ def _recenter_world_to_ground(splat_objs: list, glb_objs: list) -> None:
     the collider (which may be misaligned / not represent the floor). Compute a
     robust floor (low-percentile Z) + dense-occupancy XY centre over the splat
     points, then shift the whole world (splat + collider) by the same offset so the
-    splat floor lands at z=0 and the floor centre at (0, 0, 0). The KIRI proxy is
-    created AFTER this, so it isn't part of the group here.
+    splat floor lands at z=0 and the floor centre at (0, 0, 0).
     """
     gc = _splat_ground_and_center(splat_objs)
     if gc is None:  # numpy/verts unavailable — fall back to the splat bbox
@@ -320,51 +309,6 @@ def _recenter_world_to_ground(splat_objs: list, glb_objs: list) -> None:
                 "(offset %.3f, %.3f, %.3f)", offset.x, offset.y, offset.z)
 
 
-def _enable_splat_render(splat_objs: list) -> list:
-    """Create KIRI's render proxy so splats display in colour, not as points.
-
-    Returns any objects KIRI created (the proxy Empty). Degrades gracefully: if
-    the proxy operator isn't available, the splats stay in point-cloud preview
-    and the user can create a proxy manually.
-    """
-    _ensure_kiri()
-    # Render-side setup is independent of the viewport proxy: renders draw the
-    # splat via its geometry nodes, which need camera-driven socket updates
-    # (see core/splat_render_camera.py) or F12 output is black.
-    try:
-        from mixar.modules.moodboard.core.splat_render_camera import (
-            enable_render_updates,
-        )
-        enable_render_updates(splat_objs)
-    except Exception as e:  # noqa: BLE001
-        logger.warning("[WorldLabs] render-update enable failed: %s", e)
-
-    proxy_op = _resolve_op(_KIRI_PROXY_OP)
-    if proxy_op is None or not splat_objs:
-        if proxy_op is None:
-            logger.info("[WorldLabs] KIRI proxy operator unavailable; splats will "
-                        "show as a point cloud until a proxy is created")
-        return []
-
-    mesh = next((o for o in splat_objs if o.type == "MESH"), splat_objs[0])
-    before = set(bpy.data.objects.keys())
-    try:
-        bpy.ops.object.select_all(action="DESELECT")
-    except Exception:  # noqa: BLE001
-        pass
-    try:
-        mesh.select_set(True)
-        bpy.context.view_layer.objects.active = mesh
-        proxy_op()
-    except Exception as e:  # noqa: BLE001
-        logger.warning("[WorldLabs] KIRI render-proxy creation failed (%s); "
-                       "splats will show as a point cloud", e)
-        return []
-    return [
-        bpy.data.objects[n] for n in bpy.data.objects.keys() if n not in before
-    ]
-
-
 def _ensure_object_mode() -> None:
     """Import operators require OBJECT mode; a job may finish while the user is
     in edit/sculpt/paint mode."""
@@ -383,44 +327,9 @@ def _new_collection(name: str) -> bpy.types.Collection:
     return collection
 
 
-def _ensure_kiri() -> None:
-    """Enable the vendored KIRI addon on demand (self-heal).
-
-    The bootstrap normally enables it via a deferred timer, but if that was
-    missed (old prefs, startup-order regressions) the import must not quietly
-    degrade to a plain point cloud when the addon is sitting in the bundle.
-    Session-only enable — prefs persistence stays the bootstrap's job.
-    """
-    if _resolve_op(_KIRI_IMPORT_PLY_OP) is not None:
-        return
-    try:
-        import addon_utils
-
-        addon_utils.enable("kiri_3dgs_render", default_set=False)
-        logger.info("[WorldLabs] enabled KIRI 3DGS Render on demand")
-    except Exception as e:  # noqa: BLE001 - addon genuinely absent/broken
-        logger.debug("[WorldLabs] on-demand KIRI enable failed: %s", e)
-
-
 def _import_splat_ply(ply_path: str) -> None:
-    """Import the splat via KIRI; fall back to native PLY (mesh-only) on failure."""
-    _ensure_kiri()
-    kiri_op = _resolve_op(_KIRI_IMPORT_PLY_OP)
-    if kiri_op is not None:
-        try:
-            kiri_op(filepath=ply_path)
-            return
-        except Exception as e:  # noqa: BLE001 - operator can raise RuntimeError
-            logger.warning(
-                "[WorldLabs] KIRI splat import failed (%s); falling back to "
-                "native PLY import (no splat rendering)", e,
-            )
-    else:
-        logger.warning(
-            "[WorldLabs] KIRI 3DGS Render addon not available; importing PLY as "
-            "a plain point cloud (no splat rendering)"
-        )
-    bpy.ops.wm.ply_import(filepath=ply_path)
+    """Import the splat PLY as Blender's built-in Gaussian splat."""
+    import_splat_ply(ply_path)
 
 
 def _import_collider_glb(glb_path: str) -> None:
@@ -440,13 +349,7 @@ def _move_to_collection(objects: list, collection: bpy.types.Collection) -> None
 
 
 def _frame_objects(objects: list) -> None:
-    """Select the imported objects and leave the world's handle active.
-
-    Callers pass the proxy (an Empty) when there is one — the splat mesh and
-    collider are hidden by ``_finalize_visibility`` and a hidden object can be
-    neither selected nor made active, so preferring MESH here used to leave the
-    scene with nothing selected and nothing active at all.
-    """
+    """Select the imported splats and leave the first one active."""
     try:
         bpy.ops.object.select_all(action="DESELECT")
     except Exception:  # noqa: BLE001 - no object mode / no view layer
@@ -457,7 +360,7 @@ def _frame_objects(objects: list) -> None:
             obj.select_set(True)
         except Exception:  # noqa: BLE001
             continue
-        if active is None or (active.type != "EMPTY" and obj.type == "EMPTY"):
+        if active is None:
             active = obj
     if active is not None:
         try:
@@ -465,17 +368,3 @@ def _frame_objects(objects: list) -> None:
         except Exception:  # noqa: BLE001 - object not in the view layer
             pass
 
-
-def _resolve_op(idname: str):
-    """Return the bpy.ops callable for ``module.operator`` if registered."""
-    module, _, op = idname.partition(".")
-    group = getattr(bpy.ops, module, None)
-    fn = getattr(group, op, None) if group is not None else None
-    if fn is None:
-        return None
-    try:
-        # get_rna_type raises if the operator isn't actually registered.
-        fn.get_rna_type()
-    except Exception:  # noqa: BLE001
-        return None
-    return fn

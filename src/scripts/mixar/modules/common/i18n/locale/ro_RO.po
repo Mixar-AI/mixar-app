@@ -465,8 +465,8 @@ msgstr "S-a selectat '{name}' pe Moodboard"
 msgid "Select in Scene"
 msgstr "Selectare în scenă"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Selectează mânerul proxy al acestei lumi splat în Fereastra de Vizualizare"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Colecție"
@@ -474,8 +474,11 @@ msgstr "Colecție"
 msgid "That splat world is no longer in this file"
 msgstr "Acea lume splat nu mai este în acest fișier"
 
-msgid "This splat world has no proxy handle"
-msgstr "Această lume splat nu are mâner proxy"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "S-a selectat '{name}'"
@@ -6755,8 +6758,8 @@ msgstr "Tip de fișier splat neacceptat '{ext}' (se așteaptă .spz sau .ply)"
 msgid "File not found: {path}"
 msgstr "Fișierul nu a fost găsit: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Niciun obiect importat din {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Imaginea nu a putut fi citită: {error}"

@@ -465,8 +465,8 @@ msgstr "Odabrano '{name}' na moodboardu"
 msgid "Select in Scene"
 msgstr "Odaberi u sceni"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Odabire proxy ručku ovog svijeta splata u prozoru pogleda"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekcija"
@@ -474,8 +474,11 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "Tog svijeta splata više nema u ovoj datoteci"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ovaj svijet splata nema proxy ručku"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Odabrano '{name}'"
@@ -6755,8 +6758,8 @@ msgstr "Nepodržana vrsta datoteke splata '{ext}' (očekuje se .spz ili .ply)"
 msgid "File not found: {path}"
 msgstr "Datoteka nije pronađena: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Iz {name} nisu uvezeni objekti"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Sliku nije bilo moguće pročitati: {error}"

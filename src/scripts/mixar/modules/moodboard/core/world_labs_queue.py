@@ -5,8 +5,8 @@
 """World Labs (Marble) world-generation queue: concrete Job + enqueue helper.
 
 Genuinely-unique job (per CLAUDE.md): the backend returns a Gaussian-splat SPZ
-+ a GLB collider, which we convert (SPZ -> 3DGS PLY) locally and import via the
-bundled KIRI addon -- not a standard GLB import -- so it has its own queue file
++ a GLB collider, which we convert (SPZ -> 3DGS PLY) locally and import as a
+built-in Gaussian splat -- not a standard GLB import -- so it has its own queue file
 with a custom ``handle_result``, modelled on ``lookdev360_queue``.
 """
 
@@ -254,7 +254,7 @@ def _download_bytes(url: str) -> bytes:
 def _download_and_convert_spz(url: str, label: str = "") -> str:
     """Download the SPZ, convert to 3DGS PLY, write to a temp file, return path.
 
-    The temp PLY keeps a human stem (the job label): the KIRI importer names
+    The temp PLY keeps a human stem (the job label): the PLY importer names
     the created object after the PLY file, so an mkstemp name leaks gibberish
     object names like ``worldlabs_wy9cyeh9`` into the scene.
     """

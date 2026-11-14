@@ -465,8 +465,8 @@ msgstr "'{name}' hautatu da Moodboard-ean"
 msgid "Select in Scene"
 msgstr "Hautatu eszenan"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Hautatu splat-mundu honen proxy-heldulekua 3D bistan"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Bilduma"
@@ -474,8 +474,11 @@ msgstr "Bilduma"
 msgid "That splat world is no longer in this file"
 msgstr "Splat-mundu hori jada ez dago fitxategi honetan"
 
-msgid "This splat world has no proxy handle"
-msgstr "Splat-mundu honek ez du proxy-heldulekurik"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' hautatuta"
@@ -6755,8 +6758,8 @@ msgstr "Onartzen ez den splat fitxategi mota '{ext}' (.spz edo .ply espero da)"
 msgid "File not found: {path}"
 msgstr "Fitxategia ez da aurkitu: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Ez da objekturik inportatu {name} fitxategitik"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Ezin izan da irudia irakurri: {error}"

@@ -465,8 +465,8 @@ msgstr "무드보드에서 '{name}'을(를) 선택했습니다"
 msgid "Select in Scene"
 msgstr "씬에서 선택"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "뷰포트에서 이 스플랫 월드의 프록시 핸들을 선택합니다"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "컬렉션"
@@ -474,8 +474,11 @@ msgstr "컬렉션"
 msgid "That splat world is no longer in this file"
 msgstr "해당 스플랫 월드가 더 이상 이 파일에 없습니다"
 
-msgid "This splat world has no proxy handle"
-msgstr "이 스플랫 월드에는 프록시 핸들이 없습니다"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}'을(를) 선택했습니다"
@@ -6755,8 +6758,8 @@ msgstr "지원되지 않는 스플랫 파일 유형 '{ext}' (.spz 또는 .ply �
 msgid "File not found: {path}"
 msgstr "파일을 찾을 수 없습니다: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}에서 가져온 오브젝트가 없습니다"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "이미지를 읽지 못했습니다: {error}"

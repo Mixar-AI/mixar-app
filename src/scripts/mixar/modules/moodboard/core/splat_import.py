@@ -6,10 +6,10 @@
 
 Shares the World Labs splat pipeline (``world_labs_importer``): SPZ is
 converted to a 3DGS PLY in pure Python (``world_labs_spz.spz_to_ply``), the
-PLY is imported through the bundled KIRI 3DGS Render addon (real-time splat
-rendering via its geometry-nodes proxy), oriented into Blender's Z-up frame
-and optionally grounded at the origin — exactly what the Director flow needs
-to place cameras and characters inside a splat environment.
+PLY is imported as Blender's built-in Gaussian splat (``splat_native``),
+oriented into Blender's Z-up frame and optionally grounded at the origin —
+exactly what the Director flow needs to place cameras and characters inside a
+splat environment.
 
 Must run on the main thread (it calls ``bpy.ops``).
 """
@@ -25,10 +25,9 @@ from mixar.modules.moodboard.core.splat_lifecycle import (
     finalize_splat_handles,
     note_splats_imported,
 )
+from mixar.modules.moodboard.core.splat_native import is_splat
 from mixar.modules.moodboard.core.world_labs_importer import (
-    _enable_splat_render,
     _ensure_object_mode,
-    _finalize_visibility,
     _frame_objects,
     _import_splat_ply,
     _import_tracked,
@@ -58,12 +57,13 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
     Returns
     -------
     list[str]
-        Names of the imported objects (splat mesh + KIRI proxy).
+        Names of the imported splat objects.
 
     Raises
     ------
     ValueError
-        On unsupported extension, unreadable file, or malformed SPZ.
+        On unsupported extension, unreadable file, malformed SPZ, or a PLY
+        that is not a Gaussian splat.
     """
     ext = os.path.splitext(filepath)[1].lower()
     if ext not in SPLAT_EXTENSIONS:
@@ -82,7 +82,7 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
         with open(filepath, "rb") as f:
             spz_bytes = f.read()
         ply_bytes = spz_to_ply(spz_bytes)  # raises SpzError (a ValueError)
-        # KIRI names the imported object after the PLY file, so the temp PLY
+        # The importer names the splat object after the PLY file, so the temp PLY
         # keeps the source stem (a mkstemp name leaks gibberish object names).
         temp_dir = tempfile.mkdtemp(prefix="splat_import_")
         ply_path = os.path.join(temp_dir, f"{stem}.ply")
@@ -93,13 +93,18 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
         _ensure_object_mode()
         collection = _new_splat_collection(stem)
 
-        splat_objs = _import_tracked(lambda: _import_splat_ply(ply_path))
+        imported = _import_tracked(lambda: _import_splat_ply(ply_path))
+        splat_objs = [obj for obj in imported if is_splat(obj)]
         if not splat_objs:
-            raise ValueError(rpt_("No objects imported from {name}").format(
+            # A PLY without the 3DGS fields comes in as an ordinary mesh: not ours.
+            for obj in imported:
+                bpy.data.objects.remove(obj, do_unlink=True)
+            bpy.data.collections.remove(collection)
+            raise ValueError(rpt_("{name} is not a Gaussian splat file").format(
                 name=os.path.basename(filepath)))
         # Converted .spz (our decoder negates Y/Z → effectively y-up) takes the
         # World Labs +90 X; a raw 3DGS .ply keeps the vendor y-DOWN frame and
-        # needs the opposite rotation (KIRI's "Rotate for Blender Axes").
+        # needs the opposite rotation.
         from mixar.modules.moodboard.core.world_labs_importer import (
             RAW_PLY_ROT_EULER_DEG,
         )
@@ -110,25 +115,17 @@ def import_splat_file(filepath: str, name: str = "", recenter: bool = True) -> l
         if recenter:
             _recenter_world_to_ground(splat_objs, [])
 
-        # Build the KIRI render proxy on the splat in its FINAL pose (same
-        # ordering rule as the World Labs import).
-        proxy_objs = _enable_splat_render(splat_objs)
-
-        new_objects = splat_objs + proxy_objs
-        _move_to_collection(new_objects, collection)
-        _finalize_visibility(splat_objs, [], proxy_objs)
-        # Same outliner contract as a generated world: taggable, selectable,
-        # deletable (see splat_lifecycle).
-        finalize_splat_handles(collection, splat_objs, proxy_objs)
-        _frame_objects(proxy_objs or splat_objs)
+        _move_to_collection(splat_objs, collection)
+        # Same outliner contract as a generated world (see splat_lifecycle).
+        finalize_splat_handles(collection, splat_objs)
+        _frame_objects(splat_objs)
         note_splats_imported()
 
         logger.info(
-            "[SplatImport] imported '%s' into '%s' (%d splat, %d proxy)",
-            os.path.basename(filepath), collection.name,
-            len(splat_objs), len(proxy_objs),
+            "[SplatImport] imported '%s' into '%s' (%d splat)",
+            os.path.basename(filepath), collection.name, len(splat_objs),
         )
-        return [o.name for o in new_objects]
+        return [o.name for o in splat_objs]
     finally:
         if temp_dir:
             import shutil

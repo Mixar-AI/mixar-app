@@ -465,8 +465,8 @@ msgstr "Elektis '{name}' sur la inspirtabulo"
 msgid "Select in Scene"
 msgstr "Elektu en sceno"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Elektas la anstataŭan tenilon de ĉi tiu splata mondo en la vidujo"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekto"
@@ -474,8 +474,11 @@ msgstr "Kolekto"
 msgid "That splat world is no longer in this file"
 msgstr "Tiu splata mondo ne plu estas en ĉi tiu dosiero"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ĉi tiu splata mondo ne havas anstataŭan tenilon"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Elektis '{name}'"
@@ -6755,8 +6758,8 @@ msgstr "Nesubtenata tipo de splata dosiero '{ext}' (atenditaj .spz aŭ .ply)"
 msgid "File not found: {path}"
 msgstr "Dosiero ne trovita: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Neniuj objektoj importitaj el {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Malsukcesis legi bildon: {error}"

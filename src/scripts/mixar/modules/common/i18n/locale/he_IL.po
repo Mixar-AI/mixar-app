@@ -465,8 +465,8 @@ msgstr "'{name}' הארשהה חולב רחבנ"
 msgid "Select in Scene"
 msgstr "הנצסב הריחב"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "הגוצתה ןולחב הזה טאלפסה םלוע לש יסקורפה תידי תריחב"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "ףסוא"
@@ -474,8 +474,11 @@ msgstr "ףסוא"
 msgid "That splat world is no longer in this file"
 msgstr "ץבוקב דוע אצמנ וניא הז טאלפס םלוע"
 
-msgid "This splat world has no proxy handle"
-msgstr "יסקורפ תידי ןיא הז טאלפס םלועל"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' רחבנ"
@@ -6755,8 +6758,8 @@ msgstr "(ply. וא spz. יופצ) '{ext}' ךמתנ אל טאלפס ץבוק גו
 msgid "File not found: {path}"
 msgstr "{path} :אצמנ אל ץבוקה"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-מ םיטקייבוא ואבוי אל"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "{error} :הלשכנ הנומתה תאירק"

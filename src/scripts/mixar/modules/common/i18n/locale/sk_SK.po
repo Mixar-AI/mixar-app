@@ -465,8 +465,8 @@ msgstr "Na moodboarde je vybrané „{name}“"
 msgid "Select in Scene"
 msgstr "Vybrať v scéne"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Vyberie zástupný úchyt tohto splatového sveta v zábere"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekcia"
@@ -474,8 +474,11 @@ msgstr "Kolekcia"
 msgid "That splat world is no longer in this file"
 msgstr "Tento splatový svet už nie je v tomto súbore"
 
-msgid "This splat world has no proxy handle"
-msgstr "Tento splatový svet nemá zástupný úchyt"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Vybrané „{name}“"
@@ -6755,8 +6758,8 @@ msgstr "Nepodporovaný typ súboru splatu '{ext}' (očakáva sa .spz alebo .ply)
 msgid "File not found: {path}"
 msgstr "Súbor sa nenašiel: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Z {name} sa neimportovali žiadne objekty"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Čítanie obrázka zlyhalo: {error}"

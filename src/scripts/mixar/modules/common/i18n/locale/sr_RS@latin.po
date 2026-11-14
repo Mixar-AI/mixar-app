@@ -566,9 +566,8 @@ msgstr "Izabrano je „{name}“ na mudbordu"
 msgid "Select in Scene"
 msgstr "Izaberi u sceni"
 
-# derived
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Bira pomoćnu ručku ovog sveta splata u prikazu"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 # derived
 msgid "Collection"
@@ -578,9 +577,11 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "Taj svet splata više nije u ovoj datoteci"
 
-# derived
-msgid "This splat world has no proxy handle"
-msgstr "Ovaj svet splata nema pomoćnu ručku"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 # derived
 msgid "Selected '{name}'"
@@ -8375,9 +8376,8 @@ msgstr "Nepodržana vrsta datoteke splata „{ext}“ (očekuje se .spz ili .ply
 msgid "File not found: {path}"
 msgstr "Datoteka nije pronađena: {path}"
 
-# derived
-msgid "No objects imported from {name}"
-msgstr "Nijedan objekat nije uvezen iz {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 # derived
 msgid "Failed to read image: {error}"

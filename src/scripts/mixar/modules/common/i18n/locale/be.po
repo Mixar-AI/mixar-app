@@ -465,8 +465,8 @@ msgstr "«{name}» выбрана на мудбордзе"
 msgid "Select in Scene"
 msgstr "Выбраць у сцэне"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Выбірае проксі-маркер гэтага свету сплатаў у акне прагляду"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Калекцыя"
@@ -474,8 +474,11 @@ msgstr "Калекцыя"
 msgid "That splat world is no longer in this file"
 msgstr "Гэтага свету сплатаў больш няма ў гэтым файле"
 
-msgid "This splat world has no proxy handle"
-msgstr "У гэтага свету сплатаў няма проксі-маркера"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Выбрана «{name}»"
@@ -6755,8 +6758,8 @@ msgstr "Непадтрыманы тып файла сплата «{ext}» (ча�
 msgid "File not found: {path}"
 msgstr "Файл не знойдзены: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "З {name} не імпартавана аб'ектаў"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Не ўдалося прачытаць выяву: {error}"

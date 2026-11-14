@@ -465,8 +465,8 @@ msgstr "Zaznaczono „{name}” na moodboardzie"
 msgid "Select in Scene"
 msgstr "Zaznacz w scenie"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Zaznacza uchwyt zastępczy tego świata splatów w rzutni"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekcja"
@@ -474,8 +474,11 @@ msgstr "Kolekcja"
 msgid "That splat world is no longer in this file"
 msgstr "Tego świata splatów nie ma już w tym pliku"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ten świat splatów nie ma uchwytu zastępczego"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Zaznaczono „{name}”"
@@ -6755,8 +6758,8 @@ msgstr "Nieobsługiwany typ pliku splat „{ext}” (oczekiwano .spz lub .ply)"
 msgid "File not found: {path}"
 msgstr "Nie znaleziono pliku: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Nie zaimportowano żadnych obiektów z {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Nie udało się odczytać obrazu: {error}"

@@ -465,8 +465,8 @@ msgstr "Đã chọn '{name}' trên bảng cảm hứng"
 msgid "Select in Scene"
 msgstr "Chọn trong Cảnh"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Chọn tay cầm đại diện của thế giới splat này trong cổng nhìn"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Bộ Sưu Tập"
@@ -474,8 +474,11 @@ msgstr "Bộ Sưu Tập"
 msgid "That splat world is no longer in this file"
 msgstr "Thế giới splat đó không còn trong tập tin này"
 
-msgid "This splat world has no proxy handle"
-msgstr "Thế giới splat này không có tay cầm đại diện"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Đã chọn '{name}'"
@@ -6755,8 +6758,8 @@ msgstr "Loại tập tin splat không được hỗ trợ '{ext}' (cần .spz ho
 msgid "File not found: {path}"
 msgstr "Không tìm thấy tập tin: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Không nhập khẩu được đối tượng nào từ {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Không thể đọc hình ảnh: {error}"

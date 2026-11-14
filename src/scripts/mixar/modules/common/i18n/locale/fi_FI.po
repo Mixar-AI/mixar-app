@@ -465,8 +465,8 @@ msgstr "Kohde '{name}' valittiin tunnelmataululla"
 msgid "Select in Scene"
 msgstr "Valitse kohtauksessa"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Valitsee tämän splat-maailman sijaiskahvan näkymässä"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kokoelma"
@@ -474,8 +474,11 @@ msgstr "Kokoelma"
 msgid "That splat world is no longer in this file"
 msgstr "Splat-maailma ei ole enää tässä tiedostossa"
 
-msgid "This splat world has no proxy handle"
-msgstr "Tällä splat-maailmalla ei ole sijaiskahvaa"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Valittiin '{name}'"
@@ -6755,8 +6758,8 @@ msgstr "Splat-tiedostotyyppiä '{ext}' ei tueta (odotettiin .spz tai .ply)"
 msgid "File not found: {path}"
 msgstr "Tiedostoa ei löydy: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Kohteesta {name} ei tuotu objekteja"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Kuvaa ei voitu lukea: {error}"

@@ -77,8 +77,8 @@ def spz_to_ply(spz_bytes: bytes) -> bytes:
     Returns
     -------
     bytes
-        A standard 3DGS PLY (graphdeco attribute layout) ready for the KIRI
-        3DGS Render importer.
+        A standard 3DGS PLY (graphdeco attribute layout) that Blender's PLY
+        importer reads as a built-in Gaussian splat.
 
     Raises
     ------
@@ -258,7 +258,7 @@ def _build_ply(arrays: dict, h: dict) -> bytes:
     rotations = _decode_rotations(arrays["rotations"], n, h["smallest_three"])
 
     # Coordinate conversion: SPZ stores splats in RUB (Right-Up-Back, Y-up),
-    # but the standard 3DGS PLY consumed by KIRI / viewers is RDF (Right-Down-
+    # but the standard 3DGS PLY consumed by importers / viewers is RDF (Right-Down-
     # Front, Y-down, Z-forward) — this is what Niantic's own save_splat_to_ply
     # emits. RUB->RDF is a 180-deg rotation about X: negate Y,Z on positions and
     # negate the y,z components of each quaternion. DC colour is direction-
@@ -292,13 +292,8 @@ def _build_ply(arrays: dict, h: dict) -> bytes:
         f_rest = np.transpose(sh, (0, 2, 1)).reshape(n, sh_dim * 3)
         columns.append(f_rest)
         prop_names += [f"f_rest_{i}" for i in range(sh_dim * 3)]
-    else:
-        # No SH in the SPZ, but the KIRI importer requires f_rest_* attributes.
-        # Emit a degree-1-shaped zero block so the PLY is always KIRI-importable
-        # (zero rest coefficients == no view-dependent colour, visually fine).
-        f_rest = np.zeros((n, 9), dtype=np.float32)
-        columns.append(f_rest)
-        prop_names += [f"f_rest_{i}" for i in range(9)]
+    # No SH in the SPZ: no f_rest_* at all. Blender imports that as a degree-0
+    # splat (view-independent colour) instead of carrying a zero SH block.
 
     columns += [opacity, scales, rotations]
     prop_names += ["opacity", "scale_0", "scale_1", "scale_2",

@@ -465,8 +465,8 @@ msgstr "„{name}“ მონიშნულია მუდბორდზე"
 msgid "Select in Scene"
 msgstr "სცენაში მონიშვნა"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "მონიშნავს ამ სპლატის სამყაროს პროქსის სახელურს სარკმელში"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "კოლექცია"
@@ -474,8 +474,11 @@ msgstr "კოლექცია"
 msgid "That splat world is no longer in this file"
 msgstr "ეს სპლატის სამყარო ამ ფაილში აღარ არის"
 
-msgid "This splat world has no proxy handle"
-msgstr "ამ სპლატის სამყაროს პროქსის სახელური არ აქვს"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "„{name}“ მონიშნულია"
@@ -6755,8 +6758,8 @@ msgstr "მხარდაუჭერელი სპლატის ფაი�
 msgid "File not found: {path}"
 msgstr "ფაილი ვერ მოიძებნა: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-დან ობიექტები არ დაიმპორტდა"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "გამოსახულების წაკითხვა ვერ მოხერხდა: {error}"

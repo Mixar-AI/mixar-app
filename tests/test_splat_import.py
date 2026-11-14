@@ -10,8 +10,8 @@ itself only orchestrates), pinning the contracts that matter:
 * ``.spz`` goes through ``spz_to_ply`` into a temp PLY that is ALWAYS
   cleaned up (success and failure);
 * a plain ``.ply`` is passed straight through (no conversion, no temp);
-* the KIRI render proxy is built AFTER orientation + recentring (the
-  proxy-in-final-pose rule from the World Labs importer);
+* the splat is oriented, then recentred, then stamped and framed;
+* a PLY that imports as anything but a built-in splat is removed and refused;
 * unsupported extensions / missing files refuse loudly.
 """
 
@@ -33,9 +33,10 @@ _MOD_PATH = (
 class _Recorder:
     """Records the order importer helpers were invoked in."""
 
-    def __init__(self):
+    def __init__(self, splat=True):
         self.calls = []
         self.temp_ply_seen = ""
+        self.splat = splat
 
     def make(self, name, ret=None):
         def _fn(*args, **kwargs):
@@ -43,7 +44,9 @@ class _Recorder:
             if name == "_import_tracked":
                 # args[0] is the lambda wrapping _import_splat_ply
                 args[0]()
-                return [MagicMock(name="splat_obj")]
+                obj = MagicMock(name="splat_obj")
+                obj.is_splat = self.splat
+                return [obj]
             return ret if ret is not None else []
         return _fn
 
@@ -76,12 +79,11 @@ def _load(recorder, spz_to_ply, install):
         "mixar.modules.moodboard.core.world_labs_importer"
     )
     for name in (
-        "_ensure_object_mode", "_finalize_visibility", "_frame_objects",
-        "_move_to_collection", "_orient_splats",
+        "_ensure_object_mode", "_frame_objects", "_move_to_collection",
+        "_orient_splats",
     ):
         setattr(importer_stub, name, recorder.make(name))
     importer_stub._recenter_world_to_ground = recorder.make("_recenter")
-    importer_stub._enable_splat_render = recorder.make("_proxy", ret=[])
     importer_stub.RAW_PLY_ROT_EULER_DEG = (-90.0, 0.0, 0.0)
 
     def _import_splat_ply(ply_path):
@@ -93,12 +95,21 @@ def _load(recorder, spz_to_ply, install):
     spz_stub = types.ModuleType("mixar.modules.moodboard.core.world_labs_spz")
     spz_stub.spz_to_ply = spz_to_ply
 
+    native_stub = types.ModuleType("mixar.modules.moodboard.core.splat_native")
+    native_stub.is_splat = lambda obj: obj.is_splat
+
+    lifecycle_stub = types.ModuleType("mixar.modules.moodboard.core.splat_lifecycle")
+    lifecycle_stub.finalize_splat_handles = recorder.make("_finalize")
+    lifecycle_stub.note_splats_imported = recorder.make("_note")
+
     logging_stub = types.ModuleType("mixar.config.logging_config")
     logging_stub.get_logger = lambda name: MagicMock()
 
     install({
         "mixar.modules.moodboard.core.world_labs_importer": importer_stub,
         "mixar.modules.moodboard.core.world_labs_spz": spz_stub,
+        "mixar.modules.moodboard.core.splat_native": native_stub,
+        "mixar.modules.moodboard.core.splat_lifecycle": lifecycle_stub,
         "mixar.config.logging_config": logging_stub,
     })
     spec = importlib.util.spec_from_file_location("splat_import", _MOD_PATH)
@@ -144,7 +155,7 @@ def test_ply_passes_through_without_conversion(tmp_path, stub_env):
     assert rec.temp_ply_seen == str(ply)
 
 
-def test_proxy_built_after_orient_and_recenter(tmp_path, stub_env):
+def test_splat_oriented_then_recentred_then_stamped(tmp_path, stub_env):
     rec = _Recorder()
     mod = _load(rec, lambda data: b"PLY", stub_env)
     ply = tmp_path / "scene.ply"
@@ -152,8 +163,24 @@ def test_proxy_built_after_orient_and_recenter(tmp_path, stub_env):
 
     mod.import_splat_file(str(ply), recenter=True)
 
-    order = [c for c in rec.calls if c in ("_orient_splats", "_recenter", "_proxy")]
-    assert order == ["_orient_splats", "_recenter", "_proxy"]
+    steps = ("_orient_splats", "_recenter", "_finalize", "_frame_objects", "_note")
+    assert [c for c in rec.calls if c in steps] == list(steps)
+
+
+def test_non_splat_ply_is_removed_and_refused(tmp_path, stub_env):
+    rec = _Recorder(splat=False)
+    mod = _load(rec, lambda data: b"PLY", stub_env)
+    ply = tmp_path / "mesh.ply"
+    ply.write_bytes(b"ply\n")
+    removed = []
+    mod.bpy = MagicMock()
+    mod.bpy.data.objects.remove.side_effect = lambda obj, **_kw: removed.append(obj)
+
+    with pytest.raises(ValueError):
+        mod.import_splat_file(str(ply))
+    assert len(removed) == 1
+    assert mod.bpy.data.collections.remove.called
+    assert "_finalize" not in rec.calls
 
 
 def test_temp_cleaned_up_when_import_fails(tmp_path, stub_env):

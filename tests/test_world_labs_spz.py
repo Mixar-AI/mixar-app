@@ -109,10 +109,9 @@ def test_decode_v2_degree0_roundtrip():
     names, data = _parse_ply(spz_to_ply(spz))
 
     assert data.shape[0] == 2
-    # degree 0 -> zero-padded f_rest block (9 cols) for KIRI compatibility
-    assert "f_rest_0" in names and "f_rest_8" in names and "f_rest_9" not in names
+    # degree 0 -> no f_rest block: Blender imports a degree-0 splat
+    assert not any(nm.startswith("f_rest_") for nm in names)
     idx = {nm: i for i, nm in enumerate(names)}
-    assert np.allclose([data[:, idx[f"f_rest_{i}"]] for i in range(9)], 0.0)
 
     # Decoder converts RUB -> RDF (standard PLY): Y and Z are negated.
     expected_pos = np.array(positions, dtype=float) * np.array([1.0, -1.0, -1.0])

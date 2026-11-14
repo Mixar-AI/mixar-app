@@ -465,8 +465,8 @@ msgstr "« {name} » sélectionné sur le moodboard"
 msgid "Select in Scene"
 msgstr "Sélectionner dans la scène"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Sélectionner la poignée proxy de ce monde de splats dans la vue 3D"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Collection"
@@ -474,8 +474,11 @@ msgstr "Collection"
 msgid "That splat world is no longer in this file"
 msgstr "Ce monde de splats ne se trouve plus dans ce fichier"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ce monde de splats n’a pas de poignée proxy"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "« {name} » sélectionné"
@@ -6755,8 +6758,8 @@ msgstr "Type de fichier splat « {ext} » non pris en charge (.spz ou .ply att
 msgid "File not found: {path}"
 msgstr "Fichier introuvable : {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Aucun objet importé depuis {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Impossible de lire l’image : {error}"

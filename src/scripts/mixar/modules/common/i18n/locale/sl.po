@@ -465,8 +465,8 @@ msgstr "Izbrano '{name}' na moodboardu"
 msgid "Select in Scene"
 msgstr "Izberi v sceni"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Izbere ročaj približka tega sveta splata v 3D pogledu"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Zbirka"
@@ -474,8 +474,11 @@ msgstr "Zbirka"
 msgid "That splat world is no longer in this file"
 msgstr "Tega sveta splata ni več v tej datoteki"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ta svet splata nima ročaja približka"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Izbrano '{name}'"
@@ -6755,8 +6758,8 @@ msgstr "Nepodprta vrsta datoteke splata '{ext}' (pričakovano .spz ali .ply)"
 msgid "File not found: {path}"
 msgstr "Datoteka ni najdena: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Iz {name} ni uvožen noben predmet"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Slike ni bilo mogoče prebrati: {error}"

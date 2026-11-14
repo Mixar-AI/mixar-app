@@ -465,8 +465,8 @@ msgstr "Изабрано је „{name}“ на мудборду"
 msgid "Select in Scene"
 msgstr "Изабери у сцени"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Бира помоћну ручку овог света сплата у приказу"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Колекција"
@@ -474,8 +474,11 @@ msgstr "Колекција"
 msgid "That splat world is no longer in this file"
 msgstr "Тај свет сплата више није у овој датотеци"
 
-msgid "This splat world has no proxy handle"
-msgstr "Овај свет сплата нема помоћну ручку"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Изабрано је „{name}“"
@@ -6755,8 +6758,8 @@ msgstr "Неподржана врста датотеке сплата „{ext}�
 msgid "File not found: {path}"
 msgstr "Датотека није пронађена: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Ниједан објекат није увезен из {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Читање слике није успело: {error}"

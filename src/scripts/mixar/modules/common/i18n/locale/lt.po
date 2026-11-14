@@ -465,8 +465,8 @@ msgstr "Nuotaikų lentoje pasirinkta „{name}“"
 msgid "Select in Scene"
 msgstr "Pasirinkti scenoje"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Pasirenka šio splato pasaulio pakaitalo rankenėlę peržiūros lange"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekcija"
@@ -474,8 +474,11 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "To splato pasaulio šiame faile jau nebėra"
 
-msgid "This splat world has no proxy handle"
-msgstr "Šis splato pasaulis neturi pakaitalo rankenėlės"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Pasirinkta „{name}“"
@@ -6755,8 +6758,8 @@ msgstr "Nepalaikomas splato failo tipas „{ext}“ (tikimasi .spz arba .ply)"
 msgid "File not found: {path}"
 msgstr "Failas nerastas: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Iš {name} neimportuota objektų"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Nepavyko perskaityti paveikslo: {error}"

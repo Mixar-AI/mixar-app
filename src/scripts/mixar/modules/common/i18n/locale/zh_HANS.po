@@ -465,8 +465,8 @@ msgstr "已在情绪板上选中“{name}”"
 msgid "Select in Scene"
 msgstr "在场景中选择"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "在视图中选择此泼溅世界的代理控制柄"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "集合"
@@ -474,8 +474,11 @@ msgstr "集合"
 msgid "That splat world is no longer in this file"
 msgstr "该泼溅世界已不在此文件中"
 
-msgid "This splat world has no proxy handle"
-msgstr "此泼溅世界没有代理控制柄"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "已选中“{name}”"
@@ -6755,8 +6758,8 @@ msgstr "不支持的泼溅文件类型“{ext}”（应为 .spz 或 .ply）"
 msgid "File not found: {path}"
 msgstr "未找到文件：{path}"
 
-msgid "No objects imported from {name}"
-msgstr "未从 {name} 导入任何物体"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "无法读取图像：{error}"
