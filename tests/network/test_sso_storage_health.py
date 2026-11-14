@@ -62,7 +62,7 @@ def test_failure_after_browser_callback_has_actionable_error(store, monkeypatch)
     monkeypatch.setattr(sso, 'wait_for_code', lambda *a, **kw: 'code')
     monkeypatch.setattr(sso, '_exchange_code', lambda *a: (
         {'access_token': 'new-access', 'refresh_token': 'new-refresh'}, None))
-    monkeypatch.setattr(sso, 'store_login_token_pair', lambda *a: (False, 'Failed to store refresh token'))
+    monkeypatch.setattr(sso, 'store_login_token_pair', lambda *a, **kw: (False, 'Failed to store refresh token'))
     result = sso.sso_login()
     assert result == storage_health.storage_error_result()
     server.server_close.assert_called_once()
@@ -94,7 +94,7 @@ def test_usable_storage_completes_login(store, monkeypatch):
     save_pair = Mock(return_value=(True, None))
     monkeypatch.setattr(sso, 'store_login_token_pair', save_pair)
     assert sso.sso_login()['success']
-    save_pair.assert_called_once_with('new-access', 'new-refresh')
+    save_pair.assert_called_once_with('new-access', 'new-refresh', cancel=None)
     server.server_close.assert_called_once()
 
 

@@ -80,6 +80,14 @@ bool Mixar_floating_docks_held();
  * its top-level main window.
  */
 wmWindow *Mixar_modal_dialog_host_window(wmWindowManager *wm, wmWindow *win);
+/**
+ * `wm_draw_update` skips `win` this frame: natively hidden (the minimised
+ * island, the pill while the island is up, docks held for a modal), logically
+ * minimised (the island during its minimise fade) or OS-minimised on Windows.
+ * Its regions keep their redraw tags until it is drawn again, so readers that
+ * wait for a redraw (the QA/UI-control widget dump) must not wait on it.
+ */
+bool Mixar_window_draw_skipped(const wmWindow *win);
 /** `win`'s active screen has an Agent Bubble area (the island or the pill). */
 bool Mixar_window_has_agent_bubble(const wmWindow *win);
 

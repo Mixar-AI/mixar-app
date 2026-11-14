@@ -844,11 +844,15 @@ bool ED_agent_bubble_is_attachment_destination(const wmWindow *window)
          window->runtime->ghostwin == (g_bubble_minimised ? g_pill_ghostwin : g_bubble_ghostwin);
 }
 
-bool ED_agent_bubble_is_resting_pill(const bContext *C)
+bool agent_bubble_is_resting_pill_window(const wmWindow *win)
 {
-  const wmWindow *win = CTX_wm_window(C);
   return g_bubble_minimised && win && g_pill_ghostwin &&
          win->runtime->ghostwin == g_pill_ghostwin;
+}
+
+bool ED_agent_bubble_is_resting_pill(const bContext *C)
+{
+  return agent_bubble_is_resting_pill_window(CTX_wm_window(C));
 }
 
 bool ED_agent_bubble_is_minimised_window(const wmWindow *window)
