@@ -197,6 +197,81 @@ msgstr "सक्षम स्थिति बदलने से पहले �
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
+msgid "Invalid response status"
+msgstr ""
+
+msgid "Invalid upgrade header"
+msgstr ""
+
+msgid "Invalid connection header"
+msgstr ""
+
+msgid "Invalid challenge response"
+msgstr ""
+
+msgid "ClientResponse"
+msgstr ""
+
+msgid "RequestInfo"
+msgstr ""
+
+msgid "ChainMapProxy"
+msgstr ""
+
+msgid "ETag"
+msgstr ""
+
+msgid "HttpVersion"
+msgstr ""
+
+msgid "HttpVersion10"
+msgstr ""
+
+msgid "8bit"
+msgstr ""
+
+msgid "7bit"
+msgstr ""
+
+msgid "AsyncResolver"
+msgstr ""
+
+msgid "DefaultResolver"
+msgstr ""
+
+msgid "EofStream"
+msgstr ""
+
+msgid "StreamReader"
+msgstr ""
+
+msgid "Stopped\n"
+msgstr ""
+
+msgid "RequestPayloadError"
+msgstr ""
+
+msgid "PayloadAccessError"
+msgstr ""
+
+msgid "FileField"
+msgstr ""
+
+msgid "Request"
+msgstr ""
+
+msgid "StreamResponse"
+msgstr ""
+
+msgid "Response"
+msgstr ""
+
+msgid "WebSocketReady"
+msgstr ""
+
+msgid "WSMsgType"
+msgstr ""
+
 msgid "Unknown"
 msgstr "अज्ञात"
 
@@ -1514,8 +1589,20 @@ msgstr "नीचे के फ़ील्ड का उपयोग करे�
 msgid "Choose a local model first."
 msgstr "पहले एक स्थानीय मॉडल चुनें।"
 
-msgid "Start the local model first (it must be running to save)."
-msgstr "पहले स्थानीय मॉडल शुरू करें (सहेजने के लिए इसका चलना आवश्यक है)।"
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 msgid "Base URL and model name are required."
 msgstr "आधार URL और मॉडल नाम आवश्यक हैं।"
@@ -1671,6 +1758,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -1923,6 +2013,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -2849,8 +2942,17 @@ msgstr "Mixar किसी एप्लिकेशन बंडल से न�
 msgid "No permission to update {path}"
 msgstr "{path} को अपडेट करने की अनुमति नहीं"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 msgid "Install directory could not be resolved"
 msgstr "इंस्टॉल निर्देशिका निर्धारित नहीं हो सकी"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 msgid "Install location could not be resolved"
 msgstr "इंस्टॉल स्थान निर्धारित नहीं हो सका"
@@ -2879,6 +2981,12 @@ msgstr "अपडेटर शुरू नहीं हो सका"
 msgid "Mixar didn't close"
 msgstr "Mixar बंद नहीं हुआ"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 msgid "In-app updates aren't supported on this platform"
 msgstr "इस प्लेटफ़ॉर्म पर इन-ऐप अपडेट समर्थित नहीं हैं"
 
@@ -2893,6 +3001,72 @@ msgstr "{platform} के लिए असमर्थित इंस्टॉ�
 
 msgid "This install can't be updated in place"
 msgstr "इस इंस्टॉलेशन को यथास्थान अपडेट नहीं किया जा सकता"
+
+msgid "Updated to Mixar {version}"
+msgstr "Mixar {version} में अपडेट किया गया"
+
+msgid "The update was installed successfully."
+msgstr "अपडेट सफलतापूर्वक इंस्टॉल हो गया।"
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Update didn't take effect"
+msgstr "अपडेट प्रभावी नहीं हुआ"
+
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} आप डाउनलोड पृष्ठ से {version} डाउनलोड कर सकते हैं।"
+
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} आप डाउनलोड पृष्ठ से अपडेट डाउनलोड कर सकते हैं।"
+
+msgid "Update was not installed"
+msgstr "अपडेट इंस्टॉल नहीं हुआ"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Mixar {target} इंस्टॉल हुआ, लेकिन संस्करण {running} शुरू हुआ। डाउनलोड पृष्ठ से फिर से इंस्टॉल करें।"
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+msgid "Mixar was still running when the installer tried to start."
+msgstr "जब इंस्टॉलर ने शुरू होने का प्रयास किया, तब Mixar अभी भी चल रहा था।"
+
+msgid "The downloaded installer failed its signature check."
+msgstr "डाउनलोड किया गया इंस्टॉलर हस्ताक्षर जाँच में विफल रहा।"
+
+msgid "The downloaded installer could not be opened."
+msgstr "डाउनलोड किया गया इंस्टॉलर खोला नहीं जा सका।"
+
+msgid "Mixar could not be replaced on disk."
+msgstr "डिस्क पर Mixar को बदला नहीं जा सका।"
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+msgid "The installer did not finish."
+msgstr "इंस्टॉलर पूरा नहीं हुआ।"
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {total} में से {transferred}"
@@ -2960,47 +3134,35 @@ msgstr "अपडेट की जाँच नहीं हो सकी"
 msgid "Check your internet connection and try again."
 msgstr "अपना इंटरनेट कनेक्शन जाँचें और पुनः प्रयास करें।"
 
-msgid "Update didn't take effect"
-msgstr "अपडेट प्रभावी नहीं हुआ"
+msgid "Another Mixar window"
+msgstr ""
 
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Mixar {target} इंस्टॉल हुआ, लेकिन संस्करण {running} शुरू हुआ। डाउनलोड पृष्ठ से फिर से इंस्टॉल करें।"
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-msgid "Updated to Mixar {version}"
-msgstr "Mixar {version} में अपडेट किया गया"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-msgid "The update was installed successfully."
-msgstr "अपडेट सफलतापूर्वक इंस्टॉल हो गया।"
+msgid "Close other apps to update"
+msgstr ""
 
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} आप डाउनलोड पृष्ठ से {version} डाउनलोड कर सकते हैं।"
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} आप डाउनलोड पृष्ठ से अपडेट डाउनलोड कर सकते हैं।"
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-msgid "Update was not installed"
-msgstr "अपडेट इंस्टॉल नहीं हुआ"
+msgid "Finishing background work"
+msgstr ""
 
-msgid "Mixar was still running when the installer tried to start."
-msgstr "जब इंस्टॉलर ने शुरू होने का प्रयास किया, तब Mixar अभी भी चल रहा था।"
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-msgid "The downloaded installer failed its signature check."
-msgstr "डाउनलोड किया गया इंस्टॉलर हस्ताक्षर जाँच में विफल रहा।"
+msgid "Mixar is finishing an update"
+msgstr ""
 
-msgid "The downloaded installer could not be opened."
-msgstr "डाउनलोड किया गया इंस्टॉलर खोला नहीं जा सका।"
-
-msgid "Mixar could not be replaced on disk."
-msgstr "डिस्क पर Mixar को बदला नहीं जा सका।"
-
-msgid "The installation was cancelled."
-msgstr "इंस्टॉलेशन रद्द कर दिया गया।"
-
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows Installer ने एक गंभीर त्रुटि बताई।"
-
-msgid "The installer did not finish."
-msgstr "इंस्टॉलर पूरा नहीं हुआ।"
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
 msgstr "Mixar को पुनः आरंभ करके डाउनलोड किया गया अपडेट इंस्टॉल करता है"
@@ -3046,6 +3208,9 @@ msgstr "अपडेट का डाउनलोड रोकता है"
 
 msgid "This update is required and cannot be cancelled"
 msgstr "यह अपडेट आवश्यक है और रद्द नहीं किया जा सकता"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 msgid "Open the Mixar downloads page in the default browser"
 msgstr "मूलभूत ब्राउज़र में Mixar डाउनलोड पृष्ठ खोलता है"
@@ -20229,7 +20394,28 @@ msgstr "'{name}' अब एसेट संचिका में नहीं �
 msgid "Could not add the asset to the scene."
 msgstr "एसेट को दृश्य में नहीं जोड़ा जा सका।"
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -20283,15 +20469,6 @@ msgstr "स्वचालित रूप से फिर शुरू नह�
 msgid "The request could not be completed."
 msgstr "अनुरोध पूरा नहीं हो सका।"
 
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "आपका संदेश Mixie तक नहीं पहुँचा। अपना कनेक्शन जाँचें, फिर इसे दोबारा भेजें।"
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "सर्वर तक नहीं पहुँचा जा सका। कृपया अपना कनेक्शन जाँचें और पुनः प्रयास करें।"
 
@@ -20330,6 +20507,15 @@ msgstr "इस सर्वर पर अभी हस्तलेखन पह�
 
 msgid "Handwriting conversion failed"
 msgstr "हस्तलेखन रूपांतरण विफल"
+
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "आपका संदेश Mixie तक नहीं पहुँचा। अपना कनेक्शन जाँचें, फिर इसे दोबारा भेजें।"
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -20669,6 +20855,15 @@ msgid "Pick"
 msgstr "चुनें"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 msgid "Session expired. {reason}"
@@ -24609,6 +24804,30 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
+msgid "Shader texture preparation timed out"
+msgstr ""
+
+msgid "Preparing shader textures ({done}/{total})…"
+msgstr ""
+
+msgid "Could not prepare shader textures; publication stopped"
+msgstr ""
+
+msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
+msgstr ""
+
+msgid "{material}: connect explicit UV coordinates before publishing {channel}"
+msgstr ""
+
+msgid "{material}: publishing this shader requires a non-tiled image"
+msgstr ""
+
+msgid "{material}: publishing {channel} requires a single UV map"
+msgstr ""
+
+msgid "{material}: required UV map is missing on {object}"
+msgstr ""
+
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -25293,6 +25512,9 @@ msgstr "गुण"
 msgid "Blend (.blend)"
 msgstr ""
 
+msgid "Publish to Web…"
+msgstr ""
+
 msgid "Tutorials"
 msgstr ""
 
@@ -25945,6 +26167,18 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 msgid "Set Agent Bubble Window Size"

@@ -247,6 +247,81 @@ msgstr "Postavite aktivni dodatak pre nego što promenite njegovo omogućeno sta
 msgid "Your add-on projects folder is unavailable; reconnect the drive, or change the folder under Mixar Preferences"
 msgstr ""
 
+msgid "Invalid response status"
+msgstr ""
+
+msgid "Invalid upgrade header"
+msgstr ""
+
+msgid "Invalid connection header"
+msgstr ""
+
+msgid "Invalid challenge response"
+msgstr ""
+
+msgid "ClientResponse"
+msgstr ""
+
+msgid "RequestInfo"
+msgstr ""
+
+msgid "ChainMapProxy"
+msgstr ""
+
+msgid "ETag"
+msgstr ""
+
+msgid "HttpVersion"
+msgstr ""
+
+msgid "HttpVersion10"
+msgstr ""
+
+msgid "8bit"
+msgstr ""
+
+msgid "7bit"
+msgstr ""
+
+msgid "AsyncResolver"
+msgstr ""
+
+msgid "DefaultResolver"
+msgstr ""
+
+msgid "EofStream"
+msgstr ""
+
+msgid "StreamReader"
+msgstr ""
+
+msgid "Stopped\n"
+msgstr ""
+
+msgid "RequestPayloadError"
+msgstr ""
+
+msgid "PayloadAccessError"
+msgstr ""
+
+msgid "FileField"
+msgstr ""
+
+msgid "Request"
+msgstr ""
+
+msgid "StreamResponse"
+msgstr ""
+
+msgid "Response"
+msgstr ""
+
+msgid "WebSocketReady"
+msgstr ""
+
+msgid "WSMsgType"
+msgstr ""
+
 msgid "Unknown"
 msgstr "Nepoznato"
 
@@ -1932,9 +2007,20 @@ msgstr "Koristite polja ispod ili Ponovo skeniraj"
 msgid "Choose a local model first."
 msgstr "Prvo izaberite lokalni model."
 
-# derived
-msgid "Start the local model first (it must be running to save)."
-msgstr "Prvo pokrenite lokalni model (mora da radi da bi se sačuvalo)."
+msgid "Download the model first, then press Start."
+msgstr ""
+
+msgid "Another local model is running. Pick it, or stop it and start this one."
+msgstr ""
+
+msgid "The local model stopped. Press Start to try again."
+msgstr ""
+
+msgid "Press Start to run the model, then save."
+msgstr ""
+
+msgid "The local model did not finish starting. Press Start to try again."
+msgstr ""
 
 # derived
 msgid "Base URL and model name are required."
@@ -2101,6 +2187,9 @@ msgid "stored securely"
 msgstr ""
 
 msgid "Text-only model - chat works; 3D tasks run without visual feedback."
+msgstr ""
+
+msgid "Context window: {tokens} tokens. Mixar's agent needs about {needed}, so its replies will be cut off. Raise it in your local server (Ollama: OLLAMA_CONTEXT_LENGTH; LM Studio: Context Length), then reload the model."
 msgstr ""
 
 msgid "DISCONNECT THIS SIGN-IN?"
@@ -2378,6 +2467,9 @@ msgid "Use my key"
 msgstr ""
 
 msgid "Forget"
+msgstr ""
+
+msgid "Waiting for the local model to start…"
 msgstr ""
 
 msgid "Validating with your provider…"
@@ -3518,9 +3610,18 @@ msgstr "Mixar ne radi iz paketa aplikacije"
 msgid "No permission to update {path}"
 msgstr "Nema dozvole za ažuriranje {path}"
 
+msgid "WindowsInstaller"
+msgstr ""
+
+msgid "DisplayVersion"
+msgstr ""
+
 # derived
 msgid "Install directory could not be resolved"
 msgstr "Direktorijum instalacije nije mogao da se razreši"
+
+msgid "This copy of Mixar wasn't installed by the Mixar installer"
+msgstr ""
 
 # derived
 msgid "Install location could not be resolved"
@@ -3558,6 +3659,12 @@ msgstr "Nije moguće pokrenuti program za ažuriranje"
 msgid "Mixar didn't close"
 msgstr "Mixar se nije zatvorio"
 
+msgid "Close the apps listed in the notification, then try again"
+msgstr ""
+
+msgid "Mixar will update once its background tasks finish"
+msgstr ""
+
 # derived
 msgid "In-app updates aren't supported on this platform"
 msgstr "Ažuriranja unutar aplikacije nisu podržana na ovoj platformi"
@@ -3577,6 +3684,84 @@ msgstr "Nepodržana vrsta instalatora za {platform}: {installer_type}"
 # derived
 msgid "This install can't be updated in place"
 msgstr "Ova instalacija ne može da se ažurira na mestu"
+
+# derived
+msgid "Updated to Mixar {version}"
+msgstr "Ažurirano na Mixar {version}"
+
+# derived
+msgid "The update was installed successfully."
+msgstr "Ažuriranje je uspešno instalirano."
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
+msgstr ""
+
+msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
+msgstr ""
+
+msgid "Restart Windows to finish updating"
+msgstr ""
+
+# derived
+msgid "Update didn't take effect"
+msgstr "Ažuriranje nije stupilo na snagu"
+
+# derived
+msgid "{reason} You can download {version} from the downloads page."
+msgstr "{reason} Možete preuzeti {version} sa stranice za preuzimanje."
+
+# derived
+msgid "{reason} You can download the update from the downloads page."
+msgstr "{reason} Možete preuzeti ažuriranje sa stranice za preuzimanje."
+
+# derived
+msgid "Update was not installed"
+msgstr "Ažuriranje nije instalirano"
+
+msgid "Windows still lists Mixar {installed} as installed. Download {target} from the downloads page and run the installer."
+msgstr ""
+
+msgid "Mixar {target} was installed, but this copy ({running}) runs from another folder. Open Mixar from the Start menu instead."
+msgstr ""
+
+msgid "Mixar {target} was installed, but the running version could not be confirmed."
+msgstr ""
+
+# derived
+msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
+msgstr "Instaliran je Mixar {target}, ali je pokrenuta verzija {running}. Ponovo instalirajte sa stranice za preuzimanje."
+
+msgid "Other programs were still using Mixar's files ({names}). Close other Mixar windows and any AI app using the Mixar connector, then try again."
+msgstr ""
+
+# derived
+msgid "Mixar was still running when the installer tried to start."
+msgstr "Mixar je još radio kada je instalator pokušao da se pokrene."
+
+# derived
+msgid "The downloaded installer failed its signature check."
+msgstr "Preuzeti instalator nije prošao proveru potpisa."
+
+# derived
+msgid "The downloaded installer could not be opened."
+msgstr "Preuzeti instalator nije mogao da se otvori."
+
+# derived
+msgid "Mixar could not be replaced on disk."
+msgstr "Mixar nije mogao da se zameni na disku."
+
+msgid "The installation was cancelled at the administrator prompt. Choose Yes when Windows asks, to install the update."
+msgstr ""
+
+msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
+msgstr ""
+
+msgid "Windows Installer reported error {code}. Restart Windows, then try again."
+msgstr ""
+
+# derived
+msgid "The installer did not finish."
+msgstr "Instalator nije završio."
 
 # derived
 msgid "{percent}% — {transferred} of {total}"
@@ -3666,61 +3851,35 @@ msgstr "Nije moguće proveriti ažuriranja"
 msgid "Check your internet connection and try again."
 msgstr "Proverite internet vezu i pokušajte ponovo."
 
-# derived
-msgid "Update didn't take effect"
-msgstr "Ažuriranje nije stupilo na snagu"
+msgid "Another Mixar window"
+msgstr ""
 
-# derived
-msgid "Mixar {target} was installed but version {running} started. Reinstall from the downloads page."
-msgstr "Instaliran je Mixar {target}, ali je pokrenuta verzija {running}. Ponovo instalirajte sa stranice za preuzimanje."
+msgid "{app} (using the Mixar connector)"
+msgstr ""
 
-# derived
-msgid "Updated to Mixar {version}"
-msgstr "Ažurirano na Mixar {version}"
+msgid "An AI app using the Mixar connector"
+msgstr ""
 
-# derived
-msgid "The update was installed successfully."
-msgstr "Ažuriranje je uspešno instalirano."
+msgid "Close other apps to update"
+msgstr ""
 
-# derived
-msgid "{reason} You can download {version} from the downloads page."
-msgstr "{reason} Možete preuzeti {version} sa stranice za preuzimanje."
+msgid "Windows can't replace Mixar's files while these are using them:"
+msgstr ""
 
-# derived
-msgid "{reason} You can download the update from the downloads page."
-msgstr "{reason} Možete preuzeti ažuriranje sa stranice za preuzimanje."
+msgid "Close them, then click Restart & Update."
+msgstr ""
 
-# derived
-msgid "Update was not installed"
-msgstr "Ažuriranje nije instalirano"
+msgid "Finishing background work"
+msgstr ""
 
-# derived
-msgid "Mixar was still running when the installer tried to start."
-msgstr "Mixar je još radio kada je instalator pokušao da se pokrene."
+msgid "The update starts automatically when Mixar's background tasks finish."
+msgstr ""
 
-# derived
-msgid "The downloaded installer failed its signature check."
-msgstr "Preuzeti instalator nije prošao proveru potpisa."
+msgid "Mixar is finishing an update"
+msgstr ""
 
-# derived
-msgid "The downloaded installer could not be opened."
-msgstr "Preuzeti instalator nije mogao da se otvori."
-
-# derived
-msgid "Mixar could not be replaced on disk."
-msgstr "Mixar nije mogao da se zameni na disku."
-
-# derived
-msgid "The installation was cancelled."
-msgstr "Instalacija je otkazana."
-
-# derived
-msgid "Windows Installer reported a fatal error."
-msgstr "Windows instalator je prijavio kobnu grešku."
-
-# derived
-msgid "The installer did not finish."
-msgstr "Instalator nije završio."
+msgid "It will reopen automatically when it's done."
+msgstr ""
 
 # derived
 msgid "Restart Mixar and install the downloaded update"
@@ -3780,6 +3939,9 @@ msgstr "Zaustavlja preuzimanje ažuriranja"
 # derived
 msgid "This update is required and cannot be cancelled"
 msgstr "Ovo ažuriranje je obavezno i ne može se otkazati"
+
+msgid "Stop waiting for Mixar's background tasks; the update stays ready"
+msgstr ""
 
 # derived
 msgid "Open the Mixar downloads page in the default browser"
@@ -25933,7 +26095,28 @@ msgstr "„{name}“ više nije u datoteci resursa."
 msgid "Could not add the asset to the scene."
 msgstr "Nije bilo moguće dodati resurs u scenu."
 
+msgid "Send your message again to continue."
+msgstr ""
+
+msgid "You're signed in"
+msgstr ""
+
+msgid "Guest session started"
+msgstr ""
+
+msgid "Your key is saved"
+msgstr ""
+
+msgid "Sending your message…"
+msgstr ""
+
 msgid "Switched to Mixar credits — your {provider} key is paused."
+msgstr ""
+
+msgid "Finish signing in in your browser. This message updates when you're back."
+msgstr ""
+
+msgid "Sign-in didn't finish. Try again."
 msgstr ""
 
 msgid "Sign in to continue"
@@ -25996,16 +26179,6 @@ msgid "The request could not be completed."
 msgstr "Zahtev nije mogao da se dovrši."
 
 # derived
-msgid "Your message didn't reach Mixie. Check your connection, then send it again."
-msgstr "Vaša poruka nije stigla do Mixie. Proverite vezu, pa je pošaljite ponovo."
-
-msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
-msgstr ""
-
-msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
-msgstr ""
-
-# derived
 msgid "Couldn't reach the server. Please check your connection and try again."
 msgstr "Server nije dostupan. Proverite vezu i pokušajte ponovo."
 
@@ -26056,6 +26229,16 @@ msgstr "Prepoznavanje rukopisa još nije dostupno na ovom serveru — umesto tog
 # derived
 msgid "Handwriting conversion failed"
 msgstr "Pretvaranje rukopisa nije uspelo"
+
+# derived
+msgid "Your message didn't reach Mixie. Check your connection, then send it again."
+msgstr "Vaša poruka nije stigla do Mixie. Proverite vezu, pa je pošaljite ponovo."
+
+msgid "This version of Mixar and the server don't match. Update Mixar, then try again."
+msgstr ""
+
+msgid "Your message is too large to send. Remove some attachments or shorten it, then try again."
+msgstr ""
 
 msgid "{n} tool called"
 msgstr ""
@@ -26479,6 +26662,15 @@ msgid "Pick"
 msgstr "Izaberi"
 
 msgid "That library pick is no longer offered"
+msgstr ""
+
+msgid "Mixar is starting a guest session. Send again in a moment, or sign in."
+msgstr ""
+
+msgid "Too many guest sessions were started from this network. Sign in to continue, or Mixar tries again in about {minutes} min."
+msgstr ""
+
+msgid "Mixar couldn't start a guest session. Sign in to continue; Mixar keeps trying in the background."
 msgstr ""
 
 # derived
@@ -31494,6 +31686,30 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
+msgid "Shader texture preparation timed out"
+msgstr ""
+
+msgid "Preparing shader textures ({done}/{total})…"
+msgstr ""
+
+msgid "Could not prepare shader textures; publication stopped"
+msgstr ""
+
+msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
+msgstr ""
+
+msgid "{material}: connect explicit UV coordinates before publishing {channel}"
+msgstr ""
+
+msgid "{material}: publishing this shader requires a non-tiled image"
+msgstr ""
+
+msgid "{material}: publishing {channel} requires a single UV map"
+msgstr ""
+
+msgid "{material}: required UV map is missing on {object}"
+msgstr ""
+
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -32203,6 +32419,9 @@ msgid "Properties"
 msgstr "Osobine"
 
 msgid "Blend (.blend)"
+msgstr ""
+
+msgid "Publish to Web…"
 msgstr ""
 
 msgid "Tutorials"
@@ -33007,6 +33226,18 @@ msgid "Activate Mixar"
 msgstr ""
 
 msgid "Bring Mixar in front of other applications"
+msgstr ""
+
+msgid "Resize Agent Window"
+msgstr ""
+
+msgid "Drag to resize the agent conversation"
+msgstr ""
+
+msgid "Edges"
+msgstr ""
+
+msgid "Native resize edges"
 msgstr ""
 
 # derived
