@@ -103,6 +103,19 @@ def observation(qa, expected, role):
                    f'result=ns["observe"]({expected!r},{role!r})')
 
 
+def require_resting_pill(qa):
+    """The small status chip above an open island is not the resting capsule."""
+    observed = qa.eval("widgets=drv.snapshot()\n"
+                       "state=drv.island_state(widgets)\n"
+                       "hits=drv.find(widgets,surface='pill_cat')\n"
+                       "result={'state':state,'owners':[w['window'] for w in hits]}")
+    state = observed['state']
+    assert state['mode'] == 'pill', 'island reopened; resting pill is not visible'
+    assert len(observed['owners']) == 1, 'expected one resting-pill cat'
+    assert observed['owners'][0] == state['pill_window'], 'pill target owner changed'
+    return state
+
+
 def stage_view(qa, fixture, expected, stage):
     if stage == 'setup':
         qa.cmd('reset_state'); qa.cmd('wait_login', timeout=60)
@@ -148,6 +161,8 @@ def stage_view(qa, fixture, expected, stage):
                 "if 'qa_windows_glass' not in bpy.app.driver_namespace:ns['bands']['install']()\n"
                 f"result=ns['bands']['color']({rgb!r})")
         qa.island_minimise()
+        fixture._settle(qa)
+        require_resting_pill(qa)
         host = fixture._frame(qa, expected, 'main')['before']; pill = fixture._frame(qa, expected, 'pill')['before']
         qa.eval(f"bpy.app.driver_namespace[{KEY!r}].setdefault('original_pill_frame',{pill!r})\nresult=True")
         fixture._frame(qa, expected, 'pill', [host[0]+(host[2]-pill[2])/2, host[1]+(host[3]-pill[3])/2, *pill[2:]])
@@ -183,6 +198,8 @@ def record_stage(qa, fixture, expected, stage, capture, out):
         time.sleep(1)
         role = 'pill' if stage.startswith('pill-') else 'island'
         observed = observation(qa, expected, role)
+        if role == 'pill':
+            record['surface_state'] = require_resting_pill(qa)
         fixture._material({'window': observed['window']}); record['native'] = observed
         if role == 'island':
             capture(qa, out, stage + '-buffer')

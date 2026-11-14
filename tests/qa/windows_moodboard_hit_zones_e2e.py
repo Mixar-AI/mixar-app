@@ -101,14 +101,25 @@ def engine_resize(qa, out):
         qa.wait("next(a for a in drv.main_window().screen.areas if a.type=='VIEW_3D').spaces.active.show_region_toolbar", timeout=4)
         before = regions(qa)
     rect = before['regions']['TOOLS']
-    x, y = rect[2] - 1, (rect[1] + rect[3]) // 2
+    # Blender clips an overlapping toolbar's resize zone to its content.
+    # A tall Retina window's region midpoint can be below every control.
+    query = {'area_type': 'VIEW_3D', 'region_type': 'TOOLS',
+             'op': 'WM_OT_tool_set_by_id'}
+    qa.wait(f'bool(drv.find(**{query!r}))', timeout=3)
+    target = max(qa.find(**query)['widgets'], key=lambda item: item['center'][1])
+    x, y = rect[2] - 1, target['center'][1]
+    assert rect[1] < y < rect[3], (target, before)
+    capture(qa, out, 'engine-toolbar-before')
     qa.cmd('drag', **{'from': {'x': x, 'y': y}, 'to': {'x': x + 70, 'y': y}, 'steps': 12})
     after = regions(qa)
     assert after['regions']['TOOLS'][2] > rect[2] + 20, (before, after)
     capture(qa, out, 'engine-toolbar-expanded')
     x1 = after['regions']['TOOLS'][2] - 1
     qa.cmd('drag', **{'from': {'x': x1, 'y': y}, 'to': {'x': x, 'y': y}, 'steps': 12})
-    return {'before': before, 'after': after, 'restored': regions(qa)}
+    restored = regions(qa)
+    capture(qa, out, 'engine-toolbar-restored')
+    return {'before': before, 'after': after, 'restored': restored,
+            'resize_row': target, 'gesture': [x, y, x + 70, y]}
 
 
 def run(qa):

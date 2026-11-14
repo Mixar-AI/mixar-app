@@ -1,5 +1,5 @@
 {
-  "status": "Selected reviewed originals; not complete platform qualification",
+  "status": "Selected unchanged reviewed originals for the completed scoped UI matrix; full limits in README",
   "images": [
     {
       "file": "windows-idle-draft.png",
@@ -33,7 +33,7 @@
       "file": "mac-red-native-user.png",
       "sha256": "4172cbc0848fb610f01d89225e51c15daf3d3fffdaae164be9f4bc06e3e084e7",
       "runtime": "1a9e791e3",
-      "scope": "User-supplied native screenshot of staged red backdrop; incomplete manual series",
+      "scope": "User-supplied native red-backdrop screenshot; manually associated empty-island red/blue pair demonstrates backdrop tint response and attenuated fine bands.",
       "original": "build/qa/blender53-ui-completion/mac/manual-native/red-native-user.png"
     },
     {
@@ -54,8 +54,84 @@
       "file": "mac-blue-native-user.png",
       "sha256": "0e68eb99b23193281d989482b8aa11d2de546992dfc5757585291cde9b700d50",
       "runtime": "1a9e791e3",
-      "scope": "User-supplied native blue-backdrop screenshot; red/blue empty-island pair reviewed; remaining manual lifecycle/contrast series pending",
+      "scope": "User-supplied native blue-backdrop screenshot; manually associated empty-island red/blue pair reviewed for tint response, attenuated fine bands and foreground clarity.",
       "original": "build/qa/blender53-ui-completion/mac/manual-native/blue-native-user.png"
+    },
+    {
+      "file": "mac-recreated-native-user.png",
+      "sha256": "c0815357e36f0e93be3799c343ef2e9a0e2677602da566f1f9ddbd585ffafe8c",
+      "runtime": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "scope": "User-supplied native screenshot after staged window recreation and frame change; empty-island tint, blurred bands, rounded contours and sharp controls. Does not independently prove mouse-driven move or resize.",
+      "original": "build/qa/blender53-ui-completion/mac/manual-native-lifecycle/recreated-native-user.png",
+      "capture": "User-supplied native original, manually associated with the stage receipt; not automatically synchronized"
+    },
+    {
+      "file": "mac-bright-native-user.png",
+      "sha256": "d5833cdcf1480a78fc5b6b03bf204b752665f357ffdda2f61d0f2dee556a8cf7",
+      "runtime": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "scope": "User-supplied native white-backdrop screenshot; populated transcript readable, input neutral dark and controls unclipped. Inherited viewport transform-toolbar contrast limitation is documented separately.",
+      "original": "build/qa/blender53-ui-completion/mac/manual-native-lifecycle/bright-native-user.png",
+      "capture": "User-supplied native original, manually associated with the stage receipt; not automatically synchronized"
+    },
+    {
+      "file": "mac-dark-native-user.png",
+      "sha256": "5e11e90c57bbdadbfeab7203596b436ae1ce810ee4e38786456d30fac636dd93",
+      "runtime": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+      "scope": "User-supplied native dark-backdrop screenshot; populated transcript readable and input neutral dark. Chat Input tooltip partly occludes the placeholder.",
+      "original": "build/qa/blender53-ui-completion/mac/manual-native-lifecycle/dark-native-user.png",
+      "capture": "User-supplied native original, manually associated with the stage receipt; not automatically synchronized"
+    },
+    {
+      "file": "mac-pill-red-native-user.png",
+      "sha256": "ef6ad632f66edf7042a1f55b7dfcf1d27e44690ce3d59559ba696c37cf739968",
+      "runtime": "58b795ae6383329687d2fd95f7b80dc9a3ce17e4",
+      "scope": "User-supplied native resting-pill screenshot; red/blue pair proves visible backdrop response, attenuated fine bands, rounded contour and sharp contained label/mascot within manual capture scope.",
+      "original": "build/qa/blender53-ui-completion/mac/manual-native-58b-settled/pill-red-native-user.png",
+      "capture": "User-supplied native original, manually associated with the stage receipt; not automatically synchronized"
+    },
+    {
+      "file": "mac-pill-blue-native-user.png",
+      "sha256": "a6245dd24d87bc9118b285b1a5e1974d8141c5bf10f0e2c31cdd7bbed5d9052a",
+      "runtime": "58b795ae6383329687d2fd95f7b80dc9a3ce17e4",
+      "scope": "User-supplied native resting-pill screenshot; blue counterpart preserves visible size/position and foreground clarity while backdrop tint changes.",
+      "original": "build/qa/blender53-ui-completion/mac/manual-native-58b-settled/pill-blue-native-user.png",
+      "capture": "User-supplied native original, manually associated with the stage receipt; not automatically synchronized"
+    },
+    {
+      "file": "mac-normal-native-user.png",
+      "sha256": "2f367ca1fc99bfe9b998a8793d23daab0d5d7194a019b208226091aaf14c19a5",
+      "runtime": "58b795ae6383329687d2fd95f7b80dc9a3ce17e4",
+      "scope": "User-supplied native normal-scene restoration screenshot; cube/grid/axes return, expanded island retains neutral glass and intact contours. Connect engine tooltip occludes part of the lower row; cleanup is a separate state receipt.",
+      "original": "build/qa/blender53-ui-completion/mac/manual-native-58b-settled/normal-native-user.png",
+      "capture": "User-supplied native original, manually associated with the stage receipt; not automatically synchronized"
+    },
+    {
+      "file": "mac-board-125-fixed.png",
+      "sha256": "576683cbaefcccb4b60544b2d59e5918097923abeccde87d2112d449ad827cf0",
+      "runtime": "58b795ae6",
+      "scope": "Mac Metal framebuffer; Board menu open at125% with underlying toolbar visible",
+      "original": "build/qa/blender53-ui-completion/mac/board20-manual58-visible-row/replay/board-1.25-after.png"
+    },
+    {
+      "file": "mac-engine-resize-fixed.png",
+      "sha256": "70bc11d0ce4e2ef3a73e739b605f037b00b3960648cfb2aa65733fd95b88b2e2",
+      "runtime": "58b795ae6",
+      "scope": "Mac Metal framebuffer; Engine toolbar resized to two columns",
+      "original": "build/qa/blender53-ui-completion/mac/board20-manual58-visible-row/replay/engine-toolbar-expanded.png"
+    },
+    {
+      "file": "mac-composer-reopened.png",
+      "sha256": "812a5ccad28a008a3758248496a4505450e9cd5687d8272e781999b15dd5a9fa",
+      "runtime": "58b795ae6",
+      "scope": "Mac Metal GPU-region capture; populated composer reopens with exact retained two-line draft and caret; no native blur claim",
+      "original": "build/qa/blender53-ui-completion/mac/ui11-manual58-retained-helper/conversation-05-reopen-caret-end-regions.png"
+    },
+    {
+      "file": "mac-composer-attach.png",
+      "sha256": "ccbff7d10368859810cbf9ccce380850eebf947e7addf504ef670282760498ae",
+      "runtime": "58b795ae6",
+      "scope": "Mac Metal full companion framebuffer; attachment popup visible and contained; no native blur claim",
+      "original": "build/qa/blender53-ui-completion/mac/ui11-manual58-retained-helper/empty-09-menu-escape-open.png"
     }
   ]
 }

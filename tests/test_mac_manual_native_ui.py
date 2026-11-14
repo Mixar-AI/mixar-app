@@ -23,6 +23,19 @@ def fail(message):
     raise RuntimeError(message)
 
 
+def test_status_chip_is_not_accepted_as_resting_pill(manual):
+    qa = SimpleNamespace(eval=lambda _: {'state': {'mode': 'island'}, 'owners': []})
+    with pytest.raises(AssertionError, match='resting pill is not visible'):
+        manual.require_resting_pill(qa)
+
+
+def test_resting_pill_target_must_match_state_owner(manual):
+    qa = SimpleNamespace(eval=lambda _: {'state': {'mode': 'pill', 'pill_window': 42},
+                                         'owners': [43]})
+    with pytest.raises(AssertionError, match='pill target owner changed'):
+        manual.require_resting_pill(qa)
+
+
 def test_independent_restorations_continue_after_each_failure(manual):
     completed = []
     operations = [('bands', lambda: fail('draw handler removal failed')),
