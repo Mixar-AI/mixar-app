@@ -71,6 +71,7 @@
 #include "RE_engine.h"
 
 #include "WM_api.hh"
+#include "WM_mixar.hh"
 #include "WM_stall_monitor.hh"
 #include "WM_toolsystem.hh"
 #include "WM_types.hh"
@@ -1761,6 +1762,47 @@ void WM_paint_cursor_tag_redraw(wmWindow *win, ARegion * /*region*/)
   }
 }
 
+bool Mixar_window_draw_skipped(const wmWindow *win)
+{
+#ifdef WIN32
+  /* The QA/UI-control dump asks too, outside the draw loop (no GHOST window
+   * in background mode). */
+  const GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win->runtime->ghostwin);
+  if (ghost_window && ghost_window->getState() == GHOST_kWindowStateMinimized) {
+    /* Do not update minimized windows, gives issues on Intel (see #33223)
+     * and AMD (see #50856). it seems logical to skip update for invisible window anyway. */
+    return true;
+  }
+#endif
+
+#if defined(WIN32) || defined(__APPLE__)
+  /* Mixar: never draw or present a window that is natively hidden.
+   *
+   * The Agent Bubble overlay windows are hidden with ShowWindow(SW_HIDE) /
+   * orderOut: while the bubble is minimised to its pill or suppressed for a
+   * modal — they stay in `wm->windows` so upstream's loop keeps drawing
+   * them and calling SwapBuffers on their GL contexts. Upstream Blender
+   * never hides a GHOST window, so this present-into-a-hidden-window state
+   * is Mixar-only, and NVIDIA's GL driver intermittently crashes on it
+   * right after resume-from-sleep (access violation in DrvPresentBuffers,
+   * nvoglv64.dll). The minimized-state skip above doesn't catch it:
+   * SW_HIDE windows still report GHOST_kWindowStateNormal.
+   *
+   * The bubble restore paths force a refresh + redraw tag after re-showing
+   * the window, so skipping updates while hidden never leaves stale
+   * content on screen. */
+  /* The island releases its RNA UI before its native fade/hide. Keep the
+   * last framebuffer for that animation instead of rebuilding freed blocks. */
+  if (ED_agent_bubble_is_minimised_window(win) ||
+      (win->runtime->ghostwin != nullptr && !Mixar_WindowIsVisible(win->runtime->ghostwin)))
+  {
+    return true;
+  }
+#endif
+  UNUSED_VARS(win);
+  return false;
+}
+
 void wm_draw_update(bContext *C)
 {
   PRF_scope(ProfileCategory::Draw);
@@ -1791,41 +1833,9 @@ void wm_draw_update(bContext *C)
 #endif
 
   for (wmWindow &win : wm->windows) {
-#ifdef WIN32
-    const GHOST_IWindow *ghost_window = static_cast<GHOST_IWindow *>(win.runtime->ghostwin);
-    const GHOST_TWindowState state = ghost_window->getState();
-
-    if (state == GHOST_kWindowStateMinimized) {
-      /* Do not update minimized windows, gives issues on Intel (see #33223)
-       * and AMD (see #50856). it seems logical to skip update for invisible window anyway. */
+    if (Mixar_window_draw_skipped(&win)) {
       continue;
     }
-#endif
-
-#if defined(WIN32) || defined(__APPLE__)
-    /* Mixar: never draw or present a window that is natively hidden.
-     *
-     * The Agent Bubble overlay windows are hidden with ShowWindow(SW_HIDE) /
-     * orderOut: while the bubble is minimised to its pill or suppressed for a
-     * modal — they stay in `wm->windows` so upstream's loop keeps drawing
-     * them and calling SwapBuffers on their GL contexts. Upstream Blender
-     * never hides a GHOST window, so this present-into-a-hidden-window state
-     * is Mixar-only, and NVIDIA's GL driver intermittently crashes on it
-     * right after resume-from-sleep (access violation in DrvPresentBuffers,
-     * nvoglv64.dll). The minimized-state skip above doesn't catch it:
-     * SW_HIDE windows still report GHOST_kWindowStateNormal.
-     *
-     * The bubble restore paths force a refresh + redraw tag after re-showing
-     * the window, so skipping updates while hidden never leaves stale
-     * content on screen. */
-    /* The island releases its RNA UI before its native fade/hide. Keep the
-     * last framebuffer for that animation instead of rebuilding freed blocks. */
-    if (ED_agent_bubble_is_minimised_window(&win) ||
-        (win.runtime->ghostwin != nullptr && !Mixar_WindowIsVisible(win.runtime->ghostwin)))
-    {
-      continue;
-    }
-#endif
 
     CTX_wm_window_set(C, &win);
 

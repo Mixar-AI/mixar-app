@@ -178,3 +178,91 @@ def test_choose_still_refuses_when_the_item_never_appears(monkeypatch):
     _reads(monkeypatch, observe.Pending)
     with pytest.raises(UIError, match='unambiguous visible popup item'):
         _drive(native.run('o', {'context': 'c', 'target': 't0', 'action': 'choose', 'item': 'cube'}))
+
+
+def test_windows_skipped_from_drawing_never_hold_the_dump_pending():
+    """The island resting as a pill is never drawn, so its redraw tags never
+    clear: the dump must skip it with the exact predicate drawing uses."""
+    root = Path(__file__).resolve().parents[2] / 'src/source/blender'
+    dump = (root / 'editors/interface/interface_qa_inspect.cc').read_text()
+    body = dump.split('std::string Mixar_ui_qa_inspect_json(', 1)[1]
+    skip = body.index('Mixar_window_draw_skipped(win)')
+    assert skip < body.index('qa_dump_region(')
+    draw = (root / 'windowmanager/intern/wm_draw.cc').read_text()
+    loop = draw.split('void wm_draw_update(bContext *C)', 1)[1]
+    assert loop.index('Mixar_window_draw_skipped(&win)') < loop.index('wm_draw_window(C, &win)')
+    predicate = draw.split('bool Mixar_window_draw_skipped(const wmWindow *win)', 1)[1].split('\n}\n', 1)[0]
+    for check in ('GHOST_kWindowStateMinimized', 'ED_agent_bubble_is_minimised_window(win)',
+                  'Mixar_WindowIsVisible(win->runtime->ghostwin)'):
+        assert check in predicate
+    # Only drawing decides: no second copy of the hidden-window checks.
+    assert 'Mixar_WindowIsVisible' not in loop
+    assert 'ED_agent_bubble_is_minimised_window' not in loop
+
+
+def test_inventory_reports_windows_mixar_does_not_draw(monkeypatch):
+    dump = ('{"pending":false,"widgets":[],"windows":[{"ptr":1,"skipped":true,"pending":false},'
+            '{"ptr":2,"skipped":false,"pending":false}]}')
+    wm = SimpleNamespace(mixar_qa_ui_dump=dump, windows=[])
+    monkeypatch.setattr(observe, 'bpy', SimpleNamespace(context=SimpleNamespace(window_manager=wm)))
+    assert observe.inventory() == ([], {1})
+
+
+def test_hidden_window_is_never_captured_without_its_password_masks():
+    """A skipped window exports no widgets, so no secret masks: refuse before capturing."""
+    def capture(filepath):
+        raise AssertionError('captured a window that has no mask inventory')
+    win = SimpleNamespace(as_pointer=lambda: 1, mixar_ui_capture=capture)
+    with pytest.raises(UIError) as exc:
+        observe.image(win, [], {1})
+    assert exc.value.code == 'capture_unavailable'
+
+
+def _window(ptr, scene='S'):
+    region = SimpleNamespace(x=0, y=0, width=10, height=10, type='WINDOW')
+    area = SimpleNamespace(regions=[region], type='VIEW_3D', x=0, y=0, width=10, height=10)
+    return SimpleNamespace(as_pointer=lambda: ptr, screen=SimpleNamespace(areas=[area]),
+                           global_areas=[], scene=SimpleNamespace(name=scene, mixie_session_id='s'))
+
+
+@pytest.mark.parametrize('skipped', [False, True])
+def test_region_act_resolves_in_a_pending_dump_unless_its_window_is_hidden(monkeypatch, skipped):
+    """A viewport redrawing every frame keeps the dump pending; a region act
+    needs no widget inventory, so only a hidden window refuses it."""
+    win = _window(1)
+    dump = ('{"pending":true,"widgets":[],"windows":[{"ptr":1,"skipped":%s,"pending":true}]}'
+            % ('true' if skipped else 'false'))
+    monkeypatch.setattr(observe, 'bpy', SimpleNamespace(context=SimpleNamespace(
+        window_manager=SimpleNamespace(windows=[win], mixar_qa_ui_dump=dump))))
+    monkeypatch.setattr(observe, 'signature', lambda: 'sig')
+    monkeypatch.setattr(observe, 'region_identity', lambda *_: 'rid')
+    monkeypatch.setitem(observe._contexts, 'ctx', {
+        'owner': 'o', 'expires': float('inf'), 'signature': 'sig', 'targets': {'r0': ('region', 'rid')}})
+    if skipped:
+        with pytest.raises(UIError) as exc:
+            observe.resolve('o', 'ctx', 'r0')
+        assert exc.value.code == 'window_unavailable'
+    else:
+        assert observe.resolve('o', 'ctx', 'r0')['_win'] is win
+
+
+def test_observe_lists_no_regions_of_a_hidden_window(monkeypatch):
+    shown, hidden = _window(2), _window(1)
+    monkeypatch.setattr(observe, 'bpy', SimpleNamespace(context=SimpleNamespace(
+        window_manager=SimpleNamespace(windows=[hidden, shown]))))
+    monkeypatch.setattr(observe, 'main_window', lambda: shown)
+    monkeypatch.setattr(observe, 'signature', lambda: 'sig')
+    monkeypatch.setattr(observe, 'region_identity', lambda win, *_: win.as_pointer())
+    monkeypatch.setattr(observe, 'inventory', lambda: ([], {1}))
+    result, blocks = observe.observe('o', {})
+    assert [r['window'] for r in result['regions']] == ['w1'] and blocks == []
+    targets = observe._contexts[result['context']]['targets']
+    assert [identity for kind, identity in targets.values() if kind == 'region'] == [2]
+
+
+def test_dump_reports_skipped_and_pending_per_window():
+    source = (Path(__file__).resolve().parents[2] /
+              'src/source/blender/editors/interface/interface_qa_inspect.cc').read_text()
+    body = source.split('std::string Mixar_ui_qa_inspect_json(', 1)[1]
+    assert '\\"skipped\\":' in body and '\\"pending\\":' in body
+    assert body.index('if (!skipped)') < body.index('qa_dump_region(')

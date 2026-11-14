@@ -307,7 +307,13 @@ def sso_login(timeout=None, cancel=None):
         logger.warning("Token exchange 200 but token pair was incomplete")
         return {'success': False, 'message': rpt_('Incomplete token pair in response')}
 
-    stored, storage_error = store_login_token_pair(access_token, refresh_token_val)
+    stored, storage_error = store_login_token_pair(access_token, refresh_token_val, cancel=cancel)
+    if not stored and storage_error is None:
+        # Refused: cancelled (or superseded) while the exchange was in flight.
+        # A real storage failure carries its message and is reported below.
+        logger.info("SSO exchange finished after its sign-in was cancelled; pair dropped")
+        return {'success': False, 'message': rpt_('Login was cancelled or timed out'),
+                'cancelled': True}
     if not stored:
         logger.error("Failed to store SSO token pair in safe storage")
         if platform.system() == "Linux":

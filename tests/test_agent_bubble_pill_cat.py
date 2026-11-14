@@ -170,6 +170,25 @@ def test_qa_target_reads_the_painted_chip():
     assert "Mixar_qa_register_target_provider(SPACE_AGENT_BUBBLE, pill_cat_qa_targets)" in CAT_CC
 
 
+def test_target_follows_the_resting_pill_window_on_every_platform():
+    # The provider asks the bubble which window is the resting pill instead of
+    # guessing from region flags: Linux collapses the island into the pill in
+    # the SAME window (WINDOW/TOOLS hidden, not removed), so a region check
+    # never exported the Linux pill.
+    provider = CAT_CC[CAT_CC.index("void pill_cat_qa_targets"):CAT_CC.index("void agent_ui_pill_cat_qa_register")]
+    assert "if (!agent_bubble_is_resting_pill_window(win))" in provider
+    assert "RGN_TYPE_WINDOW" not in provider and "RGN_FLAG_HIDDEN" not in provider
+    predicate = BUBBLE_CC[BUBBLE_CC.index("bool agent_bubble_is_resting_pill_window"):]
+    predicate = predicate[:predicate.index("}")]
+    assert "g_bubble_minimised" in predicate and "g_pill_ghostwin" in predicate
+    assert "return agent_bubble_is_resting_pill_window(CTX_wm_window(C));" in BUBBLE_CC
+    # The Linux collapse makes the island window the pill; restore undoes it.
+    linux = BUBBLE_CC[BUBBLE_CC.index("g_linux_bubble_regions.clear();"):]
+    collapse, restore = linux.split("\n  }\n  else {\n", 1)
+    assert "g_bubble_minimised = true;" in collapse and "g_pill_ghostwin = g_bubble_ghostwin;" in collapse
+    assert "g_bubble_minimised = false;" in restore and "g_pill_ghostwin = nullptr;" in restore
+
+
 def test_cmake_compiles_the_cat():
     assert "agent_ui_pill_cat.cc" in CMAKE
     assert "agent_ui_pill_cat.hh" in CMAKE
