@@ -555,6 +555,19 @@ if(WITH_PYTHON)
     "file(REMOVE_RECURSE \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${TARGETDIR_VER}/scripts/mixar\")"
   )
 
+  # Blender 5.3 uses native splats. Remove the retired bundled KIRI add-on on
+  # incremental installs too, without touching unrelated or user add-ons.
+  # Keep the install-time prefix override and staged packaging root intact.
+  if(IS_ABSOLUTE "${TARGETDIR_VER}")
+    set(MIXAR_RETIRED_ADDON_DIR "${TARGETDIR_VER}/scripts/addons_core/kiri_3dgs_render")
+  else()
+    set(MIXAR_RETIRED_ADDON_DIR "\${CMAKE_INSTALL_PREFIX}/${TARGETDIR_VER}/scripts/addons_core/kiri_3dgs_render")
+  endif()
+  install(CODE
+    "file(REMOVE_RECURSE \"\$ENV{DESTDIR}${MIXAR_RETIRED_ADDON_DIR}\")"
+  )
+  unset(MIXAR_RETIRED_ADDON_DIR)
+
   # do not install freestyle dir if disabled
   if(NOT WITH_FREESTYLE)
     set(FREESTYLE_EXCLUDE_CONDITIONAL "freestyle/*")
@@ -586,6 +599,9 @@ if(WITH_PYTHON)
     PATTERN "addons_core/bl_pkg/Makefile" EXCLUDE
     PATTERN "addons_core/bl_pkg/tests" EXCLUDE
     PATTERN "addons_core/bl_pkg/example_extension" EXCLUDE
+
+    # A stale generated-source copy must not reinstall the retired add-on.
+    PATTERN "addons_core/kiri_3dgs_render" EXCLUDE
 
     # Mixar test code runs from the repository (pytest), never inside the app:
     # the legacy embedded suite and the in-tree `tests/` packages.
