@@ -42,7 +42,7 @@ class MIXIE_CHAT_OT_voice_toggle(Operator):
         if outcome == "unavailable":
             self.report({'WARNING'}, "Voice input is not available on this system")
             return {'CANCELLED'}
-        if outcome == "no_scene":
+        if outcome in {"no_scene", "login_required"}:
             return {'CANCELLED'}
         return {'FINISHED'}
 

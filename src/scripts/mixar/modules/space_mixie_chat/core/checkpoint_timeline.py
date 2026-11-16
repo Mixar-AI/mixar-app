@@ -27,15 +27,15 @@ def _user_message_count(scene) -> int:
 
 
 def _main_window():
-    """The document's main window. The chat island lives in a temporary
-    companion window that a file read tears down, so the read and the save
-    run with the main window as context whichever window asked."""
+    """The document's main window. The chat island and pill live in companion
+    windows (the pill's screen is not temporary) that a file read tears down,
+    so saves run with the main window as context whichever window asked."""
     import bpy
     try:
-        for window in bpy.context.window_manager.windows:
-            screen = getattr(window, "screen", None)
-            if screen is not None and not getattr(screen, "is_temporary", False):
-                return window
+        from mixar.modules.agent_bubble.core.bubble_windows import document_window
+        window = document_window()
+        if window is not None:
+            return window
     except Exception:  # noqa: BLE001
         pass
     return bpy.context.window

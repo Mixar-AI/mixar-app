@@ -20,6 +20,9 @@ Crash: Python's ``faulthandler`` writes the Python stacks of a native crash to
 Blender's ``*.crash.txt``); the supervisor moves it with the crash log
 (``_keep_crash_reports``). It starts first, so a crash while booting has one too.
 
+After each job's result the document is dropped (``worker_jobs.release_document``)
+so an idle warm worker holds no copy of the user's file.
+
 Exit: stdin closing (the app quit or died), a ``quit`` message, or memory
 above :data:`RECYCLE_RSS_MB` after a job (the supervisor starts a fresh one on
 the next job). ``os._exit`` skips Blender's exit path: nothing of the user's
@@ -132,6 +135,8 @@ def main():
         _emit({"type": "started", "job": message.get("job")})
         outcome = worker_jobs.run(message)
         _emit(dict(outcome, type="result", job=message.get("job")))
+        print("render worker: document released in %.3fs" % worker_jobs.release_document(),
+              flush=True)
         if _rss_mb() > RECYCLE_RSS_MB:
             reason = "recycle"
             break

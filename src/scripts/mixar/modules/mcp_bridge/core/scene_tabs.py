@@ -58,10 +58,8 @@ def _user_modal(wm) -> bool:
 def _gate():
     """Switching what every window shows must not cut into other work. Another
     tab's agent keeps working off screen, so it does not block."""
-    from mixar.modules.common.render_coordinator.core import busy
     from mixar.modules.common.ui_control.core import ownership
-    if busy():
-        raise UIError("render_in_progress", "Wait for the render to finish")
+    ownership.render_idle()
     wm = bpy.context.window_manager
     if getattr(wm, "mixar_window_resizing", False):
         raise UIError("ui_busy", "Wait for window resize to finish")

@@ -24,6 +24,7 @@ from mixar.modules.agent_bubble.core.bubble_state import (
     LOAD_AUTOSHOW_RETRY_LIMIT,
 )
 from . import bubble_state as _st
+from .bubble_windows import is_agent_bubble_window  # noqa: F401  (re-exported)
 
 logger = get_logger(__name__)
 
@@ -42,17 +43,6 @@ def _is_app_exiting() -> bool:
     except Exception:  # noqa: BLE001
         return True
     return False
-
-
-def is_agent_bubble_window(window) -> bool:
-    """Return True when a Blender window contains the runtime bubble UI."""
-    try:
-        screen = window.screen
-        return screen is not None and any(
-            area.type == 'AGENT_BUBBLE' for area in screen.areas
-        )
-    except ReferenceError:
-        return False
 
 
 def has_agent_bubble_windows() -> bool:
@@ -136,6 +126,9 @@ def reset_restored_bubbles_after_load():
         logger.info("agent_bubble: closed %d restored bubble window(s)", closed)
     pill_icons.refresh()
     _st.load_autoshow_attempts = 0
+    # A failed window may have been transient (locked or remote session,
+    # driver reset): each file load tries once more, without a dialog.
+    _st.window_unavailable = False
     if not bpy.app.timers.is_registered(load_autoshow_tick):
         bpy.app.timers.register(load_autoshow_tick, first_interval=0.1)
     return None
@@ -193,6 +186,11 @@ def _load_autoshow_tick_inner():
         _st.load_autoshow_attempts = 0
         return None
 
+    if _st.window_unavailable:
+        # try_invoke_bubble logged why; nothing to retry.
+        _st.load_autoshow_attempts = 0
+        return None
+
     if _st.load_autoshow_attempts >= LOAD_AUTOSHOW_RETRY_LIMIT:
         logger.warning(
             "agent_bubble: file-load autoshow gave up after %d attempts",
@@ -215,7 +213,7 @@ def keep_windows_for_snapshot():
     write with the windows live: the native writer unlinks bubble windows,
     runtime region data is never serialized (``RGN_FLAG_TEMP_REGIONDATA``),
     and the checkpoint restore closes the windows itself before the read
-    (``turn_checkpoints._close_bubble_windows``). The user's own saves keep
+    (``turn_checkpoints._prepare_read_window``). The user's own saves keep
     the purge.
     """
     _st.snapshot_save_depth += 1

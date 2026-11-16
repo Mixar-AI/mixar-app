@@ -29,6 +29,7 @@ import bpy
 from bpy.types import Operator
 
 from mixar.config.logging_config import get_logger
+from mixar.modules.agent_bubble.core import bubble_state
 from mixar.modules.common.i18n import rpt_
 
 _logger = get_logger(__name__)
@@ -116,6 +117,8 @@ class MIXAR_OT_agent_bubble_open_window(Operator):
         # bpy.ops returns a set like {'FINISHED'} or {'CANCELLED'}.
         if 'CANCELLED' in result:
             return {'CANCELLED'}
+        # An explicit open got a window: autoshow may use it again.
+        bubble_state.window_unavailable = False
         print("[agent_bubble] open_window: temp window opened via C++ op")
         return {'FINISHED'}
 

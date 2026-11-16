@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Прозорецът на балона на агента не можа да се отвори"
+
 msgid "Capture Viewport"
 msgstr "Заснеми 3D изгледа"
 
@@ -1439,6 +1442,9 @@ msgstr "Входът е отказан или времето му изтече"
 msgid "Incomplete token pair in response"
 msgstr "Непълна двойка токени в отговора"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "Готово за въвеждане"
 
@@ -1934,7 +1940,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1983,6 +1989,9 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -2996,19 +3005,19 @@ msgstr "Неподдържан тип инсталатор за {platform}: {ins
 msgid "This install can't be updated in place"
 msgstr "Тази инсталация не може да се актуализира на място"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "Актуализирано до Mixar {version}"
 
 msgid "The update was installed successfully."
 msgstr "Актуализацията е инсталирана успешно."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3056,11 +3065,23 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "Инсталаторът не завърши."
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% — {transferred} от {total}"
@@ -3100,6 +3121,9 @@ msgstr "Mixar ще се рестартира, за да я приложи."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} — използвайте Изтегли, за да актуализирате през браузъра."
+
+msgid "Retry"
+msgstr "Опитай отново"
 
 msgid "Restart & Update"
 msgstr "Рестартиране и актуализация"
@@ -3156,6 +3180,9 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3242,11 +3269,23 @@ msgstr "Рестартирай за актуализация"
 msgid "Updating…"
 msgstr "Актуализиране…"
 
-msgid "Verifying…"
+msgid "Updates"
 msgstr ""
 
-msgid "Downloading {percent}%"
-msgstr "Изтегляне {percent}%"
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -3486,6 +3525,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -7718,6 +7760,12 @@ msgstr "Мудборд"
 msgid "Right-click context menu for moodboard"
 msgstr "Контекстно меню с десен бутон за мудборда"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "Изтрий връзката"
 
@@ -9988,14 +10036,14 @@ msgstr "Обновяване на списъка с модели..."
 msgid "Generation catalog module not available"
 msgstr "Модулът на каталога за генерация не е наличен"
 
+msgid "A duplicate image generation is already queued"
+msgstr "Дублирана генерация на изображение вече е в опашката"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Генерира ИИ изображения и ги добавя в мудборда"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Моля, въведете промпт (натиснете Enter, за да потвърдите текста)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "Дублирана генерация на изображение вече е в опашката"
 
 msgid "No model specified and no default available"
 msgstr "Не е посочен модел и няма налично подразбиране"
@@ -19863,6 +19911,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20306,12 +20357,6 @@ msgstr "Променя се..."
 
 msgid "Awaiting Input..."
 msgstr "Чака въвеждане..."
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20895,6 +20940,9 @@ msgstr "Файлът на точката за възстановяване ли�
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Текущото състояние не можа да се запази, затова нищо не е променено"
 
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
+
 msgid "Could not read the checkpoint"
 msgstr "Точката за възстановяване не можа да се прочете"
 
@@ -21063,9 +21111,6 @@ msgstr "Изход"
 
 msgid "Sound on"
 msgstr ""
-
-msgid "Retry"
-msgstr "Опитай отново"
 
 msgid "Choose Export Location"
 msgstr "Избери място за изнасяне"
@@ -21537,6 +21582,15 @@ msgstr "Макс. прикачени файлове: {count}"
 msgid "Paste failed: {error}"
 msgstr "Поставянето не успя: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name} не може да се добави: {error}"
+
+msgid "These references are already attached"
+msgstr "Тези референции вече са прикачени"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21822,23 +21876,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} не може да се добави: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "Достигнат е лимитът за прикачени файлове ({count})"
 
 msgid "Skipped {name}: {error}"
 msgstr "Пропуснато {name}: {error}"
 
-msgid "These references are already attached"
-msgstr "Тези референции вече са прикачени"
-
 msgid "Added {count} image(s)"
 msgstr "Добавени изображения: {count}"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Добави от blend файла"
@@ -25191,6 +25236,30 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
+msgid "Shader texture preparation timed out"
+msgstr ""
+
+msgid "Preparing shader textures ({done}/{total})…"
+msgstr ""
+
+msgid "Could not prepare shader textures; publication stopped"
+msgstr ""
+
+msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
+msgstr ""
+
+msgid "{material}: connect explicit UV coordinates before publishing {channel}"
+msgstr ""
+
+msgid "{material}: publishing this shader requires a non-tiled image"
+msgstr ""
+
+msgid "{material}: publishing {channel} requires a single UV map"
+msgstr ""
+
+msgid "{material}: required UV map is missing on {object}"
+msgstr ""
+
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26511,9 +26580,6 @@ msgstr "Автоматичен режим: агентът сам решава о
 msgid "Agent Bubble"
 msgstr "Балон на агента"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Прозорецът на балона на агента не можа да се отвори"
-
 msgid "Agent Bubble Status"
 msgstr "Състояние на балона на агента"
 
@@ -26963,6 +27029,9 @@ msgstr "Анимирай прикачения файл на мудборда"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Показва новоприкачена референция, която влита в чата на Mixie"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Забавяне"

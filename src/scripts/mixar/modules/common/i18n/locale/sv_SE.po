@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Kunde inte öppna fönstret Agentbubbla"
+
 msgid "Capture Viewport"
 msgstr "Fånga visningsvy"
 
@@ -1439,6 +1442,9 @@ msgstr "Inloggningen avbröts eller tidsgränsen överskreds"
 msgid "Incomplete token pair in response"
 msgstr "Ofullständigt tokenpar i svaret"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "Redo för inmatning"
 
@@ -1934,7 +1940,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1983,6 +1989,9 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -2996,19 +3005,19 @@ msgstr "Installationstypen stöds inte för {platform}: {installer_type}"
 msgid "This install can't be updated in place"
 msgstr "Den här installationen kan inte uppdateras på plats"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "Uppdaterad till Mixar {version}"
 
 msgid "The update was installed successfully."
 msgstr "Uppdateringen installerades."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3056,11 +3065,23 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "Installationsprogrammet slutfördes inte."
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% – {transferred} av {total}"
@@ -3100,6 +3121,9 @@ msgstr "Mixar startas om för att tillämpa den."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} – använd Ladda ned för att uppdatera via webbläsaren."
+
+msgid "Retry"
+msgstr "Försök igen"
 
 msgid "Restart & Update"
 msgstr "Starta om och uppdatera"
@@ -3156,6 +3180,9 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3242,11 +3269,23 @@ msgstr "Starta om för att uppdatera"
 msgid "Updating…"
 msgstr "Uppdaterar…"
 
-msgid "Verifying…"
+msgid "Updates"
 msgstr ""
 
-msgid "Downloading {percent}%"
-msgstr "Laddar ned {percent}%"
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -3486,6 +3525,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -7718,6 +7760,12 @@ msgstr "Moodboard"
 msgid "Right-click context menu for moodboard"
 msgstr "Högerklicksmeny för moodboarden"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "Radera anslutning"
 
@@ -9988,14 +10036,14 @@ msgstr "Uppdaterar modellistan..."
 msgid "Generation catalog module not available"
 msgstr "Modulen för genereringskatalogen är inte tillgänglig"
 
+msgid "A duplicate image generation is already queued"
+msgstr "En identisk bildgenerering finns redan i kön"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Genererar AI-bilder och lägger till dem på moodboarden"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Ange en prompt (tryck på Enter för att bekräfta texten)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "En identisk bildgenerering finns redan i kön"
 
 msgid "No model specified and no default available"
 msgstr "Ingen modell angiven och ingen standard tillgänglig"
@@ -19863,6 +19911,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20306,12 +20357,6 @@ msgstr "Ändrar..."
 
 msgid "Awaiting Input..."
 msgstr "Väntar på inmatning..."
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20895,6 +20940,9 @@ msgstr "Filen för återställningspunkten saknas"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Det gick inte att behålla det aktuella tillståndet, så inget ändrades"
 
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
+
 msgid "Could not read the checkpoint"
 msgstr "Det gick inte att läsa återställningspunkten"
 
@@ -21063,9 +21111,6 @@ msgstr "Logga ut"
 
 msgid "Sound on"
 msgstr ""
-
-msgid "Retry"
-msgstr "Försök igen"
 
 msgid "Choose Export Location"
 msgstr "Välj exportplats"
@@ -21537,6 +21582,15 @@ msgstr "Max {count} bilagor"
 msgid "Paste failed: {error}"
 msgstr "Inklistringen misslyckades: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "Kan inte lägga till {name}: {error}"
+
+msgid "These references are already attached"
+msgstr "Dessa referenser är redan bifogade"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21822,23 +21876,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "Kan inte lägga till {name}: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "Gränsen för bilagor ({count}) har nåtts"
 
 msgid "Skipped {name}: {error}"
 msgstr "Hoppade över {name}: {error}"
 
-msgid "These references are already attached"
-msgstr "Dessa referenser är redan bifogade"
-
 msgid "Added {count} image(s)"
 msgstr "Lade till {count} bild(er)"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Lägg till från Blend"
@@ -25191,6 +25236,30 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
+msgid "Shader texture preparation timed out"
+msgstr ""
+
+msgid "Preparing shader textures ({done}/{total})…"
+msgstr ""
+
+msgid "Could not prepare shader textures; publication stopped"
+msgstr ""
+
+msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
+msgstr ""
+
+msgid "{material}: connect explicit UV coordinates before publishing {channel}"
+msgstr ""
+
+msgid "{material}: publishing this shader requires a non-tiled image"
+msgstr ""
+
+msgid "{material}: publishing {channel} requires a single UV map"
+msgstr ""
+
+msgid "{material}: required UV map is missing on {object}"
+msgstr ""
+
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26511,9 +26580,6 @@ msgstr "Autoläge: agenten avgör öppna val själv i stället för att fråga d
 msgid "Agent Bubble"
 msgstr "Agentbubbla"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Kunde inte öppna fönstret Agentbubbla"
-
 msgid "Agent Bubble Status"
 msgstr "Agentbubblans status"
 
@@ -26963,6 +27029,9 @@ msgstr "Animera moodboard-bilaga"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Visar en nyss bifogad referens som flyger in i Mixie-chatten"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Fördröjning"

@@ -208,6 +208,14 @@ def test_write_back_keeps_the_cli_layout_and_is_owner_only(tmp_path):
     assert json.loads(flat.read_text())["refresh_token"] == "r1"
     assert codex_auth.write_back(str(tmp_path / "gone.json"), "a2") is False
 
+    # A renewal never overwrites a sign-in that a newer `codex login` replaced
+    # while the refresh grant was in flight.
+    before = flat.read_text()
+    assert codex_auth.write_back(str(flat), "a3", "r3", renewed_from="r0") is False
+    assert flat.read_text() == before
+    assert codex_auth.write_back(str(flat), "a3", "r3", renewed_from="r1")
+    assert json.loads(flat.read_text())["refresh_token"] == "r3"
+
 
 def test_write_back_into_a_read_only_place_fails_cleanly_and_is_known_beforehand(tmp_path):
     """A failed write-back must never raise (the turn would go out keyless),

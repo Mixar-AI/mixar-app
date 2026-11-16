@@ -273,3 +273,122 @@ def test_cancel_removes_the_partial_file(monkeypatch, tmp_path):
         )
     assert not Path(final).exists()
     assert not Path(final + ".part").exists()
+
+
+@pytest.mark.parametrize('number,reason,attempts', [
+    (13, 'permission_denied', 3), (28, 'disk_full', 1),
+])
+def test_filesystem_failure_keeps_cause(monkeypatch, tmp_path, number, reason, attempts):
+    """A permission error (often an antivirus lock) is retried; a full disk is final."""
+    from mixar.modules.common.updates.core.failure import failure_details
+    monkeypatch.setattr(download, 'DOWNLOAD_RETRY_BACKOFF_S', 0)
+    responses = []
+
+    def serve(*args, **kwargs):
+        response = _FakeResponse(b'installer')
+        responses.append(response)
+        return response
+
+    def fail_open(*args):
+        raise OSError(number, 'private diagnostic', '/private/user/installer')
+
+    monkeypatch.setattr(download.urllib.request, 'urlopen', serve)
+    monkeypatch.setattr(download._shared, '_open_part', fail_open)
+    with pytest.raises(download.UpdateDownloadError) as caught:
+        download.download_installer('https://x/secret?token=secret', str(tmp_path / 'i'), 'a' * 64)
+    assert len(responses) == attempts
+    assert all(response.closed for response in responses)
+    details = failure_details(caught.value, 'download')
+    assert details['reason_code'] == reason
+    assert f'errno {number}' in details['error_detail']
+    assert 'private' not in str(details) and 'secret' not in str(details)
+
+
+def test_final_flush_disk_full_never_stages(monkeypatch, tmp_path):
+    import errno
+    real_open = download._shared._open_part
+
+    class FlushFailure:
+        def __init__(self, handle):
+            self.handle = handle
+        def write(self, chunk):
+            return self.handle.write(chunk)
+        def close(self):
+            self.handle.close()
+            raise OSError(errno.ENOSPC, 'disk full')
+
+    def open_part(*args):
+        handle, offset = real_open(*args)
+        return FlushFailure(handle), offset
+
+    monkeypatch.setattr(download.urllib.request, 'urlopen', _serve(b'installer'))
+    monkeypatch.setattr(download._shared, '_open_part', open_part)
+    final = str(tmp_path / 'installer')
+    with pytest.raises(download.UpdateDownloadError) as caught:
+        download.download_installer('https://x/i', final, hashlib.sha256(b'installer').hexdigest())
+    assert caught.value.__cause__.errno == errno.ENOSPC
+    assert not Path(final).exists()
+    assert not Path(final + '.part').exists()
+
+
+def _cdn_with_range(payload, requests):
+    """A CDN that honours Range and answers 416 past the end, as S3/CloudFront do."""
+    import urllib.error
+
+    def _open(request, timeout=None):
+        header = request.get_header('Range')
+        requests.append(header)
+        start = int(header.split('=')[1].split('-')[0]) if header else 0
+        if start >= len(payload):
+            raise urllib.error.HTTPError(request.full_url, 416, 'Range Not Satisfiable', {}, None)
+        return _FakeResponse(payload[start:], status=206 if header else 200)
+    return _open
+
+
+def _locked_rename(locks, calls):
+    """os.replace that meets Defender's scan of the just-closed .part
+    (a sharing violation, which Python raises as PermissionError)."""
+    real_replace = os.replace
+
+    def _replace(src, dst):
+        calls.append(src)
+        if len(calls) <= locks:
+            raise PermissionError(13, 'The process cannot access the file', src)
+        return real_replace(src, dst)
+    return _replace
+
+
+def test_a_rename_locked_by_antivirus_waits_instead_of_refetching(monkeypatch, tmp_path):
+    payload = b'installer' * 50
+    requests, renames = [], []
+    monkeypatch.setattr(download, 'DOWNLOAD_RETRY_BACKOFF_S', 0)
+    monkeypatch.setattr(download.urllib.request, 'urlopen', _cdn_with_range(payload, requests))
+    monkeypatch.setattr(download._shared.os, 'replace', _locked_rename(1, renames))
+    final = str(tmp_path / 'installer.msi')
+
+    download.download_installer('https://x/i', final, hashlib.sha256(payload).hexdigest())
+
+    assert Path(final).read_bytes() == payload
+    assert requests == [None]       # downloaded once; the rename alone was retried
+    assert len(renames) == 2
+
+
+def test_a_rename_that_stays_locked_reports_permission_at_finalize(monkeypatch, tmp_path):
+    from mixar.modules.common.updates.core.failure import failure_details
+    payload = b'installer' * 50
+    requests, renames = [], []
+    monkeypatch.setattr(download, 'DOWNLOAD_RETRY_BACKOFF_S', 0)
+    monkeypatch.setattr(download.urllib.request, 'urlopen', _cdn_with_range(payload, requests))
+    monkeypatch.setattr(download._shared.os, 'replace', _locked_rename(99, renames))
+    final = str(tmp_path / 'installer.msi')
+
+    with pytest.raises(download.UpdateDownloadError) as caught:
+        download.download_installer('https://x/i', final, hashlib.sha256(payload).hexdigest())
+
+    assert requests == [None]       # never a Range re-fetch that the CDN answers 416
+    assert len(renames) == download.DOWNLOAD_MAX_ATTEMPTS
+    details = failure_details(caught.value, 'download')
+    assert details['reason_code'] == 'permission_denied'
+    assert details['stage'] == 'finalize'
+    assert '416' not in details['error_detail']
+    assert not Path(final).exists() and not Path(final + '.part').exists()

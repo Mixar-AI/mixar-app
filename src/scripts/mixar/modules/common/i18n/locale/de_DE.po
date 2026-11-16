@@ -549,6 +549,9 @@ msgstr ""
 msgid "Open Mixie, the agent chat, ready to type (Shift M)"
 msgstr ""
 
+msgid "Failed to open Agent Bubble window"
+msgstr "Fenster der Agentenblase konnte nicht geöffnet werden"
+
 msgid "Capture Viewport"
 msgstr "Ansichtsfenster erfassen"
 
@@ -1439,6 +1442,9 @@ msgstr "Anmeldung wurde abgebrochen oder hat das Zeitlimit überschritten"
 msgid "Incomplete token pair in response"
 msgstr "Unvollständiges Token-Paar in der Antwort"
 
+msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
+msgstr ""
+
 msgid "Ready for input"
 msgstr "Bereit für Eingabe"
 
@@ -1934,7 +1940,7 @@ msgstr ""
 msgid "Stored only on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
 msgstr ""
 
-msgid "Read from this file on this computer, used only for Mixar agent requests - Mixar never keeps a copy."
+msgid "Read on this computer to list your ChatGPT models and for agent requests - Mixar never keeps a copy."
 msgstr ""
 
 msgid "Disconnect"
@@ -1983,6 +1989,9 @@ msgid "No models available for this provider yet."
 msgstr ""
 
 msgid "Uses your ChatGPT subscription - Mixar credits are not charged."
+msgstr ""
+
+msgid "Models your ChatGPT plan can't run are not listed."
 msgstr ""
 
 msgid "Any slug from openrouter.ai/models, e.g. anthropic/claude-opus-4.8."
@@ -2996,19 +3005,19 @@ msgstr "Nicht unterstützter Installationstyp für {platform}: {installer_type}"
 msgid "This install can't be updated in place"
 msgstr "Diese Installation kann nicht direkt aktualisiert werden"
 
+msgid "This update can't be installed from Mixar. Download it to see what to do"
+msgstr ""
+
 msgid "Updated to Mixar {version}"
 msgstr "Auf Mixar {version} aktualisiert"
 
 msgid "The update was installed successfully."
 msgstr "Das Update wurde erfolgreich installiert."
 
-msgid "Windows will finish installing Mixar {version} when you restart your computer."
-msgstr ""
-
-msgid "Mixar {version} is installed. Windows replaces some of its files only after a restart."
-msgstr ""
-
 msgid "Restart Windows to finish updating"
+msgstr ""
+
+msgid "Windows will finish installing Mixar {version} when you restart your computer."
 msgstr ""
 
 msgid "Update didn't take effect"
@@ -3056,11 +3065,23 @@ msgstr ""
 msgid "Another installation was in progress. Wait for it to finish or restart Windows, then try again."
 msgstr ""
 
+msgid "Windows on this computer allows installing only with an administrator. Click Restart & Update and accept the Windows prompt, or ask your administrator."
+msgstr ""
+
 msgid "Windows Installer reported error {code}. Restart Windows, then try again."
 msgstr ""
 
 msgid "The installer did not finish."
 msgstr "Das Installationsprogramm wurde nicht abgeschlossen."
+
+msgid "Mixar is installed for all users of this computer, so its administrator installs updates (with ALLUSERS=1)."
+msgstr ""
+
+msgid "Moving Mixar out of Program Files needs an administrator once. Nothing was changed."
+msgstr ""
+
+msgid "The installer could not update this copy of Mixar. Nothing was changed."
+msgstr ""
 
 msgid "{percent}% — {transferred} of {total}"
 msgstr "{percent}% – {transferred} von {total}"
@@ -3100,6 +3121,9 @@ msgstr "Mixar wird neu gestartet, um es anzuwenden."
 
 msgid "{error} — use Download to update via your browser."
 msgstr "{error} – verwenden Sie „Herunterladen“, um über Ihren Browser zu aktualisieren."
+
+msgid "Retry"
+msgstr "Erneut versuchen"
 
 msgid "Restart & Update"
 msgstr "Neu starten & aktualisieren"
@@ -3156,6 +3180,9 @@ msgid "Mixar is finishing an update"
 msgstr ""
 
 msgid "It will reopen automatically when it's done."
+msgstr ""
+
+msgid "Windows on this computer allows installing only with an administrator. Download the update and ask your administrator to install it"
 msgstr ""
 
 msgid "Restart Mixar and install the downloaded update"
@@ -3242,11 +3269,23 @@ msgstr "Zum Aktualisieren neu starten"
 msgid "Updating…"
 msgstr "Wird aktualisiert…"
 
-msgid "Verifying…"
+msgid "Updates"
 msgstr ""
 
-msgid "Downloading {percent}%"
-msgstr "Download {percent}%"
+msgid "How Mixar installs the updates it downloads"
+msgstr ""
+
+msgid "Downloaded updates install as Mixar closes, without asking."
+msgstr ""
+
+msgid "Turn this off to update only with Restart to Update."
+msgstr ""
+
+msgid "Install updates when I quit Mixar"
+msgstr ""
+
+msgid "When an update has been downloaded, install it as Mixar closes, so it opens on the new version next time"
+msgstr ""
 
 msgid "{count} credit"
 msgstr ""
@@ -3486,6 +3525,9 @@ msgid "Attach"
 msgstr ""
 
 msgid "Attach files (images, 3D models, videos, documents) or a folder the agent can use as context"
+msgstr ""
+
+msgid "Mixar is still loading. Try again in a moment."
 msgstr ""
 
 msgid "Attach Folder"
@@ -7718,6 +7760,12 @@ msgstr "Moodboard"
 msgid "Right-click context menu for moodboard"
 msgstr "Rechtsklick-Kontextmenü für das Moodboard"
 
+msgid "Added: {time}"
+msgstr ""
+
+msgid "Added: Unknown"
+msgstr ""
+
 msgid "Delete Connection"
 msgstr "Verbindung löschen"
 
@@ -9988,14 +10036,14 @@ msgstr "Modellliste wird aktualisiert..."
 msgid "Generation catalog module not available"
 msgstr "Generierungskatalog-Modul nicht verfügbar"
 
+msgid "A duplicate image generation is already queued"
+msgstr "Eine identische Bildgenerierung befindet sich bereits in der Warteschlange"
+
 msgid "Generate AI images and add them to the moodboard"
 msgstr "Generiert KI-Bilder und fügt sie dem Moodboard hinzu"
 
 msgid "Please enter a prompt (press Enter to confirm your text)"
 msgstr "Bitte geben Sie einen Prompt ein (drücken Sie Enter, um Ihren Text zu bestätigen)"
-
-msgid "A duplicate image generation is already queued"
-msgstr "Eine identische Bildgenerierung befindet sich bereits in der Warteschlange"
 
 msgid "No model specified and no default available"
 msgstr "Kein Modell angegeben und kein Standardmodell verfügbar"
@@ -19863,6 +19911,9 @@ msgstr ""
 msgid "Mixar closed unexpectedly. Restore your work?"
 msgstr ""
 
+msgid "Close the Agent island, then restore the saved work again. It is kept for the next launch."
+msgstr ""
+
 msgid "Mixar could not open the saved work. It is kept for the next launch."
 msgstr ""
 
@@ -20306,12 +20357,6 @@ msgstr "Wird geändert..."
 
 msgid "Awaiting Input..."
 msgstr "Warte auf Eingabe..."
-
-msgid "Added to the running task"
-msgstr ""
-
-msgid "Queued until Mixie is ready"
-msgstr ""
 
 msgid "Attach the video as a file: videos become context the agent can watch"
 msgstr ""
@@ -20895,6 +20940,9 @@ msgstr "Checkpoint-Datei fehlt"
 msgid "Could not keep the current state, so nothing was changed"
 msgstr "Der aktuelle Zustand konnte nicht gesichert werden, daher wurde nichts geändert"
 
+msgid "Close the Agent island, then restore the checkpoint again"
+msgstr ""
+
 msgid "Could not read the checkpoint"
 msgstr "Der Checkpoint konnte nicht gelesen werden"
 
@@ -21063,9 +21111,6 @@ msgstr "Abmelden"
 
 msgid "Sound on"
 msgstr ""
-
-msgid "Retry"
-msgstr "Erneut versuchen"
 
 msgid "Choose Export Location"
 msgstr "Exportziel wählen"
@@ -21537,6 +21582,15 @@ msgstr "Max. {count} Anhänge"
 msgid "Paste failed: {error}"
 msgstr "Einfügen fehlgeschlagen: {error}"
 
+msgid "Cannot add {name}: {error}"
+msgstr "{name} kann nicht hinzugefügt werden: {error}"
+
+msgid "These references are already attached"
+msgstr "Diese Referenzen sind bereits angehängt"
+
+msgid "Attached {count} file(s) as context"
+msgstr ""
+
 msgid "Pasted image as reference"
 msgstr ""
 
@@ -21822,23 +21876,14 @@ msgstr ""
 msgid "Attach files: images become references, 3D models are imported, any other file becomes context the agent can read"
 msgstr ""
 
-msgid "Cannot add {name}: {error}"
-msgstr "{name} kann nicht hinzugefügt werden: {error}"
-
 msgid "Attachment limit ({count}) reached"
 msgstr "Anhangslimit ({count}) erreicht"
 
 msgid "Skipped {name}: {error}"
 msgstr "{name} übersprungen: {error}"
 
-msgid "These references are already attached"
-msgstr "Diese Referenzen sind bereits angehängt"
-
 msgid "Added {count} image(s)"
 msgstr "{count} Bild(er) hinzugefügt"
-
-msgid "Attached {count} file(s) as context"
-msgstr ""
 
 msgid "Add from Blend"
 msgstr "Aus .blend hinzufügen"
@@ -25191,6 +25236,30 @@ msgstr ""
 msgid "Storage did not return an ETag"
 msgstr ""
 
+msgid "Shader texture preparation timed out"
+msgstr ""
+
+msgid "Preparing shader textures ({done}/{total})…"
+msgstr ""
+
+msgid "Could not prepare shader textures; publication stopped"
+msgstr ""
+
+msgid "{material}: {channel} uses geometry-dependent or unsupported shader nodes"
+msgstr ""
+
+msgid "{material}: connect explicit UV coordinates before publishing {channel}"
+msgstr ""
+
+msgid "{material}: publishing this shader requires a non-tiled image"
+msgstr ""
+
+msgid "{material}: publishing {channel} requires a single UV map"
+msgstr ""
+
+msgid "{material}: required UV map is missing on {object}"
+msgstr ""
+
 msgid "Reserving your scene link…"
 msgstr ""
 
@@ -26511,9 +26580,6 @@ msgstr "Automatikmodus: Der Agent entscheidet offene Fragen selbst, statt Sie zu
 msgid "Agent Bubble"
 msgstr "Agentenblase"
 
-msgid "Failed to open Agent Bubble window"
-msgstr "Fenster der Agentenblase konnte nicht geöffnet werden"
-
 msgid "Agent Bubble Status"
 msgstr "Status der Agentenblase"
 
@@ -26963,6 +27029,9 @@ msgstr "Moodboard-Anhang animieren"
 
 msgid "Show a newly attached reference flying into Mixie Chat"
 msgstr "Zeigt, wie eine neu angehängte Referenz in den Mixie-Chat fliegt"
+
+msgid "Context File"
+msgstr ""
 
 msgid "Delay"
 msgstr "Verzögerung"

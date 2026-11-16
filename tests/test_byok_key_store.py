@@ -292,8 +292,8 @@ def test_codex_save_sends_access_token_and_account_id_only(monkeypatch, tmp_path
         "access_token": _jwt({"https://api.openai.com/auth": {"chatgpt_account_id": "acct-9"}}),
         "refresh_token": "rt-secret",
     }}))
-    wm = SimpleNamespace(byok_form_model="gpt-5", byok_form_codex_path=str(auth_file),
-                         byok_dialog_state="IDLE", byok_last_error="")
+    wm = SimpleNamespace(byok_form_model_id="gpt-5", byok_form_codex_path=str(auth_file),
+                         byok_dialog_state="IDLE", byok_last_error="", byok_is_active=False)
     assert byok_codex_ops.execute_codex(None, wm, on_done=lambda *a: None) == {'FINISHED'}
     assert saved["provider"] == "codex" and saved["account_id"] == "acct-9"
     assert saved["api_key"].count(".") == 2 and "rt-secret" not in saved["api_key"]
@@ -302,8 +302,9 @@ def test_codex_save_sends_access_token_and_account_id_only(monkeypatch, tmp_path
     record = key_store.make_record("codex", saved["api_key"], auth_path=saved["codex_auth_path"])
     assert record["key"] is None and "refresh_token" not in record and record["auth_path"] == str(auth_file)
 
-    missing = SimpleNamespace(byok_form_model="gpt-5", byok_form_codex_path=str(tmp_path / "nope.json"),
-                              byok_dialog_state="IDLE", byok_last_error="")
+    missing = SimpleNamespace(byok_form_model_id="gpt-5",
+                              byok_form_codex_path=str(tmp_path / "nope.json"),
+                              byok_dialog_state="IDLE", byok_last_error="", byok_is_active=False)
     assert byok_codex_ops.execute_codex(None, missing, on_done=lambda *a: None) == {'CANCELLED'}
     assert missing.byok_dialog_state == "ERROR" and "codex login" in missing.byok_last_error
 
@@ -346,7 +347,8 @@ def test_codex_path_is_prefilled_when_signed_in_and_the_default_is_stored_as_emp
     saved = {}
     monkeypatch.setattr(byok_codex_ops.byok_client, "save_credentials", lambda **kw: saved.update(kw))
     monkeypatch.setattr(model_suggestions, "is_valid_model", lambda provider, model: True)
-    wm.byok_form_model, wm.byok_dialog_state, wm.byok_last_error = "gpt-5", "IDLE", ""
+    wm.byok_form_model_id, wm.byok_dialog_state, wm.byok_last_error = "gpt-5", "IDLE", ""
+    wm.byok_is_active = False
     assert byok_codex_ops.execute_codex(None, wm, on_done=lambda *a: None) == {'FINISHED'}
     assert saved["codex_auth_path"] == "" and saved["account_id"] == "acct-1"
 

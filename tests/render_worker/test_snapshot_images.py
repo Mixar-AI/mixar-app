@@ -95,7 +95,7 @@ def reuse(monkeypatch, tmp_path):
     monkeypatch.setattr(snapshot, "_users", {})
     writes = []
 
-    def write(purpose):
+    def write(purpose, **_kwargs):
         folder = tmp_path / ("snapshots/w%d" % len(writes))
         folder.mkdir(parents=True)
         (folder / "s.blend").write_bytes(b"blend")

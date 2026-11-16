@@ -642,7 +642,8 @@ def _start_worker(context, key, source, session, args):
     view_layer = getattr(context, "view_layer", None)
     try:
         record = snapshot.write_or_reuse(
-            "preview", lambda: snapshot.fingerprint(source, _revision), _flush_view_layer)
+            "preview", lambda: snapshot.fingerprint(source, _revision), _flush_view_layer,
+            background=True)
     except Exception:
         # A snapshot that cannot be written (disk full, a save refused) leaves
         # the in-process job, exactly as before the worker existed.
@@ -653,7 +654,8 @@ def _start_worker(context, key, source, session, args):
         job_id = supervisor.submit("preview", {
             "kind": "preview", "snapshot": record["path"], "images": record["images"],
             "scene": source.name, "view_layer": getattr(view_layer, "name", ""),
-            "params": params, "out": out}, timeout_s=WORKER_TIMEOUT_S)
+            "params": params, "out": out}, timeout_s=WORKER_TIMEOUT_S,
+            ready=lambda: snapshot.ready(record))
     except Exception:
         snapshot.release(record)
         return None

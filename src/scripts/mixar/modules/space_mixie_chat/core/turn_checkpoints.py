@@ -347,16 +347,21 @@ def _drop_record(session_id: str, record: dict) -> None:
         logger.debug(f"Turn checkpoint: could not drop {record.get('id')}: {e}")
 
 
-def _close_bubble_windows() -> None:
-    """A file read must never find a live Agent Bubble window (their regions
-    are freed from the outgoing Main and the motion region free crashes).
-    Every save closes them through ``save_pre``, but a jump that has nothing
-    to keep saves nothing first, so close them here regardless."""
+def _prepare_read_window():
+    """The checkpoint read's window: bubbles purged and verified gone first
+    (a live bubble window during the read crashes). ``(window, "")``, or
+    ``(None, reason)`` when the jump must be refused."""
+    from mixar.modules.agent_bubble.core.bubble_windows import (
+        FileReadContextError, prepare_file_read_window,
+    )
     try:
-        from mixar.modules.agent_bubble.core.bubble_lifecycle import close_restored_agent_bubble_windows
-        close_restored_agent_bubble_windows()
+        return prepare_file_read_window(), ""
+    except FileReadContextError as e:
+        logger.warning(f"Turn checkpoint: read refused, {e.reason}")
+        return None, e.reason
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"Turn checkpoint: bubble purge before the read skipped: {e}")
+        logger.warning(f"Turn checkpoint: bubble purge before the read failed: {e}")
+        return None, "purge_failed"
 
 
 def restore(scene, checkpoint_id: str):
@@ -392,8 +397,13 @@ def restore(scene, checkpoint_id: str):
         return False, rpt_("Checkpoint file is missing")
 
     original_path = bpy.data.filepath or target.get("original_path") or ""
-    window = _main_window()
-    _close_bubble_windows()
+    window, refused = _prepare_read_window()
+    if window is None:
+        if kept_record is not None:
+            _drop_record(session_id, kept_record)
+        if refused == "bubble_open":
+            return False, rpt_("Close the Agent island, then restore the checkpoint again")
+        return False, rpt_("Could not read the checkpoint")
     _restoring = True
     read_ok = False
     try:

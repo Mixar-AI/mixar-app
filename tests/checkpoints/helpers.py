@@ -33,3 +33,24 @@ def _turns(tc, scene, n, start=0):
 def _edit(tc, stamp="edited"):
     """A user action: the undo stack (and so the stamp) moves on."""
     tc.bpy.context.window_manager.mixie_chat_undo_stamp = stamp
+
+
+def _prepare_restore(tc, monkeypatch, scene):
+    """One captured-and-sent turn; the document has moved on since."""
+    tc.document["bytes"] = b"scene-turn-2"
+    target = tc.m.capture(scene, "turn two")
+    tc.m.bind_request(target, "cmd-turn-2")
+    _send(scene, "turn two")
+    tc.document["bytes"] = b"scene-now"
+    sent = []
+    monkeypatch.setattr(tc.m, "_send_backend", lambda sid, calls: sent.append((sid, calls)))
+    seen = {}
+
+    def recover(filepath=""):
+        seen["restoring"] = tc.m.is_restoring()
+        seen["bytes"] = open(filepath, "rb").read()
+        return {'FINISHED'}
+
+    tc.bpy.ops.wm.recover_auto_save.side_effect = recover
+    tc.bpy.data.scenes = [scene]
+    return target, sent, seen

@@ -130,3 +130,76 @@ def test_requests_name_the_app_not_urllib(monkeypatch, tmp_path):
 def test_user_agent_without_a_known_version_is_the_bare_product(monkeypatch):
     monkeypatch.setattr(download, "_client_version", lambda: None)
     assert download.user_agent() == "Mixar"
+
+
+def test_a_brief_permission_lock_is_retried(monkeypatch, tmp_path):
+    """Windows antivirus briefly locks a fresh ``.part``: retry, don't fail."""
+    import errno
+
+    payload = b"installer bytes"
+    real_open_part = download._open_part
+    opens = []
+
+    def _open_part(*args):
+        opens.append(1)
+        if len(opens) == 1:
+            raise PermissionError(errno.EACCES, "locked")
+        return real_open_part(*args)
+
+    monkeypatch.setattr(download, "_open_part", _open_part)
+    monkeypatch.setattr(download.urllib.request, "urlopen",
+                        lambda request, timeout=None: _Resp(payload, 200, len(payload)))
+    final = str(tmp_path / "i.msi")
+    download.download_file("https://cdn/x", final, hashlib.sha256(payload).hexdigest(),
+                           policy=_fast())
+    assert len(opens) == 2
+    assert Path(final).read_bytes() == payload
+
+
+@pytest.mark.parametrize("number", ["ENOSPC", "EROFS"])
+def test_full_or_read_only_disk_is_final(monkeypatch, tmp_path, number):
+    import errno
+
+    opens = []
+
+    def _open_part(*args):
+        opens.append(1)
+        raise OSError(getattr(errno, number), "no")
+
+    monkeypatch.setattr(download, "_open_part", _open_part)
+    monkeypatch.setattr(download.urllib.request, "urlopen",
+                        lambda request, timeout=None: _Resp(b"x", 200, 1))
+    with pytest.raises(download.DownloadError) as info:
+        download.download_file("https://cdn/x", str(tmp_path / "f"), "ab" * 32, policy=_fast())
+    assert not info.value.retryable
+    assert len(opens) == 1
+
+
+def test_cancel_stays_a_cancel_when_closing_the_part_fails(monkeypatch, tmp_path):
+    import errno
+
+    real_open_part = download._open_part
+
+    class _FailingClose:
+        def __init__(self, handle):
+            self.handle = handle
+
+        def write(self, chunk):
+            return self.handle.write(chunk)
+
+        def close(self):
+            self.handle.close()
+            raise OSError(errno.ENOSPC, "flush failed")
+
+    def _open_part(*args):
+        handle, offset = real_open_part(*args)
+        return _FailingClose(handle), offset
+
+    monkeypatch.setattr(download, "_open_part", _open_part)
+    monkeypatch.setattr(download.urllib.request, "urlopen",
+                        lambda request, timeout=None: _Resp(b"data", 200, 4))
+    final = str(tmp_path / "f")
+    with pytest.raises(download.DownloadCancelled):
+        download.download_file("https://cdn/x", final, "ab" * 32,
+                               policy=_fast(), should_cancel=lambda: True)
+    assert not Path(final + ".part").exists()

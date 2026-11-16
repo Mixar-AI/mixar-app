@@ -861,7 +861,7 @@ def _submit_to_worker(kwargs):
     from mixar.modules.common.render_worker import snapshot, supervisor
     started = time.perf_counter()
     try:
-        record = snapshot.write("export")
+        record = snapshot.write("export", background=True)
     except Exception:
         return None
     key = uuid.uuid4().hex
@@ -874,7 +874,7 @@ def _submit_to_worker(kwargs):
             "kind": "export", "snapshot": record["path"], "images": record["images"],
             "scene": scene.name, "view_layer": getattr(view_layer, "name", ""),
             "params": {"kwargs": kwargs, "project_dir": _project_folder()}, "out": out},
-            timeout_s=WORKER_TIMEOUT_S)
+            timeout_s=WORKER_TIMEOUT_S, ready=lambda: snapshot.ready(record))
     except Exception:
         snapshot.remove_folder(record["folder"])
         return None

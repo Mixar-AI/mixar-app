@@ -555,16 +555,23 @@ def _restore_now():
             journal.update_manifest(offer["dir"], failed_points=list(offer["failed_points"]))
         except Exception:  # noqa: BLE001
             pass
-    try:
-        from mixar.modules.space_mixie_chat.core.turn_checkpoints import _close_bubble_windows
-        _close_bubble_windows()
-    except Exception:  # noqa: BLE001
-        pass
     _state["restoring"] = True
     _state["restore_problem"] = ""
-    ok, failure = False, "read_cancelled"
+    ok, failure, refused = False, "read_cancelled", ""
     try:
-        window = _main_window()
+        from mixar.modules.agent_bubble.core.bubble_windows import (
+            FileReadContextError, prepare_file_read_window,
+        )
+        try:
+            # Purges the bubble windows, verifies none survived, then picks
+            # the document window; never falls back to another context.
+            window = prepare_file_read_window()
+        except FileReadContextError as e:
+            refused = e.reason
+            raise
+        except Exception:
+            refused = "purge_failed"
+            raise
         with bpy.context.temp_override(window=window):
             if target["kind"] == "project":
                 result = bpy.ops.wm.open_mainfile(filepath=target["path"])
@@ -572,8 +579,12 @@ def _restore_now():
                 result = bpy.ops.wm.recover_auto_save(filepath=target["path"])
         ok = 'FINISHED' in result
     except Exception as e:  # noqa: BLE001
-        failure = "read_error"
-        logger.error(f"[RECOVERY] restore read failed: {e}", exc_info=True)
+        if refused:
+            failure = "context_unavailable"
+            logger.warning(f"[RECOVERY] restore refused before the read ({refused}): {e}")
+        else:
+            failure = "read_error"
+            logger.error(f"[RECOVERY] restore read failed: {e}", exc_info=True)
     finally:
         _state["restoring"] = False
     telemetry.track("scene_restored" if ok else "failed", offer, surface=_state["surface"],
@@ -581,7 +592,11 @@ def _restore_now():
     if not ok:
         if jr is not None:
             jr.set_fields(restore_attempt=None)
-        _report(rpt_("Mixar could not open the saved work. It is kept for the next launch."))
+        if refused == "bubble_open":
+            _report(rpt_("Close the Agent island, then restore the saved work again. "
+                         "It is kept for the next launch."))
+        else:
+            _report(rpt_("Mixar could not open the saved work. It is kept for the next launch."))
         _state["decided"] = False
         return None
     if target["kind"] != "project":
@@ -641,35 +656,11 @@ def _confirm_restore():
     return None
 
 
-def _settle_restored_scenes() -> None:
-    """A tab saved mid-turn comes back reading BUSY with an open run, and no
-    connect event will move it when the socket is already up (QA: Continue
-    was refused as "not idle"). Nothing is running in this process, so every
-    tab is idle when connected, offline otherwise; the reconnect checks below
-    still adopt a turn the server kept running."""
-    try:
-        session = _session_manager()
-        from mixar.modules.space_mixie_chat.core.jsonrpc_client import get_jsonrpc_client
-        client = get_jsonrpc_client()
-        online = bool(client is not None and getattr(client, "is_connected", False))
-    except Exception as e:  # noqa: BLE001
-        logger.debug(f"[RECOVERY] scene settle skipped: {e}")
-        return
-    for scene in _tab_scenes():
-        try:
-            session.set_run(scene, "", False)
-            if online:
-                session.set_connected(scene)
-            else:
-                session.set_disconnected(scene)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"[RECOVERY] settle {scene.name} skipped: {e}")
-
-
 def _after_restore():
-    """After load_post handlers ran: generations, Continue notices, re-checks."""
+    """After load_post handlers ran (they settled every tab idle or offline,
+    space_mixie_chat/core/file_handlers.py): generations, Continue notices,
+    re-checks."""
     target = _state["restore_target"] or {}
-    _settle_restored_scenes()
     problem = _state["restore_problem"]
     try:
         if _adopt_jobs(target.get("jobs") or []):
@@ -736,10 +727,11 @@ _notice_saved_at: dict = {}
 _continue_sent: dict = {}
 
 
-def add_continue_notice(scene, session_id: str, saved_at: float) -> None:
+def add_continue_notice(scene, session_id: str, saved_at: float, *, reshown: bool = False) -> None:
     """A notice bubble: the agent was working, Continue or Start fresh."""
     if scene is None or not session_id or not hasattr(scene, "mixie_chat_messages"):
         return
+    telemetry.track("continue_offered", _state.get("offer"), surface="chat", reshown=reshown)
     _notice_saved_at[scene.name] = saved_at
     stamp = time.strftime("%H:%M", time.localtime(saved_at or _now()))
     title = rpt_("Mixar closed while the agent was working")
@@ -780,6 +772,12 @@ def remove_notice(scene) -> None:
     _redraw()
 
 
+def dismiss_continue(scene) -> None:
+    """Start fresh on the notice: the agent is not asked to continue."""
+    telemetry.track("continue_dismissed", _state.get("offer"), surface="chat")
+    remove_notice(scene)
+
+
 def continue_deferred(scene_name: str) -> None:
     """Continue on the next tick (never inside the bubble's click handler)."""
     def _run():
@@ -792,9 +790,11 @@ def continue_deferred(scene_name: str) -> None:
                          if m.sender == "USER"), "")
             if sent:
                 _continue_sent[sent] = (getattr(scene, "mixie_session_id", "") or "",
-                                        _notice_saved_at.get(scene.name, 0.0))
+                                        _notice_saved_at.get(scene.name, 0.0), time.monotonic())
+            telemetry.track("continued", _state.get("offer"), surface="chat")
             remove_notice(scene)
         else:
+            telemetry.track("continue_blocked", _state.get("offer"), surface="chat")
             _report(rpt_("The agent can continue once Mixar is connected and the chat is idle. "
                          "Press Continue again then."))
         return None
@@ -807,8 +807,22 @@ def continue_refused(scene, command_id: str) -> None:
     notice again, below the refusal, so Continue is one click once it is fixed.
     A key or sign-in refusal never comes here: that card resends the message."""
     entry = _continue_sent.pop(command_id or "", None)
-    if entry is not None and scene is not None:
-        add_continue_notice(scene, entry[0], entry[1])
+    if entry is None:
+        return
+    telemetry.track("continue_refused", _state.get("offer"), surface="chat")
+    if scene is not None:
+        add_continue_notice(scene, entry[0], entry[1], reshown=True)
+
+
+def continue_turn_ended(command_id: str, status: str) -> None:
+    """The turn a Continue started ended (its journaled ``turn_end``): how,
+    and after how long. Turns that were not a crash Continue are ignored."""
+    entry = _continue_sent.pop(command_id or "", None)
+    if entry is None:
+        return
+    duration = time.monotonic() - entry[2] if len(entry) > 2 else None
+    telemetry.track("continue_finished", _state.get("offer"), surface="chat",
+                    outcome=str(status or "completed"), duration_s=duration)
 
 
 def _redraw() -> None:

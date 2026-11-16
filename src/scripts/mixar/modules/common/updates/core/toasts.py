@@ -128,7 +128,8 @@ def push_update_available_toast(info) -> None:
     can_self_install = install_state in (
         InstallState.READY, InstallState.DOWNLOADING, InstallState.INSTALLING,
     ) or (
-        install_state is InstallState.IDLE
+        (install_state is InstallState.IDLE
+         or (install_state is InstallState.FAILED and state.install_retryable))
         and not state.blocked_reason
         and bool(info.download_url and info.download_sha256)
     )
@@ -137,9 +138,9 @@ def push_update_available_toast(info) -> None:
         title = n_("Mixar Update Ready")
         body = rpt_("Version {version} is ready to install.").format(version=info.latest_version)
     else:
-        # No percentage here, deliberately. Staging runs in the background
-        # and the user has not asked to wait on it; the topbar badge shows
-        # "Downloading 45%" for anyone who wants the detail. Progress
+        # No percentage here, deliberately. Staging runs silently in the
+        # background (the topbar badge is hidden until the installer is
+        # ready) and the user has not asked to wait on it. Progress
         # belongs in the toast only once the user has pressed Restart &
         # Update and is actually waiting — see push_downloading_toast.
         title = n_("Mixar Update Required") if forced else n_("Mixar Update Available")
@@ -161,12 +162,18 @@ def push_update_available_toast(info) -> None:
     actions = []
     if can_self_install:
         actions.append(NotificationAction(
-            label=n_("Restart & Update"), operator="mixar.restart_to_update",
+            label=n_("Retry") if install_state is InstallState.FAILED else n_("Restart & Update"),
+            operator="mixar.restart_to_update",
             style="primary",
         ))
     else:
         actions.append(NotificationAction(
             label=n_("Download"), operator="mixar.open_downloads_page", style="primary",
+        ))
+
+    if install_state is InstallState.FAILED and can_self_install:
+        actions.append(NotificationAction(
+            label=n_("Download"), operator="mixar.open_downloads_page", style="secondary",
         ))
 
     get_notification_store().push(

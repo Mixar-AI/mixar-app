@@ -92,7 +92,7 @@ class FakeLayout:
     def prop(self, data, prop, text="", expand=False):
         self._log.append(f"prop:{prop}")
 
-    def operator(self, op, text="", icon='NONE', translate=True):
+    def operator(self, op, text="", icon='NONE', translate=True, icon_value=0):
         self._log.append(f"op:{op}")
         log = self._log
 
@@ -189,8 +189,8 @@ def _wm(state='IDLE', **extra):
         byok_form_local_custom_key='',
         byok_last_error='some error text',
     )
-    for key, value in extra.items():
-        setattr(wm, key, value)
+    vars(wm).update(extra)
+    wm.byok_form_model_id = extra.get('byok_form_model_id', wm.byok_form_model)  # stored pick
     return wm
 
 

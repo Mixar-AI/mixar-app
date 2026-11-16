@@ -9,6 +9,11 @@ the launcher serves the saved copy whenever Mixar is closed, starting, signed
 out or offline. Every tool is listed up front; a call made before Mixar is
 ready says why (sign in, connecting, not open), as other desktop MCP servers do.
 Tool definitions only: no account data. No Blender access here.
+
+A launcher that hides AI image and video generation (constants.HIDE_MEDIA_ENV,
+the Claude plugin's) saves its own live list beside it and serves only that copy
+offline; the app's hourly refresh never fetches it, so nothing changes for anyone
+else.
 """
 
 import json
@@ -18,20 +23,31 @@ import time
 from .installation import _atomic, directory
 
 FILENAME = "tools.json"
+NO_MEDIA_FILENAME = "tools-no-media.json"
+#: Until such a launcher has saved a live list, the full one stands in, less these.
+GENERATION_TOOLS = frozenset({"enqueue_generation", "get_generation_params"})
 REFRESH_SECONDS = 3600
 RETRY_SECONDS = 15
 
 _state = {"thread": None, "saved_at": 0.0, "account": None, "error": None, "delay": RETRY_SECONDS}
 
 
-def path():
-    return directory() / FILENAME
+def path(no_media=False):
+    return directory() / (NO_MEDIA_FILENAME if no_media else FILENAME)
 
 
-def load():
-    """The saved backend tool definitions, or None."""
+def load(no_media=False):
+    """The saved backend tool definitions, or None. ``no_media``: the media-free
+    list, else the full one without generation."""
+    tools = _read(path(no_media))
+    if no_media and tools is None:
+        tools = [tool for tool in _read(path()) or () if tool["name"] not in GENERATION_TOOLS]
+    return tools or None
+
+
+def _read(file):
     try:
-        data = json.loads(path().read_text(encoding="utf-8"))
+        data = json.loads(file.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
     tools = data.get("tools") if isinstance(data, dict) and data.get("version") == 1 else None
@@ -40,12 +56,12 @@ def load():
     return tools or None
 
 
-def save(tools):
+def save(tools, no_media=False):
     """Atomically replace the saved list; never fails its caller."""
     try:
         root = directory()
         root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        _atomic(path(), json.dumps({"version": 1, "saved_at": int(time.time()), "tools": tools}))
+        _atomic(path(no_media), json.dumps({"version": 1, "saved_at": int(time.time()), "tools": tools}))
         return True
     except (OSError, TypeError, ValueError):
         return False

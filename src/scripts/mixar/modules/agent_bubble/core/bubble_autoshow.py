@@ -61,7 +61,18 @@ def find_target_context():
 
 
 def try_invoke_bubble(start_minimised: bool = False) -> bool:
-    """Invoke the bubble popup. Returns True on success."""
+    """Invoke the bubble popup. Returns True on success.
+
+    Never tries once ``bubble_state.window_unavailable`` is latched. A
+    RuntimeError latches it: ``mixar.agent_bubble_show_window`` has no poll
+    and reports only "Failed to open Agent Bubble window", and the
+    ``agent_bubble_open_window`` wrapper's poll always passes here, so the
+    error means the OS refused the window (pinned by
+    ``tests/test_agent_bubble_window_unavailable.py``). A file load clears
+    the latch (``bubble_lifecycle.reset_restored_bubbles_after_load``).
+    """
+    if _st.window_unavailable:
+        return False
     target = find_target_context()
     if target is None:
         logger.info("agent_bubble: no usable window/area yet")
@@ -86,8 +97,16 @@ def try_invoke_bubble(start_minimised: bool = False) -> bool:
         if not created:
             logger.info("agent_bubble: invoke finished but no AGENT_BUBBLE window exists")
         return created
-    except (AttributeError, RuntimeError) as e:
+    except RuntimeError as e:
         print(f"[agent_bubble] BUBBLE INVOKE FAILED: {e!r}")
+        _st.window_unavailable = True
+        logger.warning(
+            "agent_bubble: window could not be created, autoshow stopped "
+            "until the next file load; Shift+M opens it (%s)", e,
+        )
+        return False
+    except AttributeError as e:
+        # The operator is not registered yet (startup): retry.
         logger.info("agent_bubble: invoke deferred (%s)", e)
         return False
     except Exception as e:  # noqa: BLE001
@@ -145,10 +164,16 @@ def _autoshow_bubble_inner():
         _st.autoshow_start_minimised = False
         return None
 
+    if _st.window_unavailable:
+        # try_invoke_bubble logged why; nothing to retry.
+        _st.autoshow_attempts = 0
+        _st.autoshow_start_minimised = False
+        return None
+
     if _st.autoshow_attempts >= AUTOSHOW_RETRY_LIMIT:
         logger.warning(
-            "agent_bubble: giving up after %d attempts — "
-            "use the 'Open Agent' button in the top bar to invoke manually",
+            "agent_bubble: autoshow gave up after %d attempts; "
+            "Shift+M opens the island",
             _st.autoshow_attempts,
         )
         _st.autoshow_attempts = 0

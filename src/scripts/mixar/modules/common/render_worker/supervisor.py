@@ -40,7 +40,7 @@ import time
 
 from mixar.config.logging_config import get_logger
 
-from . import protocol
+from . import keep_warm, protocol
 
 logger = get_logger(__name__)
 
@@ -443,16 +443,22 @@ def _new_job_id() -> str:
     return "j%d-%d" % (os.getpid(), next(_ids))
 
 
-def submit(kind: str, message: dict, *, timeout_s: float) -> str:
+def submit(kind: str, message: dict, *, timeout_s: float, ready=None) -> str:
     """Queue ``message`` (a protocol ``job`` without ``type``/``job``) for the
-    ``kind`` worker; returns the job id. Never blocks on the worker."""
+    ``kind`` worker; returns the job id. Never blocks on the worker.
+
+    ``ready`` (optional, called on the main thread) holds the job in the queue
+    until it returns True, e.g. while ``snapshot`` writes the dirty images on
+    its background thread; the worker still boots meanwhile. If it raises,
+    the job fails as ``worker_unavailable`` and the caller's in-process path
+    runs."""
     if kind not in protocol.JOB_KINDS:
         raise ValueError("unknown worker job kind")
     job_id = _new_job_id()
     _jobs[job_id] = {"id": job_id, "kind": kind, "message": dict(message), "attempts": 0,
                      "boots": 0, "state": "queued", "error": "", "out": "",
                      "submitted": time.monotonic(), "timeout_s": float(timeout_s),
-                     "deadline": None, "seconds": {}, "pid": None}
+                     "deadline": None, "seconds": {}, "pid": None, "ready": ready}
     _queue.setdefault(kind, []).append(job_id)
     _ensure_maintenance()
     _dispatch(kind)
@@ -492,10 +498,21 @@ def _dispatch(kind):
             return
     if worker.job is not None:
         return
-    job_id = pending.pop(0)
+    job_id = pending[0]
     job = _jobs.get(job_id)
     if job is None:
+        pending.pop(0)
         return _dispatch(kind)
+    if job.get("ready") is not None:
+        try:
+            if not job["ready"]():
+                return  # its input is still being written; jobs of a kind run in order
+        except Exception:
+            pending.pop(0)
+            _fail(job_id, "worker_unavailable")
+            return _dispatch(kind)
+        job["ready"] = None
+    pending.pop(0)
     message = dict(job["message"], type="job", job=job_id)
     if _crash_next.get(kind, 0) > 0:
         _crash_next[kind] -= 1
@@ -631,8 +648,9 @@ def _pump(worker):
             if _workers.get(worker.kind) is worker:
                 del _workers[worker.kind]
         return
-    if worker.job is None and now - worker.last_used > IDLE_TTL_S:
-        logger.info("Render worker %s idle for %.0fs; stopping", worker.kind, IDLE_TTL_S)
+    if worker.job is None and keep_warm.idle_expired(worker.last_used, now, IDLE_TTL_S):
+        logger.info("Render worker %s idle for %.0fs; stopping", worker.kind,
+                    now - worker.last_used)
         with _lock:
             if _workers.get(worker.kind) is worker:
                 del _workers[worker.kind]
@@ -736,3 +754,4 @@ def reset_for_tests() -> None:
     _boot_failures = 0
     _disabled_reason = ""
     _maintain_registered = False
+    keep_warm.reset_for_tests()

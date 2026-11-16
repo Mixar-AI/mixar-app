@@ -10,6 +10,13 @@ script that adds, removes or edits data tags that graph while the job thread
 rebuilds and evaluates it. 4.1.1 crashed in ``graph_tag_ids_for_visible_update``
 mid-video when moodboard inspection created and removed a temporary image.
 
+A bake (``OBJECT_BAKE``) or compositor job (``COMPOSITE``) does the same on the
+job thread: prod 4.4.0 crashed in ``graph_id_tag_update`` when an agent script
+appended a material (``DEG_relations_tag_update`` tags every registered graph)
+while the agent's own bake was still running. Those jobs are refused alike,
+as ``render_kind`` ``bake`` / ``composite`` (``render_coordinator.busy()``
+covers them for every other caller too).
+
 The executor answers such a script with ``render_in_progress`` immediately. It
 never holds the queue (3.4.2's hold stalled every turn): the refusal names the
 render so the backend can wait out a short preview and tell the user about a
@@ -56,8 +63,9 @@ _RENDERS = {
     "scene_image": "a scene image render",
     "scene_video": "a scene video render",
     "other": "a render",
+    "bake": "a bake",
+    "composite": "a compositor job",
 }
-
 
 def refusal(tool_name: str) -> Optional[dict]:
     """The failure result for a script that must wait for the render, else None."""

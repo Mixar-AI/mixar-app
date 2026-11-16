@@ -213,13 +213,26 @@ def set_active_paint_slot_entity(mp):
     root_tree = mp.id_data
     wmyp = get_bpy_context().window_manager.mpprops
 
+    # A layer-index update can run when no object or no node-based material is
+    # active (another object selected, the material removed): nothing to paint.
+    if obj is None or mat is None or mat.node_tree is None:
+        return
+
     # Multiple materials will use single active image instead active material image
     # since it's the only way texture paint mode won't mess with other material image
     is_multiple_mats = obj.type == 'MESH' and len(obj.data.materials) > 1
 
+    # The active MPaint node can be missing (the material's active node is some
+    # other node): use the group node that holds this tree. Without one there is
+    # no node to make active, but the paint slot is still set below.
+    if node is None:
+        node = next((n for n in mat.node_tree.nodes
+                     if getattr(n, "node_tree", None) == root_tree), None)
+
     # Set material active node
-    node.select = True
-    mat.node_tree.nodes.active = node
+    if node is not None:
+        node.select = True
+        mat.node_tree.nodes.active = node
 
     if mp.use_baked and len(mp.channels) > 0:
 
@@ -265,6 +278,8 @@ def set_active_paint_slot_entity(mp):
 
         # Set layer node tree as active
         layer_node = root_tree.nodes.get(layer.group_node)
+        if layer_node is None:
+            return None
         layer_node.select = True
         root_tree.nodes.active = layer_node
         layer_tree = layer_node.node_tree

@@ -174,7 +174,7 @@ def parse_update_response(raw: dict) -> Optional[UpdateInfo]:
         return None
 
     latest_version = data.get("latest_version", "") or ""
-    if not _SEMVER_RE.match(latest_version):
+    if not isinstance(latest_version, str) or not _SEMVER_RE.match(latest_version):
         logger.error("Rejecting update: malformed latest_version %r", latest_version)
         return None
 

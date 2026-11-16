@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """Discovery and sync failures use the real client loop without Blender/network."""
+import hashlib
 import importlib.util
+import json
 import sys
 import threading
 import time
@@ -416,3 +418,66 @@ def test_idle_discovery_is_bounded_but_live_scenes_and_new_owner_are_immediate(m
     sync.owner = 'different'
     assert sync._known_sessions() == ['live-a', 'live-b', 'other-owner']
     assert discovered.call_count == 3
+
+
+def archive_packet(store, seq, session):
+    record = {'version': 1, 'run_id': 'run', 'task_id': 'worker', 'kind': 'message',
+              'payload': {'id': 'message%d' % seq, 'role': 'assistant', 'text': 'turn %d' % seq}}
+    return {'session_id': session, 'epoch': 'a' * 32, 'status': 'available',
+            'records': [{'seq': seq, 'event_id': hashlib.sha256(store.canonical(record)).hexdigest(),
+                         'record': record}]}
+
+
+def run_two_polls(module, monkeypatch, first_reply):
+    """Two real sync polls over the real store; returns (requests sent, notification store)."""
+    notifications = Mock()
+    monkeypatch.setitem(sys.modules, 'mixar.modules.common.notifications',
+        types.SimpleNamespace(get_notification_store=lambda: notifications))
+    monkeypatch.setattr(module, 'POLL_SECONDS', 0)
+    client = types.SimpleNamespace(is_connected=True)
+    sync = module.ArchiveSync(client)
+    monkeypatch.setattr(sync, '_capture_scene_ids', lambda: True)
+    sent = []
+    def send(method, params, callback, timeout):
+        sent.append(params)
+        callback(first_reply if len(sent) == 1 else {**first_reply, 'sessions': []})
+        if len(sent) == 2:
+            client.is_connected = False
+        return 'request'
+    client.send_request = send
+    sync._run()
+    return sent, notifications
+
+
+def test_claimed_guest_archive_is_refiled_before_the_batch_is_written(module, monkeypatch):
+    """A 4.3.x sign-in left the archive under the guest id: every batch of that
+    session failed the owner check and the toast never cleared."""
+    store = module.store
+    store.write_batch('guest', archive_packet(store, 1, 'session'))
+    reassign = Mock(wraps=store.reassign_owner)
+    monkeypatch.setattr(store, 'reassign_owner', reassign)
+    sent, notifications = run_two_polls(module, monkeypatch, {
+        'version': 1, 'owner_id': 'account', 'claimed_owner_ids': ['guest'],
+        'sessions': [archive_packet(store, 2, 'session')]})
+    assert sent[1]['acknowledgements'] == [{'session_id': 'session', 'epoch': 'a' * 32, 'seq': 2}]
+    assert 'session' in sent[1]['session_ids']  # discovered as the account's own now
+    reassign.assert_called_once_with('guest', 'account')  # once, not on every poll
+    notifications.push.assert_not_called()
+    assert json.loads((store.root() / 'session/manifest.json').read_text())['owner_id'] == 'account'
+
+
+@pytest.mark.parametrize('claimed, session, owner', [
+    (['guest'], 'other', 'stranger'),  # an owner the server did not name
+    (None, 'session', 'guest'),        # an older backend that names nobody
+])
+def test_unclaimed_owners_still_fail_closed(module, monkeypatch, claimed, session, owner):
+    store = module.store
+    store.write_batch('guest', archive_packet(store, 1, 'session'))
+    store.write_batch('stranger', archive_packet(store, 1, 'other'))
+    reply = {'version': 1, 'owner_id': 'account', 'sessions': [archive_packet(store, 2, session)]}
+    if claimed is not None:
+        reply['claimed_owner_ids'] = claimed
+    sent, notifications = run_two_polls(module, monkeypatch, reply)
+    assert [params['acknowledgements'] for params in sent] == [[], []]
+    assert notifications.push.call_args.args[1] == 'Agent history needs attention'
+    assert json.loads((store.root() / session / 'manifest.json').read_text())['owner_id'] == owner

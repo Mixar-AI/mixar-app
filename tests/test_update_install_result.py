@@ -72,9 +72,10 @@ def _toast():
      "3.3.6", PORTABLE_EXE, "no_effect", "old_copy_relaunched"),
     (_result(install_location=INSTALL_DIR, installed_version="3.3.6"),
      "3.3.6", INSTALLED_EXE, "no_effect", "msi_not_upgraded"),
-    # 3010 used to count as success; files in use are replaced at reboot.
+    # 3010 with the old build back: the held files are replaced at reboot.
     (_result(exit="3010"), "3.3.6", INSTALLED_EXE, "pending_reboot", "files_pending_reboot"),
-    (_result(exit="3010"), "3.4.0", INSTALLED_EXE, "pending_reboot", ""),
+    # 3010 with the new build running: only old copies wait for the reboot.
+    (_result(exit="3010"), "3.4.0", INSTALLED_EXE, "success", ""),
     (_result(exit="1602"), "3.3.6", INSTALLED_EXE, "failed", "uac_declined"),
     (_result(exit="1618"), "3.3.6", INSTALLED_EXE, "failed", "another_install"),
     (_result(exit="1603", msi_error="1925"), "3.3.6", INSTALLED_EXE, "failed", "msi_error"),
@@ -87,6 +88,23 @@ def _toast():
 ])
 def test_results_classify_by_cause(result, running, binary, outcome, reason):
     verdict = installer.classify_result(result, running, binary)
+
+    assert (verdict["outcome"], verdict["failure_reason"]) == (outcome, reason)
+
+
+@pytest.mark.parametrize("result, running, pending, outcome, reason", [
+    # A held file still queued for the reboot: the new exe may run an old DLL.
+    (_result(exit="3010"), "3.4.0", True, "pending_reboot", "files_pending_reboot"),
+    (_result(exit="3010"), "3.4.0", False, "success", ""),
+    (_result(exit="3010"), "3.3.6", True, "pending_reboot", "files_pending_reboot"),
+    # Exit 0 is judged by the version alone.
+    (_result(), "3.4.0", True, "success", ""),
+    (_result(), "3.3.6", True, "no_effect", "unknown"),
+    (_result(exit="1603"), "3.3.6", True, "failed", "msi_error"),
+])
+def test_queued_reboot_renames_decide_a_3010(result, running, pending, outcome, reason):
+    verdict = installer.classify_result(
+        result, running, INSTALLED_EXE, files_pending_reboot=pending)
 
     assert (verdict["outcome"], verdict["failure_reason"]) == (outcome, reason)
 
@@ -147,6 +165,45 @@ def test_pending_reboot_asks_for_a_windows_restart(monkeypatch):
     assert item.title == "Restart Windows to finish updating"
     assert item.type.value == "warning"
     assert not item.actions
+
+
+def _pending_registry(monkeypatch, read):
+    from mixar.modules.common.updates.core import pending_renames
+
+    monkeypatch.setattr(pending_renames, "_on_windows", lambda: True)
+    monkeypatch.setattr(pending_renames, "read_pending_renames", read)
+
+
+def test_a_3010_with_a_rename_queued_in_the_install_asks_for_a_restart(monkeypatch):
+    held = [(r"C:\Program Files\Mixar\~DF1A2B.tmp", r"C:\Program Files\Mixar\a.dll")]
+    _pending_registry(monkeypatch, lambda: held)
+
+    # Judged on the helper's recorded location, else the running binary's folder.
+    for result in (_result(exit="3010", install_location=INSTALL_DIR), _result(exit="3010")):
+        item = _report(monkeypatch, result, "3.4.0")
+        assert item.title == "Restart Windows to finish updating"
+        get_notification_store().clear_all()
+
+    other = [(r"C:\Config.Msi\3a5f2e.rbf", ""), (r"C:\Other\a.tmp", r"C:\Other\a.dll")]
+    _pending_registry(monkeypatch, lambda: other)
+    assert _report(monkeypatch, _result(exit="3010"), "3.4.0").title == "Updated to Mixar 3.4.0"
+
+
+def test_an_unreadable_rename_queue_keeps_the_success(monkeypatch):
+    def unreadable():
+        raise PermissionError(5, "Access is denied")
+
+    _pending_registry(monkeypatch, unreadable)
+
+    assert _report(monkeypatch, _result(exit="3010"), "3.4.0").title == "Updated to Mixar 3.4.0"
+
+
+def test_only_a_3010_reads_the_rename_queue(monkeypatch):
+    read = MagicMock(return_value=[(INSTALLED_EXE, "")])
+    _pending_registry(monkeypatch, read)
+
+    assert _report(monkeypatch, _result(), "3.4.0").title == "Updated to Mixar 3.4.0"
+    read.assert_not_called()
 
 
 def test_empty_running_version_is_not_reported_as_success(monkeypatch):
@@ -220,9 +277,29 @@ def test_result_event_carries_the_diagnostics(monkeypatch):
         "helper_version": 2, "install_kind": "msi", "installed_version": "3.3.6",
         "relaunch_matched": True, "relaunch_kind": "registry",
         "locking_processes": "mixar.exe,python.exe,..evil", "wait_s": 63,
+        # No trigger recorded: a helper from before install-on-quit.
+        "trigger": "click",
+        # Helper v7 / #2079 fields: unknown here (an older helper, a macOS host).
+        "install_scope": None, "moved_from_program_files": None,
+        "msi_refusal": None, "elevation": None,
+        # Helper v8: where the installer put Mixar and why.
+        "install_decision": None, "install_decision_reason": None,
     }
     # Paths recorded by the helper stay on the machine.
     assert not any("\\" in str(value) for value in props.values())
+
+
+def test_result_event_names_the_installer_decision(monkeypatch):
+    """Helper v8 copies MIXAR_SCOPE_ACTION / _REASON from the MSI log (#2079):
+    whether Mixar moved, stayed or was updated in place, and why."""
+    props = _captured(monkeypatch, _result(exit="0", scope_action="in_place",
+                                           scope_reason="path_policy"))
+    assert (props["install_decision"], props["install_decision_reason"]) == (
+        "in_place", "path_policy")
+    # Anything else in the file (a path, a newer installer's name) is dropped.
+    props = _captured(monkeypatch, _result(exit="0", scope_action="teleport",
+                                           scope_reason="C:\\Users\\ana"))
+    assert (props["install_decision"], props["install_decision_reason"]) == (None, None)
 
 
 def test_result_event_from_the_old_helper(monkeypatch):

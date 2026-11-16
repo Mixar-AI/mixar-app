@@ -82,6 +82,10 @@ void ED_spacetype_agent_bubble();  /* Floating Agent Bubble overlay editor for M
  * call even when no bubble window was ever opened. */
 void ED_agent_bubble_windows_closed();
 
+/* The expanded native island is logically hidden during its minimise fade.
+ * Retain its last framebuffer without rebuilding RNA UI; never matches the pill. */
+bool ED_agent_bubble_is_minimised_window(const wmWindow *window);
+
 /* Mixar: Cinema Mode's chat bar IS the resting Agent pill, seated under the
  * camera gate. The View3D overlay hands over the seat (its bottom y in the
  * host's window pixels; the pill is centred on the host) while the Cinema
