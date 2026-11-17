@@ -452,11 +452,49 @@ def link_call(tool: str, arguments: dict | None = None, engine: str | None = Non
         return _fail(err)
 
 
+# Mixar Link 0.5.1+ imports packages one at a time (several agents may send
+# them at once) and lists its queue in status.imports. The wait for an import
+# grows with the imports ahead of it, from the caller's own budget up to the cap.
+IMPORT_WAIT_PER_JOB_S = 120.0
+IMPORT_WAIT_MAX_S = 600.0
+IMPORT_STILL_RUNNING = ("The engine is still importing {folder} ({where}); it will finish on its own. "
+                        "Check engine_status before importing it again.")
+
+
+def _imports(client) -> dict:
+    """The editor's import queue (Mixar Link 0.5.1+), or {}."""
+    try:
+        data = _result(client.call("status", {}, 10.0)).get("data") or {}
+    except LinkError:
+        return {}
+    imports = data.get("imports") if isinstance(data, dict) else None
+    return imports if isinstance(imports, dict) else {}
+
+
+def import_wait(timeout: float, imports: dict) -> float:
+    """``timeout``, raised by ``IMPORT_WAIT_PER_JOB_S`` for each import ahead
+    (running or queued), capped at ``IMPORT_WAIT_MAX_S`` (never below ``timeout``)."""
+    ahead = len(imports.get("queued") or []) + (1 if imports.get("running") else 0)
+    return max(float(timeout), min(IMPORT_WAIT_MAX_S, float(timeout) + ahead * IMPORT_WAIT_PER_JOB_S))
+
+
+def _still_importing(imports: dict, folder: str) -> str:
+    running = imports.get("running") if isinstance(imports.get("running"), dict) else {}
+    if running.get("folder") == folder:
+        return "running"
+    queued = [q for q in imports.get("queued") or [] if isinstance(q, dict)]
+    for i, q in enumerate(queued):
+        if q.get("folder") == folder:
+            return f"queued, {i + 1 + (1 if running else 0)} ahead"
+    return ""
+
+
 @_prefetchable
 def link_import(folder: str, destination: str = "mixar_exports", engine: str | None = None,
                 timeout: float = 180.0) -> dict:
     """Import the ``export_asset`` package ``folder`` (at ``destination``)
-    into the engine project as ``res://mixar/<folder>/``."""
+    into the engine project as ``res://mixar/<folder>/``. Waits ``timeout``,
+    longer when the editor has imports queued ahead of this one (``import_wait``)."""
     from . import export_package
 
     try:
@@ -466,12 +504,20 @@ def link_import(folder: str, destination: str = "mixar_exports", engine: str | N
     if not folder or not os.path.isfile(os.path.join(source, "manifest.json")):
         return {"success": False, "error": f"No Mixar package named {folder!r} in {destination}; "
                                            "export it with export_asset first."}
+    name = os.path.basename(source)
     try:
-        _, client = _connect(engine)
-        return _result(client.call("import_package",
-                                   {"source_dir": source, "folder": os.path.basename(source)},
-                                   float(timeout)))
+        info, client = _connect(engine)
+        wait = import_wait(timeout, _imports(client)) if info.get("engine") == "godot" else float(timeout)
+        return _result(client.call("import_package", {"source_dir": source, "folder": name}, wait))
     except LinkError as err:
+        if err.timed_out:
+            try:
+                where = _still_importing(_imports(_connect(engine)[1]), name)
+            except LinkError:
+                where = ""
+            if where:
+                return {"success": False, "importing": where,
+                        "error": IMPORT_STILL_RUNNING.format(folder=name, where=where)}
         return _fail(err)
 
 

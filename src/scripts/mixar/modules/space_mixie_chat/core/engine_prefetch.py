@@ -82,6 +82,8 @@ class EngineCallPrefetch:
         self.fn, self.kwargs = fn, kwargs
         self.key = engine_link.call_key(fn, kwargs)
         budget = kwargs.get("timeout") or DEFAULT_TIMEOUT_S.get(fn, 60.0)
+        if fn == "link_import":  # it may wait longer when imports are queued ahead (import_wait)
+            budget = max(float(budget), engine_link.IMPORT_WAIT_MAX_S)
         self._deadline = time.monotonic() + float(budget) + HEADROOM_S
         self._done = threading.Event()
         self._settled = threading.Lock()  # the answer is stored once: the call's, or the timeout's

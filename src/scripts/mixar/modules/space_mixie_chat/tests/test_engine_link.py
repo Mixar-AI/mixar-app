@@ -32,6 +32,7 @@ class _Fake(http.server.BaseHTTPRequestHandler):
     issued = 0
     calls: list = []
     expire_next = False
+    imports = None  # status.imports, as Mixar Link 0.5.1+ reports its import queue
 
     def log_message(self, *a):
         pass
@@ -70,6 +71,9 @@ class _Fake(http.server.BaseHTTPRequestHandler):
             result = {"content": [{"type": "text", "text": "{}"},
                                   {"type": "image", "data": "/9j/AA==", "mimeType": "image/jpeg"}],
                       "structuredContent": {"source": "game", "width": 4, "height": 3}, "isError": False}
+        elif name == "status" and type(self).imports is not None:
+            result = {"content": [{"type": "text", "text": "{}"}],
+                      "structuredContent": {"engine": "godot", "imports": type(self).imports}, "isError": False}
         elif name == "play":
             result = {"content": [{"type": "text", "text": "The game did not connect"}],
                       "structuredContent": {"error": "The game did not connect", "log_seq": 7}, "isError": True}
@@ -85,7 +89,7 @@ class _Fake(http.server.BaseHTTPRequestHandler):
 def link(tmp_path, monkeypatch):
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Fake)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    _Fake.sessions, _Fake.calls, _Fake.expire_next, _Fake.issued = set(), [], False, 0
+    _Fake.sessions, _Fake.calls, _Fake.expire_next, _Fake.issued, _Fake.imports = set(), [], False, 0, None
     link_dir = tmp_path / "engine-link"
     link_dir.mkdir()
     monkeypatch.setattr(engine_link, "LINK_DIR", str(link_dir))
@@ -206,6 +210,68 @@ def test_import_package_is_only_reachable_by_folder_name(link, tmp_path, monkeyp
     assert name == "import_package" and args == {"source_dir": str(exports / "Crate"), "folder": "Crate"}
     # The local path went to the engine only; what comes back is scrubbed.
     assert str(exports) not in json.dumps(out)
+
+
+def test_the_import_wait_grows_with_the_queue_ahead_and_is_capped():
+    assert engine_link.import_wait(180, {}) == 180  # an older Mixar Link has no queue
+    assert engine_link.import_wait(180, {"running": None, "queued": []}) == 180
+    assert engine_link.import_wait(180, {"running": {"folder": "A"}, "queued": [{"folder": "B"}]}) == 420
+    assert engine_link.import_wait(180, {"running": {"folder": "A"}, "queued": [{}] * 9}) == 600
+    assert engine_link.import_wait(900, {"running": {"folder": "A"}}) == 900  # never below the caller's own
+
+
+def _package(tmp_path, monkeypatch, name="Crate"):
+    exports = tmp_path / "Mixar Exports"
+    (exports / name).mkdir(parents=True)
+    (exports / name / "manifest.json").write_text("{}")
+    monkeypatch.setattr(export_package, "destination",
+                        lambda where, sub=None, create=True: str(exports / export_package._safe(sub)))
+
+
+def _record_timeouts(monkeypatch, fail_import=False):
+    seen = []
+    real = engine_link.McpClient.call
+
+    def call(self, name, arguments, timeout):
+        seen.append((name, timeout))
+        if fail_import and name == "import_package":
+            raise engine_link.LinkError("The engine did not answer (TimeoutError).", timed_out=True)
+        return real(self, name, arguments, timeout)
+
+    monkeypatch.setattr(engine_link.McpClient, "call", call)
+    return seen
+
+
+def test_an_import_behind_others_waits_longer(link, tmp_path, monkeypatch):
+    _package(tmp_path, monkeypatch)
+    seen = _record_timeouts(monkeypatch)
+    _Fake.imports = {"running": {"id": 1, "folder": "Rubble"}, "queued": [{"id": 2, "folder": "Barrel"}], "recent": []}
+    assert engine_link.link_import("Crate")["success"]
+    assert ("import_package", 420.0) in seen and seen[0] == ("status", 10.0)
+
+
+def test_an_import_that_outlives_its_wait_says_it_is_still_queued(link, tmp_path, monkeypatch):
+    _package(tmp_path, monkeypatch)
+    _record_timeouts(monkeypatch, fail_import=True)
+    _Fake.imports = {"running": {"id": 1, "folder": "Rubble"}, "queued": [{"id": 2, "folder": "Crate"}], "recent": []}
+    out = engine_link.link_import("Crate")
+    assert not out["success"] and out["importing"] == "queued, 2 ahead"
+    assert "still importing Crate" in out["error"] and "engine_status" in out["error"]
+    _Fake.imports = {"running": None, "queued": [], "recent": []}  # it finished meanwhile: a plain failure
+    out = engine_link.link_import("Crate")
+    assert not out["success"] and "importing" not in out and "did not answer" in out["error"]
+
+
+def test_the_prefetched_import_outlives_the_longest_import_wait():
+    from mixar.modules.space_mixie_chat.core import engine_prefetch
+    calls = []
+    real = engine_prefetch.threading.Thread
+    engine_prefetch.threading.Thread = lambda **kw: type("T", (), {"start": lambda self: calls.append(kw)})()
+    try:
+        call = engine_prefetch.EngineCallPrefetch("link_import", {"folder": "Crate", "timeout": 180.0})
+    finally:
+        engine_prefetch.threading.Thread = real
+    assert call._deadline - time.monotonic() > engine_link.IMPORT_WAIT_MAX_S
 
 
 def test_destination_lookup_never_creates_a_folder(tmp_path, monkeypatch):

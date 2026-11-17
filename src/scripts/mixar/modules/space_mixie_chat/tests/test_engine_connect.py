@@ -173,14 +173,14 @@ def test_the_addon_download_is_the_pinned_release_checked_before_install(tmp_pat
     assert "latest" not in ec.ADDON_URL and len(ec.ADDON_SHA256) == 64
     project = ec.create_project(str(tmp_path / "Ruins"), "Ruins")
     before = open(os.path.join(project, "project.godot")).read()
-    archive = _addon_zip(version="0.4.0")
+    archive = _addon_zip(version=ec.ADDON_VERSION)
     monkeypatch.setattr(ec.urllib.request, "urlopen", lambda req, timeout: _Resp(archive))
     with pytest.raises(RuntimeError, match="checksum mismatch"):
         ec.install_addon(project)
     assert not os.path.exists(os.path.join(project, "addons"))
     assert open(os.path.join(project, "project.godot")).read() == before
     monkeypatch.setattr(ec, "ADDON_SHA256", __import__("hashlib").sha256(archive).hexdigest())
-    assert ec.install_addon(project) == "0.4.0"
+    assert ec.install_addon(project) == ec.ADDON_VERSION
 
 
 @pytest.mark.parametrize("plat,machine,part", [
