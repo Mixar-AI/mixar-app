@@ -36,12 +36,9 @@ ALLOWED = {
     "BKE_screen_view3d_zoom_to_fac",
     "ED_view3d_win_to_3d_on_plane",
     # Depsgraph iteration flags for the aerial map's scene extents.
-    "DEG_ITER_OBJECT_FLAG_LINKED_DIRECTLY",
-    "DEG_ITER_OBJECT_FLAG_LINKED_VIA_SET",
     "DEG_ITER_OBJECT_FLAG_VISIBLE",
     # Headers included for their types only.
     "GPU_shader_shared_utils",
-    "GPU_shader_shared",
     # The dock paints its keys as green dots rather than the theme's key-type
     # diamonds, so it sets the keyframe shader's shape flag itself
     # (GPU_shader_shared.hh, `GPUKeyframeShapes`).
