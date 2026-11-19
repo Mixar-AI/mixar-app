@@ -1109,6 +1109,15 @@ struct PopupBlockHandle {
   bool can_refresh = false;
   bool refresh = false;
 
+  /**
+   * Mixar: a dialog that Blender 5.3 placed with its default button under the cursor was opened
+   * while the left mouse button was still down (Mixar's native surfaces open dialogs on press).
+   * The release of that same press must not answer the dialog: with a "No" default it closed a
+   * delete confirmation the moment it appeared. Cleared by the release it swallows, or by the
+   * first press on one of the popup's buttons. See #block_bounds_calc_popup.
+   */
+  bool mixar_swallow_open_release = false;
+
   wmTimer *scrolltimer = nullptr;
   float scrolloffset = 0.0f;
   float scrollmin = 0.0f;

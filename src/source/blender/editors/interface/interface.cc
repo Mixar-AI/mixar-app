@@ -588,6 +588,17 @@ static void block_bounds_calc_popup(
     if (const Button *but = block_active_default_button_find(block)) {
       block->bounds_offset[0] = -(but->rect.xmin + 0.8f * BLI_rctf_size_x(&but->rect));
       block->bounds_offset[1] = -BLI_rctf_cent_y(&but->rect);
+
+      /* Mixar: the default button now sits under the cursor. When the popup is created from a
+       * left-button press (first creation only: the event state is unset while refreshing), the
+       * pending release would land on it and answer the dialog; have the handler swallow it.
+       * See #PopupBlockHandle::mixar_swallow_open_release. */
+      const wmEvent *event_state = window->runtime->eventstate;
+      if (block->handle && !block->handle->refresh && event_state &&
+          event_state->type == LEFTMOUSE && event_state->val == KM_PRESS)
+      {
+        block->handle->mixar_swallow_open_release = true;
+      }
     }
   }
 

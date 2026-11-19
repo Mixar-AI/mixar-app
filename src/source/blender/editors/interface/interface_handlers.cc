@@ -5975,7 +5975,19 @@ static int do_but_BUT(bContext *C, Button *but, HandleButtonData *data, const wm
       }
     }
     if (event->type == LEFTMOUSE && event->val == KM_PRESS) {
+      /* Mixar: a press of its own ends the wait for the opening press's release. */
+      if (but->block->handle) {
+        but->block->handle->mixar_swallow_open_release = false;
+      }
       button_activate_state(C, but, BUTTON_STATE_WAIT_RELEASE);
+      return WM_UI_HANDLER_BREAK;
+    }
+    /* Mixar: the release of the press that opened this dialog is not an answer to it
+     * (#PopupBlockHandle::mixar_swallow_open_release). The button stays highlighted. */
+    if (event->type == LEFTMOUSE && event->val == KM_RELEASE && but->block->handle &&
+        but->block->handle->mixar_swallow_open_release)
+    {
+      but->block->handle->mixar_swallow_open_release = false;
       return WM_UI_HANDLER_BREAK;
     }
     if (event->type == LEFTMOUSE && event->val == KM_RELEASE && but->block->handle) {
