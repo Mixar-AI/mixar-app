@@ -6761,7 +6761,13 @@ msgstr "Loại tập tin splat không được hỗ trợ '{ext}' (cần .spz ho
 msgid "File not found: {path}"
 msgstr "Không tìm thấy tập tin: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "Kết quả sinh tạo thế giới thiếu URL splat (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Kết quả sinh tạo thế giới thiếu URL vật va chạm (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Không thể tải xuống/chuyển đổi thế giới: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Đã nhập khẩu thế giới nhưng không tạo ra đối tượng nào"
@@ -10969,14 +10975,32 @@ msgstr "Đặt Nền Tại Gốc Tọa Độ"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Di chuyển splat sao cho sàn nằm trên Z=0 và tâm vùng chiếm chỗ nằm tại gốc tọa độ (cách đặt nền giống các thế giới đã sinh tạo)"
 
+msgid "Source"
+msgstr "Nguồn"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Tiêu Chuẩn"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Chưa chọn tập tin splat"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Đã nhập khẩu {count} splat: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Splat Gauss (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12546,9 +12570,6 @@ msgstr "Bao Gồm Toàn Bộ các Ảnh Hưởng của Xương"
 
 msgid "Lighting Mode"
 msgstr "Chế Độ Ánh Sáng"
-
-msgid "Standard"
-msgstr "Tiêu Chuẩn"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Đơn vị chiếu sáng glTF dựa trên vật lý"
@@ -18800,9 +18821,6 @@ msgstr "Pha Trộn"
 
 msgid "No masks"
 msgstr "Không có màn chắn lọc"
-
-msgid "Source"
-msgstr "Nguồn"
 
 msgid "No node group loaded"
 msgstr "Chưa nạp nhóm nút nào"

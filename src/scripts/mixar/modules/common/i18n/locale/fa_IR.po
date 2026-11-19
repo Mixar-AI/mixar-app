@@ -6761,7 +6761,13 @@ msgstr "(ply. ﺎﯾ spz. ﺭﺎﻈﺘﻧﺍ) ﺩﻮﺷ‌ﯽﻤﻧ ﯽﻧﺎﺒ
 msgid "File not found: {path}"
 msgstr "{path} :ﺪﺸﻧ ﺍﺪﯿﭘ ﻞﯾﺎﻓ"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "ﺩﺭﺍﺪﻧ (SPZ) ﺖﻠﭙﺳﺍ URL ﻥﺎﻬﺟ ﺪﯿﻟﻮﺗ �
 msgid "World generation result missing collider (GLB) URL"
 msgstr "ﺩﺭﺍﺪﻧ (GLB) ﻩﺪﻨﻫﺩﺩﺭﻮﺧﺮﺑ URL ﻥﺎﻬﺟ ﺪﯿﻟﻮﺗ ﻪﺠﯿﺘﻧ"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "{error} :ﺩﻮﺑ ﻖﻓﻮﻣﺎﻧ ﻥﺎﻬﺟ ﻞﯾﺪﺒﺗ/ﯼﺮﯿﮔﺭﺎﺑ"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "ﺖﺧﺎﺴﻧ ﯼﺍ‌ﺊﺷ ﺎﻣﺍ ﺪﺷ ﺩﺭﺍﻭ ﻥﺎﻬﺟ"
@@ -10969,14 +10975,32 @@ msgstr "ﺃﺪﺒﻣ ﯼﻭﺭ ﻦﯿﻣﺯ"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "(ﻩﺪﺷﺪﯿﻟﻮﺗ ﯼﺎﻫ‌ﻥﺎﻬﺟ ﯼﺭﺍﺬﮔ‌ﻦﯿﻣﺯ ﻥﺎﻤﻫ) ﺪﺷﺎﺑ ﺃﺪﺒﻣ ﺭﺩ ﺶﯾﺎﭘﺩﺭ ﺰﮐﺮﻣ ﻭ ﺪﻨﯿﺸﻨﺑ Z=0 ﯼﻭﺭ ﻥﺁ ﻒﮐ ﺎﺗ ﺪﻨﮐ‌ﯽﻣ ﺎﺟ‌ﻪﺑﺎﺟ ﺍﺭ ﺖﻠﭙﺳﺍ"
 
+msgid "Source"
+msgstr "ﻊﺒﻨﻣ"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "ﺩﺭﺍﺪﻧﺎﺘﺳﺍ"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "ﻩﺪﺸﻧ ﺏﺎﺨﺘﻧﺍ ﯽﺘﻠﭙﺳﺍ ﻞﯾﺎﻓ"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} ﺪﺷ ﺩﺭﺍﻭ ﺖﻠﭙﺳﺍ: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "(spz/.ply.) ﯽﺳﻭﺎﮔ ﺖﻠﭙﺳﺍ"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "({shortcut}) ﺪﻨﮐ‌ﯽﻣ ﻪﻓﺎﺿﺍ ﺩﺭﻮﺑﺩﻮﻣ ﻪﺑ ﻦﺘﻣ ﻪﺒﻌﺟ ﮏﯾ"
@@ -12546,9 +12570,6 @@ msgstr "ﻥﺍﻮﺨﺘﺳﺍ ﯼﺎﻫﺮﯿﺛﺄﺗ ﻪﻤﻫ ﻞﻣﺎﺷ"
 
 msgid "Lighting Mode"
 msgstr "ﺭﻮﻧ ﺖﻟﺎﺣ"
-
-msgid "Standard"
-msgstr "ﺩﺭﺍﺪﻧﺎﺘﺳﺍ"
 
 msgid "Physically-based glTF lighting units"
 msgstr "glTF ﯽﮑﯾﺰﯿﻓ ﺭﻮﻧ ﯼﺎﻫﺪﺣﺍﻭ"
@@ -18800,9 +18821,6 @@ msgstr "ﺐﯿﮐﺮﺗ"
 
 msgid "No masks"
 msgstr "ﺖﺴﯿﻧ ﯽﮑﺳﺎﻣ"
-
-msgid "Source"
-msgstr "ﻊﺒﻨﻣ"
 
 msgid "No node group loaded"
 msgstr "ﺖﺳﺍ ﻩﺪﺸﻧ ﯼﺭﺍﺬﮔﺭﺎﺑ ﯽﻫﺮﮔ ﻩﻭﺮﮔ"

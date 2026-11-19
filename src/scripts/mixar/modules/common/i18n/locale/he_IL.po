@@ -6761,7 +6761,13 @@ msgstr "(ply. וא spz. יופצ) '{ext}' ךמתנ אל טאלפס ץבוק גו
 msgid "File not found: {path}"
 msgstr "{path} :אצמנ אל ץבוקה"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "(SPZ) טאלפס לש URL תבותכ הרסח םלועה תריצי תא
 msgid "World generation result missing collider (GLB) URL"
 msgstr "(GLB) רדיילוק לש URL תבותכ הרסח םלועה תריצי תאצותב"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "{error} :הלשכנ םלועה לש הרמה/הדרוה"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "םיטקייבוא רצי אל ךא אבוי םלועה"
@@ -10969,14 +10975,32 @@ msgstr "רוקמב הפצרל דמצה"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "(ורצונש תומלוע ומכ הדמצה התוא) רוקמב לגרה תעיבט זכרמו Z=0 לע ולש הפצרהש ךכ טאלפסה תא זיזמ"
 
+msgid "Source"
+msgstr "רוקמ"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "יטרדנטס"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "טאלפס ץבוק רחבנ אל"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count}: {names} :ואבויש םיטאלפס"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "(spz/.ply.) ינאיסואג טאלפס"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "({shortcut}) הארשהה חולל טסקט תבית תפסוה"
@@ -12546,9 +12570,6 @@ msgstr "םצעה תועפשה לכ תא לולכ"
 
 msgid "Lighting Mode"
 msgstr "הרואת בצמ"
-
-msgid "Standard"
-msgstr "יטרדנטס"
 
 msgid "Physically-based glTF lighting units"
 msgstr "הקיזיפ תוססובמ glTF תרואת תודיחי"
@@ -18800,9 +18821,6 @@ msgstr "בוברע"
 
 msgid "No masks"
 msgstr "תוכסמ ןיא"
-
-msgid "Source"
-msgstr "רוקמ"
 
 msgid "No node group loaded"
 msgstr "םיתמצ תצובק הנעטנ אל"

@@ -6761,7 +6761,13 @@ msgstr "Nepodprta vrsta datoteke splata '{ext}' (pričakovano .spz ali .ply)"
 msgid "File not found: {path}"
 msgstr "Datoteka ni najdena: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "Rezultatu generiranja sveta manjka URL splata (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Rezultatu generiranja sveta manjka URL trkalnika (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Sveta ni bilo mogoče prenesti/pretvoriti: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Svet je uvožen, a ni ustvaril predmetov"
@@ -10969,14 +10975,32 @@ msgstr "Na tla v izhodišču"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Splat premakne tako, da so tla na Z=0, središče tlorisa pa v izhodišču (enako kot pri generiranih svetovih)"
 
+msgid "Source"
+msgstr "Izvor"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standardno"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Nobena datoteka splata ni izbrana"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Uvoženi splati ({count}): {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussov splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Na Moodboard doda besedilno polje ({shortcut})"
@@ -12546,9 +12570,6 @@ msgstr "Vključi vse vplive kosti"
 
 msgid "Lighting Mode"
 msgstr "Način osvetlitve"
-
-msgid "Standard"
-msgstr "Standardno"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fizikalne enote osvetlitve glTF"
@@ -18800,9 +18821,6 @@ msgstr "Prelivanje"
 
 msgid "No masks"
 msgstr "Ni mask"
-
-msgid "Source"
-msgstr "Izvor"
 
 msgid "No node group loaded"
 msgstr "Nobena skupina vozlišč ni naložena"

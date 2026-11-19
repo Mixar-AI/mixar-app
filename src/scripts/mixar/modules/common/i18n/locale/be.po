@@ -6761,7 +6761,13 @@ msgstr "Непадтрыманы тып файла сплата «{ext}» (ча�
 msgid "File not found: {path}"
 msgstr "Файл не знойдзены: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "У выніку генерацыі свету няма URL сплата 
 msgid "World generation result missing collider (GLB) URL"
 msgstr "У выніку генерацыі свету няма URL калайдара (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Не ўдалося спампаваць або пераўтварыць свет: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Свет імпартаваны, але не даў аб'ектаў"
@@ -10969,14 +10975,32 @@ msgstr "Паставіць на пачатак каардынат"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Перамяшчае сплат так, каб падлога ляжала на Z=0, а цэнтр следа — у пачатку каардынат (тое самае грунтаванне, што ў згенераваных светаў)"
 
+msgid "Source"
+msgstr "Крыніца"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Стандарт"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Файл сплата не выбраны"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Імпартавана сплатаў: {count}: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Гаўсаў сплат (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Дадаць тэкставае поле на мудборд ({shortcut})"
@@ -12546,9 +12570,6 @@ msgstr "Уключыць усе ўплывы костак"
 
 msgid "Lighting Mode"
 msgstr "Рэжым асвятлення"
-
-msgid "Standard"
-msgstr "Стандарт"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Фізічныя адзінкі асвятлення glTF"
@@ -18800,9 +18821,6 @@ msgstr "Змешванне"
 
 msgid "No masks"
 msgstr "Няма масак"
-
-msgid "Source"
-msgstr "Крыніца"
 
 msgid "No node group loaded"
 msgstr "Група вузлоў не загружана"
