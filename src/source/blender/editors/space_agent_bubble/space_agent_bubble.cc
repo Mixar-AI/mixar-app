@@ -4157,11 +4157,12 @@ static wmOperatorStatus mixar_bubble_hover_tick_exec(bContext *C, wmOperator * /
 /**
  * Nothing to maintain until the island has a window of its own.
  *
- * The Python pump (hover_ops.py) gates its tick on `op.poll()`, and without a
- * poll callback that is unconditionally true — a full `bpy.ops` invocation ten
- * times a second for the whole session, bubble or no bubble. On a platform
+ * The Python pump (hover_ops.py) dispatches through
+ * `WindowManager.mixar_bubble_hover_tick()`, whose `WM_operator_name_call`
+ * runs this poll before exec; without it every tick would execute, ten times
+ * a second for the whole session, bubble or no bubble. On a platform
  * outside the `Mixar_Window*` allowlist (see agent_bubble/constants.py) the
- * exec body below is a bare OPERATOR_CANCELLED, so the poll is simply false.
+ * exec body above is a bare OPERATOR_CANCELLED, so the poll is simply false.
  */
 static bool mixar_bubble_hover_tick_poll(bContext * /*C*/)
 {

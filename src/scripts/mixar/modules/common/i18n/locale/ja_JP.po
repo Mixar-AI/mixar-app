@@ -5573,6 +5573,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -29775,6 +29778,9 @@ msgstr "丸みのあるUI要素の角の半径"
 
 msgid "Mixie Chat"
 msgstr "Mixieチャット"
+
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
 
 msgid "Double-click injection requires event simulation"
 msgstr ""

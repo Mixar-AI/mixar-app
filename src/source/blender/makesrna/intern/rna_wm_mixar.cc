@@ -17,13 +17,11 @@
  * inside the ``#else`` branch (compiled into the makesrna binary
  * which generates the runtime code).
  *
- * This file briefly also exposed a **report channel** on
- * ``WindowManager`` (``mixar_last_report`` / ``_type`` /
- * ``mixar_report_count``) for the agent island to paint inline; it was
- * removed because Blender's global report list carries unrelated app
- * activity — the agent's own sandboxed script execution above all — so
- * pane messages now come from a dedicated channel that only the pane's
- * own action writes (``agent_bubble/ui/properties/pane_message_props.py``).
+ * A **report channel** on ``WindowManager`` (``mixar_last_report`` / ``_type`` /
+ * ``mixar_report_count``) for the agent island was removed: Blender's global
+ * report list carries unrelated app activity (above all the agent's own sandboxed
+ * scripts), so pane messages come from a channel only the pane's own action
+ * writes (``agent_bubble/ui/properties/pane_message_props.py``).
  *
  * The table entry for this file is registered in Mixar's overlay
  * of ``makesrna.cc`` (right after ``rna_wm.cc``). That same overlay
@@ -70,6 +68,7 @@
 
 #include "rna_wm_ui_control.cc"
 #include "rna_wm_mixar_popup.cc"
+#include "rna_wm_mixar_hover.cc"
 
 /* Mixar 5.2 port: namespace wrap. Every include stays ABOVE this line: the
  * generated ``rna_*_gen.cc`` files include this .cc at global scope, and a
@@ -282,6 +281,7 @@ void RNA_def_wm_mixar(BlenderRNA *brna)
 
   RNA_def_mixar_ui_control(brna, srna);
   RNA_def_mixar_popup_query(brna, srna);
+  RNA_def_mixar_hover(brna);
 
   PropertyRNA *prop;
 
