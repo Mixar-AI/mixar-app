@@ -21,6 +21,7 @@
 #include "BKE_image.hh"
 
 #include "IMB_imbuf.hh"
+#include "IMB_partial_update.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -134,7 +135,7 @@ static wmOperatorStatus blend_images_exec(bContext *C, wmOperator *op)
                            (blend_pixels[idx + 3] - base_pixels[idx + 3]) * opacity;
   }
 
-  BKE_image_mark_dirty(base_image, base_ibuf);
+  IMB_mark_dirty(base_ibuf);
   BKE_image_release_ibuf(base_image, base_ibuf, base_lock);
   BKE_image_release_ibuf(blend_image, blend_ibuf, blend_lock);
 
@@ -209,7 +210,7 @@ static wmOperatorStatus dither_image_exec(bContext *C, wmOperator *op)
   }
 #endif
 
-  BKE_image_mark_dirty(image, ibuf);
+  IMB_mark_dirty(ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);

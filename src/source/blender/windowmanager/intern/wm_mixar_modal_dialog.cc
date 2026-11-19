@@ -32,7 +32,7 @@
 
 #include "BLI_listbase_iterator.hh"
 #include "BLI_set.hh"
-#include "BLI_utildefines.h"
+#include "BLI_utildefines.hh"
 
 #include "BKE_context.hh"
 #include "BKE_global.hh"
@@ -141,7 +141,7 @@ static wmWindow *take_key_dock()
   const int winid = g_key_dock_winid;
   g_key_dock = nullptr;
   g_key_dock_winid = 0;
-  wmWindowManager *wm = G_MAIN ? static_cast<wmWindowManager *>(G_MAIN->wm.first) : nullptr;
+  wmWindowManager *wm = G_MAIN ? G_MAIN->wm.first_as<wmWindowManager>() : nullptr;
   if (dock == nullptr || wm == nullptr) {
     return nullptr;
   }

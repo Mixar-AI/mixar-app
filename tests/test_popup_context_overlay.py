@@ -84,7 +84,9 @@ def test_popup_check_refuses_a_window_without_event_state():
 def test_every_begin_wrapper_checks_the_context_before_creating_a_popup(name):
     body = _overlay_function(name)
     assert body.count(CHECK) == 1
-    assert _ordered(body, f"if (!{CHECK}) {{\n    return PointerRNA_NULL;\n  }}", BEGIN_WRAPPERS[name])
+    # A refused begin returns the null pointer (`{}` since Blender 5.3, which dropped
+    # `PointerRNA_NULL`); the report makes the Python call raise.
+    assert _ordered(body, f"if (!{CHECK}) {{\n    return {{}};\n  }}", BEGIN_WRAPPERS[name])
 
 
 def test_the_overlay_is_upstream_plus_the_marked_hunk():

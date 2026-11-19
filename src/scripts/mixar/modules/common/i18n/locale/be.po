@@ -465,8 +465,8 @@ msgstr "«{name}» выбрана на мудбордзе"
 msgid "Select in Scene"
 msgstr "Выбраць у сцэне"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Выбірае проксі-маркер гэтага свету сплатаў у акне прагляду"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Калекцыя"
@@ -474,8 +474,11 @@ msgstr "Калекцыя"
 msgid "That splat world is no longer in this file"
 msgstr "Гэтага свету сплатаў больш няма ў гэтым файле"
 
-msgid "This splat world has no proxy handle"
-msgstr "У гэтага свету сплатаў няма проксі-маркера"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Выбрана «{name}»"
@@ -6758,8 +6761,8 @@ msgstr "Непадтрыманы тып файла сплата «{ext}» (ча�
 msgid "File not found: {path}"
 msgstr "Файл не знойдзены: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "З {name} не імпартавана аб'ектаў"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Не ўдалося прачытаць выяву: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Маляванне карткі патрабуе зваротнага выкліку малявання актыўнай вобласці"
 
@@ -29775,6 +29775,9 @@ msgstr "Радыус кутоў закругленых элементаў інт
 msgid "Mixie Chat"
 msgstr "Чат Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Шляхі перацягвання павінны быць непуст
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Шляхі перацягвання павінны быць непустым масівам JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Глабальныя вобласці"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Глабальныя вобласці акна (верхняя панэль, радок стану). Пашырэнне Mixar — адкрыта, каб азнаямленне магло звяртацца да верхняй панэлі для перамалёўкі."
 
 msgid "QA UI Dump"
 msgstr "Дамп інтэрфейсу QA"

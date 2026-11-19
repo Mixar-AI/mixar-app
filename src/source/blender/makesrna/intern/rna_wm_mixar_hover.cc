@@ -18,7 +18,7 @@ static void rna_WindowManager_mixar_bubble_hover_tick(bContext *C)
 
 static void RNA_def_mixar_hover(BlenderRNA *brna)
 {
-  StructRNA *wm = brna->structs_map.lookup_default("WindowManager", nullptr);
+  StructRNA *wm = brna->structs_map.lookup_default("WindowManager"_ustr, nullptr);
   if (wm == nullptr) {
     return;
   }

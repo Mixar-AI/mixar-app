@@ -6,6 +6,7 @@
 No backend turn or generation calls. Requires QA_HARNESS and MIXAR_QA_PORT.
 Leaves a QA cube with a single 1K geometry mask; does not load the user scene.
 """
+import json
 import os
 from pathlib import Path
 import sys
@@ -50,12 +51,55 @@ with bpy.context.temp_override(window=win,area=area,region=region):
  assert len(images)==1,[im.name for im in images]
  image=images[0]
  assert image.source!='TILED' and list(image.size)==[1024,1024],(image.source,list(image.size))
- result={'source_tiles':len(source_tiles),'mask_tiles':1,'size':list(image.size),'seconds':round(elapsed,3),'original_uv_preserved':True,'image':image.name}
+ pixels=np.empty(len(image.pixels),dtype=np.float32)
+ image.pixels.foreach_get(pixels)
+ assert image.has_data and pixels.size==1024*1024*4,(image.has_data,pixels.size)
+ assert np.isfinite(pixels).all(),'Mask contains non-finite pixels'
+ assert np.any(pixels!=0),'Mask buffer is empty (all RGBA values are zero)'
+ rgba=pixels.reshape(-1,4)
+ # A cube can legitimately have a uniform cavity mask. Record actual values
+ # without imposing an arbitrary contrast or numeric range on the bake.
+ pixel_stats={'finite':True,'values':int(pixels.size),
+  'nonzero_values':int(np.count_nonzero(pixels)),
+  'rgb_min':float(rgba[:,:3].min()),'rgb_max':float(rgba[:,:3].max()),
+  'alpha_min':float(rgba[:,3].min()),'alpha_max':float(rgba[:,3].max())}
+ result={'source_tiles':len(source_tiles),'mask_tiles':1,'size':list(image.size),'seconds':round(elapsed,3),'original_uv_preserved':True,'image':image.name,'pixels':pixel_stats,'area_pointer':area.as_pointer(),'area_type':area.type}
 ''')
     out = Path(os.environ.get('QA_SCENARIO_OUT', '/private/tmp/uat6-mask-freeze-evidence'))
     out.mkdir(parents=True, exist_ok=True)
-    qa.snap(str(out / 'after-mask-bake.png'))
-    return {'state': state, 'snaps': [str(out / 'after-mask-bake.png')]}
+    try:
+        qa.step('show_baked_mask', qa.eval, f'''
+area=next(a for a in drv.main_window().screen.areas if a.as_pointer()=={state['area_pointer']})
+area.type='IMAGE_EDITOR'
+area.spaces.active.image=bpy.data.images[{state['image']!r}]
+area.spaces.active.mode='VIEW'
+area.spaces.active.display_channels='COLOR'
+area.tag_redraw()
+with bpy.context.temp_override(window=drv.main_window()):
+ bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP',iterations=2)
+result=True
+''')
+        qa.step('frame_baked_mask', qa.eval, f'''
+win=drv.main_window()
+area=next(a for a in win.screen.areas if a.as_pointer()=={state['area_pointer']})
+region=next(r for r in area.regions if r.type=='WINDOW')
+with bpy.context.temp_override(window=win,area=area,region=region):
+ assert 'FINISHED' in bpy.ops.image.view_all(fit_view=True)
+area.tag_redraw()
+with bpy.context.temp_override(window=win):
+ bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP',iterations=2)
+result={{'image':area.spaces.active.image.name,'zoom':list(area.spaces.active.zoom)}}
+''')
+        qa.cmd('snap', path=str(out / 'mask-image.png'), area='IMAGE_EDITOR')
+    finally:
+        qa.step('restore_original_editor', qa.eval, f'''
+area=next(a for a in drv.main_window().screen.areas if a.as_pointer()=={state['area_pointer']})
+area.type={state['area_type']!r}
+area.tag_redraw()
+result=area.type
+''')
+    (out / 'mask-state.json').write_text(json.dumps(state, indent=2) + '\n')
+    return {'state': state, 'snaps': [str(out / 'mask-image.png')]}
 
 
 if __name__ == '__main__':

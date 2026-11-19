@@ -28,7 +28,7 @@
 
 #include <cstdint>
 
-#include "BLI_sys_types.h"
+#include "BLI_sys_types.hh"
 #include "UI_mixar_types.hh"
 namespace blender {
 struct bContext;

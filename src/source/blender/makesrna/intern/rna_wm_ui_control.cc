@@ -5,8 +5,8 @@
 #include "RNA_enum_types.hh"
 #ifdef RNA_RUNTIME
 #  include "BKE_context.hh"
-#  include "BLI_string.h"
-#  include "BLI_string_utf8.h"
+#  include "BLI_string.hh"
+#  include "BLI_string_utf8.hh"
 #endif
 
 namespace blender {
@@ -129,7 +129,7 @@ static bool rna_ui_capture_enabled(wmWindow *win, bContext *C, ReportList *repor
 #else
 static void RNA_def_mixar_ui_control(BlenderRNA *brna, StructRNA *window)
 {
-  StructRNA *wm = brna->structs_map.lookup_default("WindowManager", nullptr);
+  StructRNA *wm = brna->structs_map.lookup_default("WindowManager"_ustr, nullptr);
   if (!wm) { return; }
   FunctionRNA *func = RNA_def_function(wm, "mixar_ui_enable", "rna_ui_enable");
   RNA_def_boolean(func, "enabled", false, "Enabled", "Enable local UI control");

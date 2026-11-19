@@ -21,9 +21,9 @@
 
 #include "BLF_api.hh"
 
-#include "BLI_rect.h"
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 
 #include "BLT_translation.hh"
 
@@ -305,7 +305,7 @@ void agent_ui_tabmedia_draw(const bContext *C,
     ui::mixar_style_button(input, ui::MixarComponent::Input, ui::MixarVariant::Primary, u, agent_ui_text_unit());
     if (input) {
       ui::button_placeholder_set(input, IFACE_("Describe your scene here..."));
-      ui::button_flag2_enable(input, ui::BUT2_ACTIVATE_ON_INIT_NO_SELECT);
+      ui::button_flag_enable(input, ui::BUT_ACTIVATE_ON_INIT_NO_SELECT);
       ui::button_flag_enable(input, ui::BUT_TEXTEDIT_UPDATE);
     }
   }

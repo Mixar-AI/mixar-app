@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
 #include "../interface_intern.hh"
-#include "BLI_math_vector.h"
+#include "BLI_math_vector_c.hh"
 #include "BLT_translation.hh"
 #include "DNA_theme_types.h"
 #include "DNA_userdef_types.h"

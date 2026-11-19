@@ -13,6 +13,7 @@ import os
 import re
 
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import BoolProperty, EnumProperty, StringProperty, CollectionProperty
 from bpy.types import Operator
 from bpy_extras.io_utils import ImportHelper
@@ -174,7 +175,7 @@ class LAYERS_OT_OpenImagesToLayer(Operator, ImportHelper, OpenImage):
         description='UV map to use for texture coordinates'
     )
 
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     @classmethod
     def poll(cls, context):

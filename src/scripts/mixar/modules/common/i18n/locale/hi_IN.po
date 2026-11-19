@@ -465,8 +465,8 @@ msgstr "मूडबोर्ड पर '{name}' चयनित किया �
 msgid "Select in Scene"
 msgstr "दृश्य में चयन करें"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "व्यूपोर्ट में इस स्प्लैट जगत का प्रॉक्सी हैंडल चयनित करता है"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "संग्रह"
@@ -474,8 +474,11 @@ msgstr "संग्रह"
 msgid "That splat world is no longer in this file"
 msgstr "वह स्प्लैट जगत अब इस संचिका में नहीं है"
 
-msgid "This splat world has no proxy handle"
-msgstr "इस स्प्लैट जगत का कोई प्रॉक्सी हैंडल नहीं है"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' चयनित किया गया"
@@ -6758,8 +6761,8 @@ msgstr "असमर्थित स्प्लैट संचिका प्
 msgid "File not found: {path}"
 msgstr "संचिका नहीं मिली: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name} से कोई वस्तु आयात नहीं हुई"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "छवि पढ़ी नहीं जा सकी: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "कार्ड बनाने के लिए सक्रिय क्षेत्र का ड्रॉ कॉलबैक आवश्यक है"
 
@@ -29775,6 +29775,9 @@ msgstr "गोल UI तत्वों की कोना त्रिज्�
 msgid "Mixie Chat"
 msgstr "Mixie चैट"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "ड्रॉप पथ गैर-खाली स्ट्रिंग �
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ड्रॉप पथ एक गैर-खाली JSON सरणी होने चाहिए"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "वैश्विक क्षेत्र"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "खिड़की-वैश्विक क्षेत्र (शीर्ष पट्टी, स्थिति पट्टी)। Mixar विस्तार — इसलिए उपलब्ध कि ऑनबोर्डिंग फिर से बनाने के लिए शीर्ष पट्टी तक पहुँच सके।"
 
 msgid "QA UI Dump"
 msgstr "QA UI डंप"

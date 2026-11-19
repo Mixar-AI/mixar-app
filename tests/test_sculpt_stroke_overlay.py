@@ -46,7 +46,7 @@ MODAL = (
     "const wmEvent *event)\n{\n"
 )
 CANCEL = "static void sculpt_brush_stroke_cancel(bContext *C, wmOperator *op)\n{\n"
-TEST_START = "bool SculptPaintStroke::test_start(wmOperator *op, const float mval[2])\n{\n"
+TEST_START = "bool SculptPaintStroke::test_start(wmOperator *op, const float2 mouse)\n{\n"
 STRUCT = "struct SculptPaintStroke final : public PaintStroke {\n"
 HELPER = "static bool stroke_lost_session(const SculptPaintStroke &stroke)\n{\n"
 HUNKS = 6
@@ -79,7 +79,8 @@ def test_the_stroke_records_its_cache_right_after_initialising_it():
     assert "\n  StrokeCache *cache_ = nullptr;\n" in _overlay_function(STRUCT)
     body = _overlay_function(TEST_START)
     assert (
-        "    stroke_cache_init(mval);\n    cache_ = ob.runtime->sculpt_session->cache;\n"
+        "    stroke_cache_init(this->vc, *sculpt_, *this->brush, *this->object, mouse);\n"
+        "    cache_ = this->object->runtime->sculpt_session->cache;\n"
     ) in body
     assert body.count("cache_ =") == 1
 

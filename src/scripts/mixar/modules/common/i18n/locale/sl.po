@@ -465,8 +465,8 @@ msgstr "Izbrano '{name}' na moodboardu"
 msgid "Select in Scene"
 msgstr "Izberi v sceni"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Izbere ročaj približka tega sveta splata v 3D pogledu"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Zbirka"
@@ -474,8 +474,11 @@ msgstr "Zbirka"
 msgid "That splat world is no longer in this file"
 msgstr "Tega sveta splata ni več v tej datoteki"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ta svet splata nima ročaja približka"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Izbrano '{name}'"
@@ -6758,8 +6761,8 @@ msgstr "Nepodprta vrsta datoteke splata '{ext}' (pričakovano .spz ali .ply)"
 msgid "File not found: {path}"
 msgstr "Datoteka ni najdena: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Iz {name} ni uvožen noben predmet"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Slike ni bilo mogoče prebrati: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Risanje kartice zahteva povratni klic risanja aktivnega področja"
 
@@ -29775,6 +29775,9 @@ msgstr "Polmer vogalov za zaobljene elemente vmesnika"
 msgid "Mixie Chat"
 msgstr "Klepet Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Poti spusta morajo biti neprazni nizi"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Poti spusta morajo biti neprazno polje JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globalna področja"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Področja, skupna vsemu oknu (zgornja vrstica, vrstica stanja). Razširitev Mixar — izpostavljeno, da lahko uvod naslovi zgornjo vrstico za ponovno risanje."
 
 msgid "QA UI Dump"
 msgstr "Izpis vmesnika QA"

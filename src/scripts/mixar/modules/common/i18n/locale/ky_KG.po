@@ -465,8 +465,8 @@ msgstr "Мудборддо '{name}' тандалды"
 msgid "Select in Scene"
 msgstr "Сахнада тандоо"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Бул сплат дүйнөсүнүн орток туткасын көрүү терезесинде тандайт"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Топтом"
@@ -474,8 +474,11 @@ msgstr "Топтом"
 msgid "That splat world is no longer in this file"
 msgstr "Ал сплат дүйнөсү бул файлда эми жок"
 
-msgid "This splat world has no proxy handle"
-msgstr "Бул сплат дүйнөсүнүн орток туткасы жок"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' тандалды"
@@ -6758,8 +6761,8 @@ msgstr "Колдоого алынбаган сплат файл түрү '{ext}'
 msgid "File not found: {path}"
 msgstr "Файл табылган жок: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name} ичинен объект импорттолгон жок"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Сүрөттү окуу ишке ашкан жок: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Карта тартуу активдүү аймактын тартуу кайра чакыруусун талап кылат."
 
@@ -29775,6 +29775,9 @@ msgstr "Тегеректелген интерфейс элементтерини
 msgid "Mixie Chat"
 msgstr "Mixie маеги"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Таштоо жолдору бош эмес саптар болушу к
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Таштоо жолдору бош эмес JSON массиви болушу керек."
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Глобалдуу аймактар"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Терезенин глобалдуу аймактары (үстүнкү тилке, абал тилкеси). Mixar кеңейтүүсү — баштапкы таанышуу үстүнкү тилкени кайра тартуу үчүн кайрыла алсын деп ачылган."
 
 msgid "QA UI Dump"
 msgstr "QA интерфейс таштоосу"

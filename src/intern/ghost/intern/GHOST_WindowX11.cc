@@ -42,6 +42,7 @@
 
 /* For DPI value. */
 #include <X11/Xresource.h>
+#include <X11/extensions/Xrender.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -214,8 +215,20 @@ GHOST_WindowX11::GHOST_WindowX11(GHOST_SystemX11 *system,
 #endif
   {
     XVisualInfo tmp = {nullptr};
-    int n;
-    visual_info_ = XGetVisualInfo(display_, 0, &tmp, &n);
+    int n = 0;
+    if (want_context_params_.use_alpha &&
+        XMatchVisualInfo(display_, DefaultScreen(display_), 32, TrueColor, &tmp))
+    {
+      const XRenderPictFormat *format = XRenderFindVisualFormat(display_, tmp.visual);
+      if (format && format->type == PictTypeDirect && format->direct.alphaMask != 0) {
+        visual_info_ = XGetVisualInfo(display_, VisualIDMask, &tmp, &n);
+      }
+    }
+    want_context_params_.use_alpha = visual_info_ != nullptr;
+    if (visual_info_ == nullptr) {
+      tmp.visualid = XVisualIDFromVisual(DefaultVisual(display_, DefaultScreen(display_)));
+      visual_info_ = XGetVisualInfo(display_, VisualIDMask, &tmp, &n);
+    }
   }
 
   /* caller needs to check 'getValid()' */
@@ -1654,7 +1667,7 @@ GHOST_Context *GHOST_WindowX11::newDrawingContext(GHOST_TDrawingContextType type
                                                    nullptr,
                                                    nullptr,
                                                    1,
-                                                   2,
+                                                   1,
                                                    preferred_device_,
                                                    &hdr_info_);
       if (context->initializeDrawingContext()) {

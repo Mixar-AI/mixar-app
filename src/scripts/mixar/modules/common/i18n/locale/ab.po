@@ -465,8 +465,8 @@ msgstr "«{name}» амудборд аҿы иалхын"
 msgid "Select in Scene"
 msgstr "Асцена аҿы алхра"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Ари асплат адунеи апрокси арыцхә 3Д Аԥшра аҿы алх"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Аизга"
@@ -474,8 +474,11 @@ msgstr "Аизга"
 msgid "That splat world is no longer in this file"
 msgstr "Ари асплат адунеи ари ашәҟәы аҿы ыҟаӡам"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ари асплат адунеи апрокси арыцхә амаӡам"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "«{name}» иалхын"
@@ -6758,8 +6761,8 @@ msgstr "Асплат ашәҟәы ахкы «{ext}» аднакылаӡом (.sp
 msgid "File not found: {path}"
 msgstr "Ашәҟәы ԥым: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name} аҟынтәи амаҭәарқәа иимпортым"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Асахьанҵа аԥхьара алымшеит: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Акарточка асахьа активтә арегион асахьа аколбек аҭахуп"
 
@@ -29775,6 +29775,9 @@ msgstr "Иргьежьу UI аелементқәа ркәакь арадиус"
 msgid "Mixie Chat"
 msgstr "Mixie Ачат"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Акаҳара амҩақәа аҭацәым ацәаҳәақәа заҵ
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Акаҳара амҩақәа аҭацәым JSON амассив заҵәык ыҟазароуп"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Зеиԥшла Аҭыԥқәа"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Аԥенџьыр-зеиԥшла аҭыԥқәа (ахахьтәи апанель, астатус апанель). Mixar арасширение — иаартуп, алагаратә тур ахахьтәи апанель аиҭасахьа азы иазхьарԥшхарц"
 
 msgid "QA UI Dump"
 msgstr "QA UI Адамп"

@@ -465,8 +465,8 @@ msgstr "Imechagua '{name}' kwenye ubao wa hisia"
 msgid "Select in Scene"
 msgstr "Chagua kwenye mandhari"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Chagua kishikio mbadala cha ulimwengu huu wa splat katika mtazamo wa kutazama"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Mkusanyiko"
@@ -474,8 +474,11 @@ msgstr "Mkusanyiko"
 msgid "That splat world is no longer in this file"
 msgstr "Ulimwengu huo wa splat haupo tena katika faili hii"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ulimwengu huu wa splat hauna kishikio mbadala"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Imechagua '{name}'"
@@ -6758,8 +6761,8 @@ msgstr "Aina ya faili ya splat isiyotumika '{ext}' (inatarajiwa .spz au .ply)"
 msgid "File not found: {path}"
 msgstr "Faili haikupatikana: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Hakuna vitu vilivyoingizwa kutoka {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Imeshindwa kusoma taswira: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Uchoro wa kadi unahitaji mwitikio wa kuchora wa eneo amilifu"
 
@@ -29775,6 +29775,9 @@ msgstr "Radi ya kona ya vipengee vya UI vyenye kona duara"
 msgid "Mixie Chat"
 msgstr "Mazungumzo ya Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Njia za udondoshaji lazima ziwe maandishi yasiyo tupu"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Njia za udondoshaji lazima ziwe safu ya JSON isiyo tupu"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Maeneo ya kimataifa"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Maeneo ya kimataifa ya dirisha (upau wa juu, upau wa hali). Kiendelezi cha Mixar — kimewekwa wazi ili utangulizi uweze kushughulikia upau wa juu kwa uchoraji upya."
 
 msgid "QA UI Dump"
 msgstr "Dondoo la UI ya QA"

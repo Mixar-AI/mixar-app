@@ -64,6 +64,7 @@ def lost_binary(tmp_path_factory):
     ('missing', 'lost'),
     ('object_mode', 'lost'),
     ('texture_paint', 'lost'),
+    ('texture_paint_session', 'lost'),
     ('vertex_paint', 'lost'),
     ('weight_paint', 'lost'),
     ('round_trip', 'lost'),

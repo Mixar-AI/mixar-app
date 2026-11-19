@@ -465,8 +465,8 @@ msgstr "മൂഡ്ബോർഡിൽ '{name}' തിരഞ്ഞെടുത�
 msgid "Select in Scene"
 msgstr "സീനിൽ തിരഞ്ഞെടുക്കുക"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "ഈ സ്പ്ലാറ്റ് ലോകത്തിന്റെ പ്രോക്സി ഹാൻഡിൽ വ്യൂപോർട്ടിൽ തിരഞ്ഞെടുക്കുക"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "കളക്ഷൻ"
@@ -474,8 +474,11 @@ msgstr "കളക്ഷൻ"
 msgid "That splat world is no longer in this file"
 msgstr "ആ സ്പ്ലാറ്റ് ലോകം ഈ ഫയലിൽ ഇനിയില്ല"
 
-msgid "This splat world has no proxy handle"
-msgstr "ഈ സ്പ്ലാറ്റ് ലോകത്തിന് പ്രോക്സി ഹാൻഡിലില്ല"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' തിരഞ്ഞെടുത്തു"
@@ -6758,8 +6761,8 @@ msgstr "പിന്തുണയില്ലാത്ത സ്പ്ലാറ�
 msgid "File not found: {path}"
 msgstr "ഫയൽ കണ്ടെത്തിയില്ല: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-ൽ നിന്ന് ഒബ്ജക്റ്റുകൾ ഇമ്പോർട്ട് ചെയ്തില്ല"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "ചിത്രം വായിക്കാനായില്ല: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "കാർഡ് വരയ്ക്കാൻ സജീവ മേഖലയുടെ ഡ്രോ കോൾബാക്ക് വേണം"
 
@@ -29775,6 +29775,9 @@ msgstr "വൃത്താകൃതി UI ഘടകങ്ങളുടെ കോ�
 msgid "Mixie Chat"
 msgstr "Mixie ചാറ്റ്"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "ഡ്രോപ്പ് പാതകൾ ശൂന്യമല്ലാ�
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ഡ്രോപ്പ് പാതകൾ ശൂന്യമല്ലാത്ത JSON അറേ ആയിരിക്കണം"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "ആഗോള ഏരിയകൾ"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "വിൻഡോ-ആഗോള ഏരിയകൾ (ടോപ്പ്ബാർ, സ്റ്റാറ്റസ്ബാർ). Mixar വിപുലീകരണം — ഓൺബോർഡിങിന് റീഡ്രോയ്ക്കായി ടോപ്പ്ബാർ അഭിസംബോധന ചെയ്യാൻ തുറന്നുവച്ചത്."
 
 msgid "QA UI Dump"
 msgstr "QA UI ഡമ്പ്"

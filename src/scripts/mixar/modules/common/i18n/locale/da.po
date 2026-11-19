@@ -465,8 +465,8 @@ msgstr "Valgte '{name}' på moodboardet"
 msgid "Select in Scene"
 msgstr "Vælg i scene"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Vælg denne splatverdens proxyhåndtag i 3D-visningen"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Samling"
@@ -474,8 +474,11 @@ msgstr "Samling"
 msgid "That splat world is no longer in this file"
 msgstr "Den splatverden er ikke længere i denne fil"
 
-msgid "This splat world has no proxy handle"
-msgstr "Denne splatverden har intet proxyhåndtag"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Valgte '{name}'"
@@ -6758,8 +6761,8 @@ msgstr "Ikke-understøttet splatfiltype '{ext}' (forventede .spz eller .ply)"
 msgid "File not found: {path}"
 msgstr "Fil ikke fundet: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Ingen objekter importeret fra {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Kunne ikke læse billede: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Korttegning kræver det aktive områdes tegne-callback"
 
@@ -29775,6 +29775,9 @@ msgstr "Hjørneradius for afrundede brugerfladeelementer"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Slipstier skal være strenge der ikke er tomme"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Slipstier skal være et JSON-array der ikke er tomt"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globale områder"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Vinduesglobale områder (topbjælke, statusbjælke). Mixar-udvidelse — vist så introduktionen kan ramme topbjælken til gentegning."
 
 msgid "QA UI Dump"
 msgstr "QA-brugerfladeudtræk"

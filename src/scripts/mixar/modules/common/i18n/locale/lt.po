@@ -465,8 +465,8 @@ msgstr "Nuotaikų lentoje pasirinkta „{name}“"
 msgid "Select in Scene"
 msgstr "Pasirinkti scenoje"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Pasirenka šio splato pasaulio pakaitalo rankenėlę peržiūros lange"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekcija"
@@ -474,8 +474,11 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "To splato pasaulio šiame faile jau nebėra"
 
-msgid "This splat world has no proxy handle"
-msgstr "Šis splato pasaulis neturi pakaitalo rankenėlės"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Pasirinkta „{name}“"
@@ -6758,8 +6761,8 @@ msgstr "Nepalaikomas splato failo tipas „{ext}“ (tikimasi .spz arba .ply)"
 msgid "File not found: {path}"
 msgstr "Failas nerastas: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Iš {name} neimportuota objektų"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Nepavyko perskaityti paveikslo: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kortelės piešimui reikia aktyvios srities piešimo iškvietos"
 
@@ -29775,6 +29775,9 @@ msgstr "Suapvalintų sąsajos elementų kampų spindulys"
 msgid "Mixie Chat"
 msgstr "Mixie pokalbis"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Numetimo keliai turi būti netuščios eilutės"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Numetimo keliai turi būti netuščias JSON masyvas"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Visuotinės sritys"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Lango visuotinės sritys (viršutinė juosta, būsenos juosta). „Mixar“ plėtinys — atvertas, kad supažindinimas galėtų kreiptis į viršutinę juostą perpiešimui."
 
 msgid "QA UI Dump"
 msgstr "QA sąsajos išrašas"

@@ -25,8 +25,8 @@
 
 #include <cstring>
 
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_enums.h"

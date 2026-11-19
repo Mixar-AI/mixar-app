@@ -13,8 +13,8 @@
 
 #  include "BKE_sound.hh"
 
-#  include "BLI_string.h"
-#  include "BLI_timer.h"
+#  include "BLI_string.hh"
+#  include "BLI_timer.hh"
 
 #  include "DNA_userdef_types.h"
 

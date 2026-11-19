@@ -6,6 +6,7 @@
 """Layer CRUD operators for creating and managing paint layers"""
 
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -326,7 +327,7 @@ class MNewLayer(bpy.types.Operator):
         max=10.0,
     )
 
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     image_resolution: EnumProperty(
         name="Image Resolution", items=image_resolution_items, default="1024"

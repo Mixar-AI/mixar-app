@@ -29,10 +29,10 @@
 #include <algorithm>
 #include <cmath>
 
-#include "BLI_listbase.h"
-#include "BLI_rect.h"
-#include "BLI_time.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_rect.hh"
+#include "BLI_time.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
@@ -64,12 +64,12 @@ static SpaceMixieChat *ink_space_from_area(ScrArea *area)
 {
   /* SPACE_AGENT_BUBBLE reuses these callbacks via its layout-compatible
    * spacedata struct (same as the rules/history overlays). */
-  if (!area || !area->spacedata.first ||
+  if (!area || !area->spacedata.first() ||
       (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return nullptr;
   }
-  return static_cast<SpaceMixieChat *>(area->spacedata.first);
+  return area->spacedata.first_as<SpaceMixieChat>();
 }
 
 ARegion *mixie_chat_ink_area_main_region(ScrArea *area)

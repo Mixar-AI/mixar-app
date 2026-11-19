@@ -465,8 +465,8 @@ msgstr "Επιλέχθηκε το «{name}» στο Moodboard"
 msgid "Select in Scene"
 msgstr "Επιλογή στη σκηνή"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Επιλέγει τη λαβή αντιπροσώπου αυτού του κόσμου splat στην προβολή 3D"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Συλλογή"
@@ -474,8 +474,11 @@ msgstr "Συλλογή"
 msgid "That splat world is no longer in this file"
 msgstr "Αυτός ο κόσμος splat δεν βρίσκεται πια σε αυτό το αρχείο"
 
-msgid "This splat world has no proxy handle"
-msgstr "Αυτός ο κόσμος splat δεν έχει λαβή αντιπροσώπου"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Επιλέχθηκε το «{name}»"
@@ -6758,8 +6761,8 @@ msgstr "Μη υποστηριζόμενος τύπος αρχείου splat «{e
 msgid "File not found: {path}"
 msgstr "Το αρχείο δεν βρέθηκε: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Δεν εισήχθησαν αντικείμενα από το {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Αποτυχία ανάγνωσης εικόνας: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Η σχεδίαση κάρτας απαιτεί την επιστροφή σχεδίασης της ενεργής περιοχής"
 
@@ -29775,6 +29775,9 @@ msgstr "Ακτίνα γωνίας για στρογγυλεμένα στοιχε
 msgid "Mixie Chat"
 msgstr "Συνομιλία Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Οι διαδρομές απόθεσης πρέπει να είναι μ
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Οι διαδρομές απόθεσης πρέπει να είναι μη κενός πίνακας JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Καθολικές περιοχές"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Καθολικές περιοχές παραθύρου (επάνω γραμμή, γραμμή κατάστασης). Επέκταση Mixar — εκτίθεται ώστε η εισαγωγή να μπορεί να απευθυνθεί στην επάνω γραμμή για επανασχεδίαση."
 
 msgid "QA UI Dump"
 msgstr "Αποτύπωση περιβάλλοντος QA"

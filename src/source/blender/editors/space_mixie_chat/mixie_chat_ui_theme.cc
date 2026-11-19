@@ -30,7 +30,7 @@ namespace blender {
 
 static const ThemeSpace *chat_ui_get_theme_space()
 {
-  bTheme *btheme = static_cast<bTheme *>(U.themes.first);
+  bTheme *btheme = U.themes.first_as<bTheme>();
   if (btheme) {
     return &btheme->space_mixie_chat;
   }

@@ -2,19 +2,17 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Regression tests for hiding/deleting splat worlds from the outliner.
+"""Regression tests for splat worlds in the outliner (``splat_lifecycle``).
 
-Two halves, matching where the fix lives:
-
-* ``splat_lifecycle`` — reconciling KIRI's process-global runtime with outliner
-  deletions, and mirroring viewport visibility onto the render flag;
-* the vendored KIRI patch — the metadata texture must carry each proxy's real
-  visibility, because ``assets/vert.glsl`` culls on it.
+Splats are Blender's built-in Gaussian splat objects, so hiding and deleting
+are plain Blender. What is pinned here is what Mixar still adds: imported
+worlds are stamped, a world whose splat was deleted loses its hidden
+leftovers (and only those), the scan stays off the per-edit path, and opening
+a file schedules the KIRI-era conversion.
 """
 
 import importlib.util
 import pathlib
-import re
 import sys
 import types
 from unittest.mock import MagicMock
@@ -25,8 +23,6 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _MOD_PATH = (
     _REPO_ROOT / "src/scripts/mixar/modules/moodboard/core/splat_lifecycle.py"
 )
-_KIRI_PATH = _REPO_ROOT / "src/scripts/addons_core/kiri_3dgs_render/__init__.py"
-_VERT_GLSL = _REPO_ROOT / "src/scripts/addons_core/kiri_3dgs_render/assets/vert.glsl"
 
 
 # --------------------------------------------------------------------------- #
@@ -42,16 +38,11 @@ class _IdEq:
 
 
 class _Object(_IdEq, dict):
-    def __init__(self, name, otype="EMPTY", visible=True, **props):
+    def __init__(self, name, otype="MESH", splat=False, **props):
         super().__init__(props)
         self.name = name
         self.type = otype
-        self.hide_viewport = False
-        self.hide_render = False
-        self._visible = visible
-
-    def visible_get(self):
-        return self._visible
+        self.splat = splat
 
 
 class _Collection(_IdEq, dict):
@@ -101,7 +92,7 @@ class _Timers:
 
 @pytest.fixture
 def lifecycle(monkeypatch):
-    """Load splat_lifecycle against stubbed bpy + splat_render_camera."""
+    """Load splat_lifecycle against stubbed bpy + splat_native + splat_legacy."""
     timers = _Timers()
     handlers = types.ModuleType("bpy.app.handlers")
     handlers.persistent = lambda fn: fn
@@ -115,285 +106,176 @@ def lifecycle(monkeypatch):
     logging_stub = types.ModuleType("mixar.config.logging_config")
     logging_stub.get_logger = lambda _name: MagicMock()
 
-    calls = []
-    kiri = types.ModuleType("kiri_3dgs_render")
-    kiri.sna_clean_up_scene_5F1F1 = lambda remove: calls.append(("cleanup", remove))
-    kiri.sna_texture_creation_FD1B2 = lambda: calls.append(("texture",))
+    native = types.ModuleType("mixar.modules.moodboard.core.splat_native")
+    native.is_splat = lambda obj: obj.splat
 
-    src = types.ModuleType("mixar.modules.moodboard.core.splat_render_camera")
-    src._KIRI_CLEANUP_FN = "sna_clean_up_scene_5F1F1"
-    src._KIRI_TEXTURE_FN = "sna_texture_creation_FD1B2"
-    src._ready_kiri_module = lambda: kiri
-    src._saved_splat_proxies = lambda: [
-        obj for obj in bpy.data.objects
-        if obj.get("is_gaussian_splat") and int(obj.get("gaussian_count", 0) or 0) > 0
-    ]
-
-    core_pkg = types.ModuleType("mixar.modules.moodboard.core")
-    core_pkg.splat_render_camera = src
+    legacy = types.ModuleType("mixar.modules.moodboard.core.splat_legacy")
+    legacy.convert_kiri_splats = MagicMock(return_value=[])
 
     for name, module in (
         ("bpy", bpy),
         ("bpy.app", app),
         ("bpy.app.handlers", handlers),
         ("mixar.config.logging_config", logging_stub),
-        ("mixar.modules.moodboard.core", core_pkg),
-        ("mixar.modules.moodboard.core.splat_render_camera", src),
+        ("mixar.modules.moodboard.core.splat_native", native),
+        ("mixar.modules.moodboard.core.splat_legacy", legacy),
     ):
         monkeypatch.setitem(sys.modules, name, module)
 
     spec = importlib.util.spec_from_file_location("test_splat_lifecycle_mod", _MOD_PATH)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return types.SimpleNamespace(mod=module, bpy=bpy, timers=timers, calls=calls)
+    return types.SimpleNamespace(mod=module, bpy=bpy, timers=timers, legacy=legacy)
 
 
-def _world(data, stem, *, with_proxy=True, with_collider=True):
-    """Build an imported splat world: proxy + hidden source mesh (+ collider)."""
-    objects = []
-    mesh = _Object(
-        stem, otype="MESH", visible=False,
-        gaussian_source_uuid=f"uuid-{stem}", wl_role="splat",
-    )
-    objects.append(mesh)
-    proxy = None
-    if with_proxy:
-        proxy = _Object(
-            f"{stem}Splat_Proxy",
-            is_gaussian_splat=True,
-            gaussian_count=10,
-            source_mesh_uuid=f"uuid-{stem}",
-            wl_role="proxy",
-        )
-        objects.append(proxy)
+def _world(data, stem, *, with_collider=True, flagged=True):
+    """An imported splat world: the splat (+ its hidden collider)."""
+    splat = _Object(f"{stem}_Splat", otype="POINTCLOUD", splat=True, wl_role="splat")
+    objects = [splat]
     if with_collider:
-        objects.append(_Object(f"{stem}_collider", otype="MESH", wl_role="collider"))
-    collection = _Collection(f"WorldLabs_{stem}", objects, mixar_splat_world=True)
+        objects.append(_Object(f"{stem}_Collider", wl_role="collider"))
+    props = {"mixar_splat_world": True} if flagged else {}
+    collection = _Collection(f"WorldLabs_{stem}", objects, **props)
     data.collections.append(collection)
     data.objects.extend(objects)
-    return types.SimpleNamespace(
-        collection=collection, mesh=mesh, proxy=proxy, objects=objects,
-    )
+    return types.SimpleNamespace(collection=collection, splat=splat, objects=objects)
+
+
+def _delete(data, obj):
+    data.objects.remove(obj, do_unlink=True)
+
+
+# --------------------------------------------------------------------------- #
+# Import-time stamping
+# --------------------------------------------------------------------------- #
+
+def test_finalize_stamps_splats_and_flags_the_world(lifecycle):
+    splat = _Object("Room", otype="POINTCLOUD", splat=True)
+    collection = _Collection("Splat_Room", [splat])
+    lifecycle.mod.finalize_splat_handles(collection, [splat])
+    assert splat["wl_role"] == "splat"
+    assert collection["mixar_splat_world"] is True
+
+
+def test_finalize_never_flags_a_world_without_a_splat(lifecycle):
+    mesh = _Object("NotASplat")
+    collection = _Collection("Splat_Mesh", [mesh])
+    lifecycle.mod.finalize_splat_handles(collection, [mesh])
+    assert "mixar_splat_world" not in collection
+    assert "wl_role" not in mesh
 
 
 # --------------------------------------------------------------------------- #
 # Deleting a world
 # --------------------------------------------------------------------------- #
 
-def test_deleting_one_world_rebuilds_textures_and_keeps_the_other(lifecycle):
-    mod, bpy, calls = lifecycle.mod, lifecycle.bpy, lifecycle.calls
-    kept = _world(bpy.data, "Kept")
-    doomed = _world(bpy.data, "Doomed")
-    bpy.gaussian_object_cache = {
-        kept.proxy.name: {"object": kept.proxy},
-        doomed.proxy.name: {"object": doomed.proxy},
-    }
-    mod.note_splats_imported()
+def test_deleting_a_splat_purges_its_world_and_keeps_the_other(lifecycle):
+    data = lifecycle.bpy.data
+    room, yard = _world(data, "Room"), _world(data, "Yard")
+    lifecycle.mod.note_splats_imported()
 
-    bpy.data.objects.remove(doomed.proxy)  # user deletes the proxy in the outliner
-    mod.on_depsgraph_update()
-    assert lifecycle.timers.is_registered(mod._check_splats)
-    mod._check_splats()
-    assert lifecycle.timers.is_registered(mod.reconcile_splats)
-    mod.reconcile_splats()
+    _delete(data, room.splat)
+    lifecycle.mod._check_splats()
 
-    # The surviving world keeps rendering: textures are rebuilt, not left in the
-    # "Global textures missing - run script_3 first" state.
-    assert ("texture",) in calls
-    assert ("cleanup", False) not in calls
-    assert list(bpy.gaussian_object_cache) == [kept.proxy.name]
-
-
-def test_deleting_a_world_purges_its_leftovers(lifecycle):
-    mod, bpy = lifecycle.mod, lifecycle.bpy
-    kept = _world(bpy.data, "Kept")
-    doomed = _world(bpy.data, "Doomed")
-    bpy.gaussian_object_cache = {
-        kept.proxy.name: {"object": kept.proxy},
-        doomed.proxy.name: {"object": doomed.proxy},
-    }
-    mod.note_splats_imported()
-
-    bpy.data.objects.remove(doomed.proxy)
-    mod.reconcile_splats()
-
-    # The hidden point-cloud mesh still renders splat quads through its geometry
-    # nodes at F12, so it must not survive its proxy — nor must the collider.
-    names = [obj.name for obj in bpy.data.objects]
-    assert doomed.mesh.name not in names
-    assert f"{doomed.mesh.name}_collider" not in names
-    assert doomed.collection not in bpy.data.collections
-    # ...and the untouched world is entirely intact.
-    assert kept.mesh.name in names
-    assert kept.collection in bpy.data.collections
+    assert room.collection not in data.collections
+    assert all(obj not in data.objects for obj in room.objects)
+    assert yard.collection in data.collections
+    assert all(obj in data.objects for obj in yard.objects)
 
 
 def test_purge_leaves_user_objects_and_unflagged_collections_alone(lifecycle):
-    mod, bpy = lifecycle.mod, lifecycle.bpy
-    world = _world(bpy.data, "Doomed")
-    stray = _Object("UserCube", otype="MESH")
-    world.collection.objects.append(stray)
-    bpy.data.objects.append(stray)
-    foreign = _Collection("UserCollection", [_Object("Other", otype="MESH")])
-    bpy.data.collections.append(foreign)
-    bpy.data.objects.extend(foreign.objects)
-    mod.note_splats_imported()
+    data = lifecycle.bpy.data
+    room = _world(data, "Room")
+    user_obj = _Object("MyChair")
+    room.collection.objects.append(user_obj)
+    data.objects.append(user_obj)
+    other = _world(data, "Other", flagged=False)
+    lifecycle.mod.note_splats_imported()
 
-    bpy.data.objects.remove(world.proxy)
-    mod.reconcile_splats()
+    _delete(data, room.splat)
+    _delete(data, other.splat)
+    lifecycle.mod._check_splats()
 
-    assert stray in bpy.data.objects
-    assert world.collection in bpy.data.collections  # still holds the user's object
-    assert foreign in bpy.data.collections
-    assert foreign.objects[0] in bpy.data.objects
-
-
-def test_point_cloud_fallback_world_is_never_purged(lifecycle):
-    mod, bpy = lifecycle.mod, lifecycle.bpy
-    # KIRI's proxy step failed / the addon was unavailable: the world stays a
-    # visible point cloud with no proxy, and must not read as "already deleted".
-    fallback = _Collection("WorldLabs_Fallback")
-    mesh = _Object("Fallback", otype="MESH")
-    mod.finalize_splat_handles(fallback, [mesh], [])
-    fallback.objects.append(mesh)
-    bpy.data.collections.append(fallback)
-    bpy.data.objects.append(mesh)
-    healthy = _world(bpy.data, "Healthy")
-    mod.note_splats_imported()
-
-    bpy.data.objects.remove(healthy.proxy)
-    mod.reconcile_splats()
-
-    assert fallback in bpy.data.collections
-    assert mesh in bpy.data.objects
+    assert room.collection in data.collections
+    assert room.collection.objects == [user_obj]
+    assert other.collection in data.collections
+    assert other.objects[1] in data.objects  # unflagged collider survives
 
 
-def test_deleting_the_last_world_tears_the_runtime_down(lifecycle):
-    mod, bpy, calls = lifecycle.mod, lifecycle.bpy, lifecycle.calls
-    only = _world(bpy.data, "Only")
-    bpy.gaussian_object_cache = {only.proxy.name: {"object": only.proxy}}
-    mod.note_splats_imported()
-
-    bpy.data.objects.remove(only.proxy)
-    mod.reconcile_splats()
-
-    assert ("cleanup", False) in calls
-    assert ("texture",) not in calls
+def test_adding_a_world_never_purges(lifecycle):
+    data = lifecycle.bpy.data
+    room = _world(data, "Room")
+    lifecycle.mod.note_splats_imported()
+    _world(data, "New")
+    lifecycle.mod._check_splats()
+    assert room.collection in data.collections
+    assert len(data.objects) == 4
 
 
-def test_readded_proxy_forces_cache_reconstruction(lifecycle):
-    mod, bpy, calls = lifecycle.mod, lifecycle.bpy, lifecycle.calls
-    world = _world(bpy.data, "Undone")
-    bpy.gaussian_object_cache = {}  # undo restored the object, not the cache entry
-    mod.note_splats_imported()
-    mod._known_proxies = frozenset()
-
-    mod.reconcile_splats()
-
-    # A cache that cannot serve the proxy is dropped, so KIRI reconstructs it
-    # from the proxy's saved gaussian_data instead of rendering nothing.
-    assert not hasattr(bpy, "gaussian_object_cache")
-    assert ("texture",) in calls
+def test_renamed_splat_does_not_read_as_deleted(lifecycle):
+    data = lifecycle.bpy.data
+    room = _world(data, "Room")
+    lifecycle.mod.note_splats_imported()
+    room.splat.name = "Renamed"
+    lifecycle.mod._check_splats()
+    assert all(obj in data.objects for obj in room.objects)
 
 
 # --------------------------------------------------------------------------- #
-# Hiding a world
+# Handler cost and file load
 # --------------------------------------------------------------------------- #
 
-def test_hiding_a_world_also_hides_it_from_renders(lifecycle):
-    mod, bpy = lifecycle.mod, lifecycle.bpy
-    world = _world(bpy.data, "Room")
-    mod.note_splats_imported()
-    assert world.mesh.hide_render is False
-
-    world.proxy._visible = False  # outliner eye on the proxy
-    mod.on_depsgraph_update()
-    assert lifecycle.timers.is_registered(mod._check_splats)
-    mod._check_splats()
-    assert lifecycle.timers.is_registered(mod.reconcile_splats)
-    mod.reconcile_splats()
-    assert world.mesh.hide_render is True
-
-    world.proxy._visible = True
-    mod.reconcile_splats()
-    assert world.mesh.hide_render is False
-
-
-def test_visibility_change_alone_does_not_rebuild_textures(lifecycle):
-    mod, bpy, calls = lifecycle.mod, lifecycle.bpy, lifecycle.calls
-    world = _world(bpy.data, "Room")
-    mod.note_splats_imported()
-
-    world.proxy.hide_viewport = True
-    mod.reconcile_splats()
-
-    # KIRI's own draw pass picks visibility up per redraw (see the patch below);
-    # rebuilding the global textures for a hide would be pure waste.
-    assert calls == []
-
-
-# --------------------------------------------------------------------------- #
-# The vendored KIRI patch
-# --------------------------------------------------------------------------- #
-
-def test_kiri_metadata_writers_use_real_visibility():
-    source = _KIRI_PATH.read_text(encoding="utf-8")
-    writers = re.findall(r"metadata_data\[base_idx \+ 2\] = (.+)", source)
-    assert writers, "visibility slot writers vanished — re-check the KIRI vendor drop"
-    for writer in writers:
-        assert writer.startswith("mixar_object_visibility("), writer
-    assert "def mixar_object_visibility(" in source
-
-
-def test_kiri_rebuilds_metadata_when_visibility_changes():
-    source = _KIRI_PATH.read_text(encoding="utf-8")
-    # A hide changes no transform, so the transform check alone can never
-    # refresh the visibility flags.
-    assert "visibility_changed = visibility != getattr(bpy, 'mixar_last_visibility', None)" in source
-    assert "if transforms_changed or visibility_changed:" in source
-    assert "'mixar_last_visibility'," in source  # cleared with the rest of the runtime
-
-
-def test_kiri_shader_still_culls_on_visibility():
-    glsl = _VERT_GLSL.read_text(encoding="utf-8")
-    assert "obj_metadata.visibility < 0.5" in glsl
-
-
-@pytest.mark.parametrize("with_splats", [False, True])
-def test_operator_burst_scans_only_after_returning_to_main_loop(lifecycle, with_splats):
+def test_operator_burst_scans_only_after_returning_to_main_loop(lifecycle):
     mod = lifecycle.mod
-    if with_splats:
-        _world(lifecycle.bpy.data, "Room")
+    _world(lifecycle.bpy.data, "Room")
     mod.note_splats_imported()
-    scan = MagicMock(wraps=mod.src._saved_splat_proxies)
-    mod.src._saved_splat_proxies = scan
+    scan = MagicMock(wraps=mod._splat_names)
+    mod._splat_names = scan
     for _ in range(1000):
         mod.on_depsgraph_update()
     scan.assert_not_called()
     assert list(lifecycle.timers.registered) == [mod._check_splats]
     mod._check_splats()
-    assert scan.call_count == (2 if with_splats else 1)
+    assert scan.call_count == 1
     assert not mod._check_pending
-    assert not mod._reconcile_pending
-    assert lifecycle.calls == []
 
 
-@pytest.mark.parametrize("reset", ["cancel_pending", "on_load_post"])
-def test_reset_cancels_detection_and_reconciliation(lifecycle, reset):
+def test_load_post_schedules_kiri_conversion_and_rebaselines(lifecycle):
+    mod = lifecycle.mod
+    room = _world(lifecycle.bpy.data, "Room")
+    mod.on_depsgraph_update()
+    mod.on_load_post()
+    assert list(lifecycle.timers.registered) == [mod._convert_legacy]
+    assert mod._known_splats is None
+
+    mod._convert_legacy()
+    lifecycle.legacy.convert_kiri_splats.assert_called_once_with()
+    assert mod._known_splats == frozenset({room.splat.name})
+
+
+def test_converted_worlds_are_flagged_for_cleanup(lifecycle):
+    mod = lifecycle.mod
+    splat = _Object("Old_Splat", otype="POINTCLOUD", splat=True, wl_role="splat")
+    collection = _Collection("WorldLabs_Old", [splat])
+    splat.users_collection = [collection]
+    lifecycle.legacy.convert_kiri_splats.return_value = [splat]
+    mod._convert_legacy()
+    assert collection["mixar_splat_world"] is True
+
+
+def test_conversion_failure_never_blocks_the_file(lifecycle):
+    lifecycle.legacy.convert_kiri_splats.side_effect = RuntimeError("bad file")
+    assert lifecycle.mod._convert_legacy() is None
+
+
+def test_cancel_pending_clears_both_timers(lifecycle):
     mod = lifecycle.mod
     mod.on_depsgraph_update()
-    mod.request_reconcile()
-    getattr(mod, reset)()
+    mod.on_load_post()
+    mod.on_depsgraph_update()
+    mod.cancel_pending()
     assert not lifecycle.timers.registered
-    assert not mod._check_pending and not mod._reconcile_pending
-
-
-def test_initial_detection_adopts_loaded_splats_without_rebuilding(lifecycle):
-    _world(lifecycle.bpy.data, "Loaded")
-    lifecycle.mod.on_depsgraph_update()
-    lifecycle.mod._check_splats()
-    assert lifecycle.mod._known_proxies == frozenset({"LoadedSplat_Proxy"})
-    assert lifecycle.calls == []
+    assert not mod._check_pending
 
 
 def test_detection_retries_after_timer_registration_fails(lifecycle):

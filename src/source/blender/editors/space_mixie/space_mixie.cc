@@ -14,9 +14,9 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.h"
-#include "BLI_string_utf8.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_string_utf8.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
@@ -71,7 +71,7 @@ static void mixie_footer_region_listener(const wmRegionListenerParams *params);
 {
   ScrArea *area = CTX_wm_area(C);
   if (area && area->spacetype == SPACE_MIXIE) {
-    return static_cast<SpaceMixie *>(area->spacedata.first);
+    return area->spacedata.first_as<SpaceMixie>();
   }
   return nullptr;
 }

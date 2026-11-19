@@ -22,10 +22,10 @@
 #include <cmath>
 
 #include "BLI_math_matrix_types.hh"
-#include "BLI_math_rotation.h"
+#include "BLI_math_rotation_c.hh"
 #include "BLI_math_vector.hh"
-#include "BLI_rect.h"
-#include "BLI_utildefines.h"
+#include "BLI_rect.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_camera.h"
 #include "BKE_context.hh"
