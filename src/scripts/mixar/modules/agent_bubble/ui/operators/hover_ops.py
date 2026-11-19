@@ -7,18 +7,19 @@
 
 The pill opens on click; an outside mouse press dismisses the open island.
 WM owns dismissal so moving the cursor or scrolling cannot close the chat.
-This timer maintains pending composer focus, Scribble pad transitions and
-mascot visibility scheduling.
+This timer fits the open island to the host, maintains pending composer focus
+and Scribble pad transitions, resizes the resting Sketch pill and schedules
+mascot visibility.
 
 Two gates keep the heartbeat honest:
 
 * ``register()`` is a no-op outside ``BUBBLE_WINDOW_CONTROLS_SUPPORTED``. The
   native heartbeat is only available on supported desktop platforms.
   Linux uses it only while a Wayland size transition is settling.
-* The tick itself is gated on ``op.poll()``, which the operator now really
-  implements (false until a bubble or pill window exists). Before that poll
-  existed this was an unconditional ``bpy.ops`` invocation ten times a second
-  for the whole session.
+* The tick itself is gated on the operator's native poll (false until a
+  bubble or pill window exists), which the ``WindowManager`` RNA dispatch runs
+  before exec. Before that poll existed this was an unconditional ``bpy.ops``
+  invocation ten times a second for the whole session.
 """
 
 import sys
@@ -40,9 +41,10 @@ _reported_failure = False
 def _hover_tick():
     global _reported_failure
     try:
-        op = getattr(bpy.ops.mixar, "bubble_hover_tick", None)
-        if op is not None and op.poll():
-            op()
+        # UI-only: never bpy.ops, whose implicit pre/post view-layer update
+        # flushes and evaluates the depsgraph from this timer, even while a
+        # render holds the interface lock and the main loop skips updates.
+        bpy.context.window_manager.mixar_bubble_hover_tick()
     except Exception:
         # Never let a transient context hiccup unregister the pump — but do not
         # swallow a genuine failure in the collapse logic forever either.
