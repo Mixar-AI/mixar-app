@@ -234,6 +234,15 @@
             Return="ignore"/>
         <SetProperty Id="MixarCleanMachineAssociationsOnRemove" Value="[INSTALL_ROOT]"
             Before="MixarCleanMachineAssociationsOnRemove" Sequence="execute"><![CDATA[(NOT UPGRADINGPRODUCTCODE) AND (REMOVE="ALL") AND NOT ALLUSERS AND Privileged]]></SetProperty>
+        <!-- An update in place (kept or in_place) from an unprivileged token
+             (#2154): Windows Installer re-applies an overwritten file's
+             owner, and a copy an elevated install wrote (the #2079 move out
+             of Program Files) is owned by BUILTIN\Administrators, which the
+             user's token cannot set: 1310, 1603 and a rollback, on every
+             update. The user takes ownership of the copy first (WRITE_OWNER,
+             part of its Full control); content and rollback are unchanged. -->
+        <CustomAction Id="MixarOwnInstallFolder" BinaryKey="MixarMsiCa"
+            DllEntry="MixarOwnInstallFolder" Execute="immediate" Return="ignore"/>
         <!-- Without MixarInspect (its DLL could not run), the old product's
              folder: an upgrade in place, exactly as before #2079. -->
         <SetProperty Id="INSTALL_ROOT" Action="MixarKeepWithoutInspect" Value="[MIXAR_ARP_LOCATION]"
@@ -313,6 +322,7 @@
         <InstallExecuteSequence>
             <Custom Action="MixarInspect" After="AppSearch"><![CDATA[NOT Installed AND NOT MIXAR_INSPECTED]]></Custom>
             <Custom Action="MixarMarker" Before="CostFinalize"><![CDATA[NOT Installed]]></Custom>
+            <Custom Action="MixarOwnInstallFolder" Before="InstallInitialize"><![CDATA[NOT Installed AND NOT Privileged AND INSTALL_ROOT AND (MIXAR_SCOPE_ACTION="keep" OR MIXAR_SCOPE_ACTION="in_place")]]></Custom>
             <Custom Action="MixarCleanMachineAssociations" After="RemoveExistingProducts"><![CDATA[NOT Installed AND NOT ALLUSERS AND Privileged AND MIXAR_MOVED_FROM]]></Custom>
             <!-- Not while this product is being removed: with the old product
                  removed after the new one installs, the launcher is still on
