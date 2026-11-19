@@ -4,8 +4,9 @@
 
 """Import a generated World Labs world into the Blender scene.
 
-Brings the converted Gaussian-splat PLY (as Blender's built-in splat object,
-see ``splat_native``) and the GLB collider mesh into a fresh
+Brings the downloaded Gaussian-splat SPZ (imported by Blender's native SPZ
+importer as a built-in splat object, see ``splat_native``) and the GLB collider
+mesh into a fresh
 ``WorldLabs_<name>`` collection so it reads as a self-contained
 environment/backdrop.
 
@@ -24,39 +25,38 @@ from mixar.modules.moodboard.core.splat_lifecycle import (
     finalize_splat_handles,
     note_splats_imported,
 )
-from mixar.modules.moodboard.core.splat_native import import_splat_ply
+from mixar.modules.moodboard.core.splat_native import import_splat_ply, import_splat_spz
 
 logger = get_logger(__name__)
 
-# Orientation of CONVERTED World Labs splats: **+90deg X**, validated against
-# a real Marble 1.1 room (2026-08-10: at -90 the furniture hung from the
-# ceiling — a full interior is the only unambiguous evidence; outdoor spray
-# blobs and the old fixture misled a brief -90 detour). Why +90 and not the
-# raw-PLY -90: Marble SPZ stores the INRIA-style RDF frame, and our
-# decoder's RUB->RDF step NEGATES Y/Z — so the temp PLY it emits is
-# effectively y-UP, and y-up -> Blender z-up is Rx(+90). The -90 applies to
-# UNCONVERTED INRIA PLYs (y-down) — that convention lives in
-# ``RAW_PLY_ROT_EULER_DEG`` for the local .ply import path. Don't add a Z yaw
-# here: none was ever measured. Blender's own ``wm.spz_import`` assumes the
-# spec's RUB frame and lands Marble worlds 180deg about X from this, which is
-# why SPZ still goes through our converter.
-_SPLAT_ROT_EULER_DEG = (90.0, 0.0, 0.0)
+# Object rotation of a World Labs (Marble) splat after ``wm.spz_import``:
+# **180deg X**. Marble SPZ stores the INRIA-style y-down (RDF) frame, while
+# ``wm.spz_import`` assumes the spec's RUB frame and lands Marble worlds upside
+# down; 180 about X turns them upright. This reproduces, splat for splat, the
+# orientation validated on a real Marble 1.1 interior (2026-08-10: furniture
+# on the floor) with the retired Python SPZ->PLY converter at +90deg X:
+# measured on the same files (Niantic v2 samples, a synthetic v3 with SH
+# degree 3), world positions agree to 1.5e-5, world covariances to 1e-6
+# relative, colours exactly, renders differ only by sort/rounding speckle.
+# Don't add a Z yaw here: none was ever measured. Shared with the local import's
+# World Labs source (``splat_import``).
+WORLD_LABS_SPZ_ROT_EULER_DEG = (180.0, 0.0, 0.0)
 
-# Raw (unconverted) 3DGS PLYs — e.g. a user-supplied INRIA/graphdeco file in
+# Raw 3DGS PLYs — e.g. a user-supplied INRIA/graphdeco file in
 # the local splat import — keep the vendor y-DOWN frame, so they need the
 # opposite rotation.
 RAW_PLY_ROT_EULER_DEG = (-90.0, 0.0, 0.0)
 
 
 def import_world_labs_world(
-    ply_path: str, glb_path: str = "", name: str = "World", semantics: dict = None,
+    spz_path: str, glb_path: str = "", name: str = "World", semantics: dict = None,
 ) -> list:
-    """Import the splat PLY (+ optional GLB collider) into a new collection.
+    """Import the splat SPZ (+ optional GLB collider) into a new collection.
 
     Parameters
     ----------
-    ply_path : str
-        Path to the 3DGS PLY produced by ``world_labs_spz.spz_to_ply``.
+    spz_path : str
+        Path to the World Labs SPZ as downloaded (no conversion).
     glb_path : str, optional
         Path to the GLB collider mesh; skipped if empty.
     name : str
@@ -81,7 +81,7 @@ def import_world_labs_world(
     )
 
     # 1) Import the raw geometry: splat point cloud + collider room.
-    splat_objs = _import_tracked(lambda: _import_splat_ply(ply_path))
+    splat_objs = _import_tracked(lambda: _import_splat_spz(spz_path))
     _orient_splats(splat_objs)
 
     glb_objs = []
@@ -145,10 +145,11 @@ def _import_tracked(do_import) -> list:
 def _orient_splats(objects: list, euler_deg: tuple = None) -> None:
     """Rotate splat roots into Blender's Z-up frame.
 
-    Default is the converted-World-Labs rotation (+90 X); the raw-PLY path
-    passes ``RAW_PLY_ROT_EULER_DEG``.
+    Default is the World Labs SPZ rotation (``WORLD_LABS_SPZ_ROT_EULER_DEG``);
+    the local import passes its source's rotation or ``RAW_PLY_ROT_EULER_DEG``.
     """
-    euler = tuple(math.radians(d) for d in (euler_deg or _SPLAT_ROT_EULER_DEG))
+    euler = tuple(math.radians(d) for d in (
+        euler_deg if euler_deg is not None else WORLD_LABS_SPZ_ROT_EULER_DEG))
     for obj in objects:
         if obj.parent is None:  # roots only; children inherit the transform
             obj.rotation_euler = euler
@@ -174,7 +175,7 @@ def _align_collider_to_splat(splat_objs: list, glb_objs: list) -> None:
     """Rotate + translate the COLLIDER so it coincides with the splat room.
 
     The splat and the GLB collider are the SAME Marble room at the same scale,
-    but with the splat at Rx(+90) the collider lands 180deg about X from it
+    but with the splat upright the collider lands 180deg about X from it
     (voxel registration on Marble output: an Rx(180) on the collider matched
     ~81% of its verts onto the dense splat occupancy, vs <47% for every other
     axis-aligned rotation). The splat is the visual the user trusts, so we
@@ -325,6 +326,11 @@ def _new_collection(name: str) -> bpy.types.Collection:
     collection = bpy.data.collections.new(base)
     bpy.context.scene.collection.children.link(collection)
     return collection
+
+
+def _import_splat_spz(spz_path: str) -> None:
+    """Import the World Labs SPZ as Blender's built-in Gaussian splat."""
+    import_splat_spz(spz_path)
 
 
 def _import_splat_ply(ply_path: str) -> None:

@@ -21,6 +21,8 @@ sys.path[:0] = [str(harness), str(harness / 'scenarios')]
 from lib import run_scenario
 from export_formats_e2e import picker
 from release_suite.native import capture, choose_file, file_browser, viewport_keyboard
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from splat_import_source_gui_e2e import execute_picker
 
 FIXTURE_MODULE = '_qa_native_splat_fixtures'
 READ = """
@@ -63,8 +65,8 @@ def state(qa, out, label):
 
 def import_file(qa, out, path, expected):
     picker(qa, 'Import', 'MIXIE_OT_import_splat')
-    choose_file(qa, path)
-    qa.wait("not any(a.type=='FILE_BROWSER' for w in bpy.context.window_manager.windows for a in w.screen.areas)", timeout=20)
+    # Verified Import press (one retry when Windows drops the first click).
+    execute_picker(qa, path)
     qa.wait("any(o.type=='POINTCLOUD' for o in drv.main_window().scene.objects)", timeout=10)
     frame(qa)
     value = state(qa, out, path.stem + '-imported')

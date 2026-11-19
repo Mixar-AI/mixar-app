@@ -3,7 +3,9 @@
 """Free headless replay of built-in Gaussian splats: Mixar --background --factory-startup --python this_file.
 
 Covers, inside the real app with no backend and no credits:
-  * .spz and raw .ply import as one built-in splat each, oriented as before;
+  * .spz (Standard and World Labs source) and raw .ply import as one built-in
+    splat each, each in its pinned orientation;
+  * a generated World Labs world imports its SPZ natively, upright;
   * a PLY without 3DGS fields is refused and leaves nothing behind;
   * EEVEE, Cycles and Workbench F12 draw the splat; hide_render removes it;
   * deleting a world's splat removes its hidden collider;
@@ -26,6 +28,7 @@ from mathutils import Vector
 
 from mixar.modules.moodboard.core import splat_lifecycle, splat_legacy, splat_native
 from mixar.modules.moodboard.core.splat_import import import_splat_file
+from mixar.modules.moodboard.core.world_labs_importer import import_world_labs_world
 
 out = pathlib.Path(os.environ.get('QA_SCENARIO_OUT', '/tmp/mixar-native-splats'))
 results = {}
@@ -126,11 +129,38 @@ def case_spz_import():
     splat = objs[0]
     assert splat['wl_role'] == 'splat'
     assert splat.users_collection[0].get('mixar_splat_world') is True
-    # Converted SPZ keeps the validated Marble orientation (+90 X on the
-    # y-up converted frame): file +Y lands on -Z, file -Z on -Y.
+    # Standard (spec RUB) SPZ through wm.spz_import: file +Y (up) lands on
+    # +Z, file -Z (forward) on +Y.
     pts = world_points(splat)
-    assert pts == [(0.0, 0.0, -1.0), (1.0, 0.0, 0.0), (0.0, -1.0, 0.0)], pts
+    assert pts == [(0.0, 0.0, 1.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)], pts
     assert bpy.context.view_layer.objects.active == splat
+
+    # World Labs keeps the validated Marble orientation the converter path
+    # produced (+90 X on the y-up converted frame): file +Y lands on -Z,
+    # file -Z on -Y.
+    reset()
+    names = import_splat_file(str(spz), recenter=False, source='WORLD_LABS')
+    marble = world_points(bpy.data.objects[names[0]])
+    assert marble == [(0.0, 0.0, -1.0), (1.0, 0.0, 0.0), (0.0, -1.0, 0.0)], marble
+    return {'points': pts, 'world_labs_points': marble}
+
+
+def case_world_labs_spz_import():
+    """A generated world: the downloaded SPZ through the World Labs importer."""
+    reset()
+    spz = out / 'wl_world.spz'
+    spz.write_bytes(spz_bytes([(0, 1, 0), (1, 0, 0), (0, 0, -1)]))
+    names = import_world_labs_world(str(spz), name='QA')
+    splat = next(bpy.data.objects[n] for n in names if splat_native.is_splat(bpy.data.objects[n]))
+    assert splat['wl_role'] == 'splat'
+    coll = splat.users_collection[0]
+    assert coll.name.startswith('WorldLabs_QA') and coll.get('mixar_splat_world') is True
+    assert tuple(round(math.degrees(a)) for a in splat.rotation_euler) == (180, 0, 0)
+    # The grounding only translates, so the shape keeps the validated Marble
+    # orientation of the retired converter path: file +Y on -Z, file -Z on -Y.
+    pts = world_points(splat)
+    deltas = [tuple(round(p[i] - pts[0][i], 2) + 0.0 for i in range(3)) for p in pts]
+    assert deltas == [(0.0, 0.0, 0.0), (1.0, 0.0, 1.0), (0.0, -1.0, 1.0)], deltas
     return {'points': pts}
 
 
@@ -267,7 +297,7 @@ def case_kiri_file_converts():
 
 def main():
     out.mkdir(parents=True, exist_ok=True)
-    for case in (case_spz_import, case_raw_ply_import, case_non_splat_ply_refused, case_renders,
+    for case in (case_spz_import, case_world_labs_spz_import, case_raw_ply_import, case_non_splat_ply_refused, case_renders,
                  case_delete_purges_collider, case_kiri_file_converts):
         check(case.__name__, case)
 
