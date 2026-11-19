@@ -6761,7 +6761,13 @@ msgstr "Splat-filtypen '{ext}' støttes ikke (forventet .spz eller .ply)"
 msgid "File not found: {path}"
 msgstr "Fant ikke filen: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "Resultatet av verdengenerering mangler splat-URL (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Resultatet av verdengenerering mangler kollisjonsmodell-URL (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Kunne ikke laste ned/konvertere verden: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Verden ble importert, men ga ingen objekter"
@@ -10969,14 +10975,32 @@ msgstr "Sett på origo"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Flytt splatten så gulvet ligger på Z=0 med midten av fotavtrykket i origo (samme grunnsetting som genererte verdener)"
 
+msgid "Source"
+msgstr "Kilde"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standard"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Ingen splat-fil valgt"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Importerte {count} splat(er): {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussisk splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Legg til en tekstboks på moodboardet ({shortcut})"
@@ -12546,9 +12570,6 @@ msgstr "Ta med alle knokkelpåvirkninger"
 
 msgid "Lighting Mode"
 msgstr "Belysningsmodus"
-
-msgid "Standard"
-msgstr "Standard"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fysikkbaserte glTF-belysningsenheter"
@@ -18800,9 +18821,6 @@ msgstr "Blanding"
 
 msgid "No masks"
 msgstr "Ingen masker"
-
-msgid "Source"
-msgstr "Kilde"
 
 msgid "No node group loaded"
 msgstr "Ingen nodegruppe er lastet inn"

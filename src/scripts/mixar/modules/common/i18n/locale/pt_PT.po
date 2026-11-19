@@ -6761,7 +6761,13 @@ msgstr "Tipo de ficheiro de splat não suportado '{ext}' (esperado .spz ou .ply)
 msgid "File not found: {path}"
 msgstr "Ficheiro não encontrado: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "Falta o URL do splat (SPZ) no resultado da geração do mundo"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Falta o URL do colisor (GLB) no resultado da geração do mundo"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Falha ao transferir/converter o mundo: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "O mundo foi importado mas não produziu objetos"
@@ -10969,14 +10975,32 @@ msgstr "Assentar na origem"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Move o splat para que o chão fique em Z=0 com o centro da sua área de ocupação na origem (o mesmo assentamento dos mundos gerados)"
 
+msgid "Source"
+msgstr "Fonte"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Padrão"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Nenhum ficheiro de splat selecionado"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} splat(s) importado(s): {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Splat gaussiano (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12546,9 +12570,6 @@ msgstr "Incluir Todas as Influências de Ossos"
 
 msgid "Lighting Mode"
 msgstr "Modo de Iluminação"
-
-msgid "Standard"
-msgstr "Padrão"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Unidades de iluminação glTF fisicamente baseadas"
@@ -18800,9 +18821,6 @@ msgstr "Mesclagem"
 
 msgid "No masks"
 msgstr "Sem máscaras"
-
-msgid "Source"
-msgstr "Fonte"
 
 msgid "No node group loaded"
 msgstr "Nenhum grupo de nós carregado"

@@ -6761,7 +6761,13 @@ msgstr "Μη υποστηριζόμενος τύπος αρχείου splat «{e
 msgid "File not found: {path}"
 msgstr "Το αρχείο δεν βρέθηκε: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "Στο αποτέλεσμα παραγωγής κόσμου λείπει
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Στο αποτέλεσμα παραγωγής κόσμου λείπει URL συγκρουστή (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Αποτυχία λήψης/μετατροπής κόσμου: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Ο κόσμος εισήχθη αλλά δεν παρήγαγε αντικείμενα"
@@ -10969,14 +10975,32 @@ msgstr "Έδαφος στην αρχή"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Μετακινεί το splat ώστε το δάπεδό του να κάθεται στο Z=0 με το κέντρο του αποτυπώματός του στην αρχή (η ίδια έδραση με τους παραγόμενους κόσμους)"
 
+msgid "Source"
+msgstr "Πηγή"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Τυπικό"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Δεν έχει επιλεγεί αρχείο splat"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Εισήχθησαν splat: {count}: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Γκαουσιανό splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Προσθέτει ένα πλαίσιο κειμένου στο Moodboard ({shortcut})"
@@ -12546,9 +12570,6 @@ msgstr "Συμπερίληψη όλων των επιρροών οστών"
 
 msgid "Lighting Mode"
 msgstr "Κατάσταση φωτισμού"
-
-msgid "Standard"
-msgstr "Τυπικό"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Μονάδες φωτισμού glTF με φυσική βάση"
@@ -18800,9 +18821,6 @@ msgstr "Ανάμιξη"
 
 msgid "No masks"
 msgstr "Χωρίς μάσκες"
-
-msgid "Source"
-msgstr "Πηγή"
 
 msgid "No node group loaded"
 msgstr "Δεν έχει φορτωθεί γκρουπ κόμβων."

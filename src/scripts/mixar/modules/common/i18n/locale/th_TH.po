@@ -6761,7 +6761,13 @@ msgstr "ไม่รองรับไฟล์สแปลตชนิด '{ext
 msgid "File not found: {path}"
 msgstr "ไม่พบไฟล์: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "ผลลัพธ์การสร้างโลกไม่มี UR
 msgid "World generation result missing collider (GLB) URL"
 msgstr "ผลลัพธ์การสร้างโลกไม่มี URL ของตัวชน (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "ดาวน์โหลด/แปลงโลกไม่สำเร็จ: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "นำเข้าโลกแล้วแต่ไม่ได้สร้างวัตถุใด"
@@ -10969,14 +10975,32 @@ msgstr "วางบนพื้นที่จุดกำเนิด"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "ย้ายสแปลตให้พื้นอยู่ที่ Z=0 และกึ่งกลางของฐานอยู่ที่จุดกำเนิด (แบบเดียวกับโลกที่สร้างขึ้น)"
 
+msgid "Source"
+msgstr "แหล่งที่มา"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "มาตรฐาน"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "ไม่ได้เลือกไฟล์สแปลต"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "นำเข้าสแปลตแล้ว {count} รายการ: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "เกาส์เซียนสแปลต (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "เพิ่มกล่องข้อความลงในมู้ดบอร์ด ({shortcut})"
@@ -12546,9 +12570,6 @@ msgstr "รวมอิทธิพลของกระดูกทั้งห
 
 msgid "Lighting Mode"
 msgstr "โหมดแสง"
-
-msgid "Standard"
-msgstr "มาตรฐาน"
 
 msgid "Physically-based glTF lighting units"
 msgstr "หน่วยแสง glTF แบบอิงกายภาพ"
@@ -18800,9 +18821,6 @@ msgstr "การผสม"
 
 msgid "No masks"
 msgstr "ไม่มีหน้ากาก"
-
-msgid "Source"
-msgstr "แหล่งที่มา"
 
 msgid "No node group loaded"
 msgstr "ไม่ได้โหลดกลุ่มจุดต่อ"

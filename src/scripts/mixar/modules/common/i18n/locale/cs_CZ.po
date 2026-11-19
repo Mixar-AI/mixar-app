@@ -6761,7 +6761,13 @@ msgstr "Nepodporovaný typ souboru splatu „{ext}“ (očekáváno .spz nebo .p
 msgid "File not found: {path}"
 msgstr "Soubor nebyl nalezen: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "Ve výsledku generování světa chybí URL splatu (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Ve výsledku generování světa chybí URL kolizního tělesa (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Nepodařilo se stáhnout/převést svět: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Svět byl importován, ale nevytvořil žádné objekty"
@@ -10969,14 +10975,32 @@ msgstr "Usadit do počátku"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Posune splat tak, aby jeho podlaha ležela na Z=0 a střed jeho půdorysu byl v počátku (stejné usazení jako u generovaných světů)"
 
+msgid "Source"
+msgstr "Zdroj"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standardní"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Není vybrán žádný soubor splatu"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Importované splaty ({count}): {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussovský splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12546,9 +12570,6 @@ msgstr "Zahrnout všechny vlivy kostí"
 
 msgid "Lighting Mode"
 msgstr "Režim osvětlení"
-
-msgid "Standard"
-msgstr "Standardní"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fyzikálně založené jednotky osvětlení glTF"
@@ -18800,9 +18821,6 @@ msgstr "Přechod"
 
 msgid "No masks"
 msgstr "Žádné masky"
-
-msgid "Source"
-msgstr "Zdroj"
 
 msgid "No node group loaded"
 msgstr "Není načtena žádná skupina uzlů"

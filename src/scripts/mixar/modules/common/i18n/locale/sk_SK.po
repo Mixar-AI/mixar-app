@@ -6761,7 +6761,13 @@ msgstr "Nepodporovaný typ súboru splatu '{ext}' (očakáva sa .spz alebo .ply)
 msgid "File not found: {path}"
 msgstr "Súbor sa nenašiel: {path}"
 
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
 msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
 msgstr ""
 
 msgid "Failed to read image: {error}"
@@ -6917,8 +6923,8 @@ msgstr "Vo výsledku generovania sveta chýba adresa URL splatu (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Vo výsledku generovania sveta chýba adresa URL kolízneho telesa (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Stiahnutie alebo konverzia sveta zlyhali: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Svet bol importovaný, ale nevznikli žiadne objekty"
@@ -10969,14 +10975,32 @@ msgstr "Uzemniť v počiatku"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Presunie splat tak, aby jeho podlaha ležala na Z=0 a stred jeho pôdorysu bol v počiatku (rovnaké uzemnenie ako pri vygenerovaných svetoch)"
 
+msgid "Source"
+msgstr "Zdroj"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Štandardná"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Nie je vybraný žiadny súbor splatu"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Importované splaty ({count}): {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussov splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Pridať textové pole na moodboard ({shortcut})"
@@ -12546,9 +12570,6 @@ msgstr "Zahrnúť vplyvy všetkých kostí"
 
 msgid "Lighting Mode"
 msgstr "Režim osvetlenia"
-
-msgid "Standard"
-msgstr "Štandardná"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fyzikálne založené jednotky osvetlenia glTF"
@@ -18800,9 +18821,6 @@ msgstr "Prelínanie"
 
 msgid "No masks"
 msgstr "Žiadne masky"
-
-msgid "Source"
-msgstr "Zdroj"
 
 msgid "No node group loaded"
 msgstr "Nie je načítaná žiadna skupina uzlov"
