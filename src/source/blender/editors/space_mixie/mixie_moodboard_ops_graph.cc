@@ -9,7 +9,7 @@
 
 #include "mixie_moodboard_ops_common.hh"
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 
 namespace blender::ed::mixie {
 

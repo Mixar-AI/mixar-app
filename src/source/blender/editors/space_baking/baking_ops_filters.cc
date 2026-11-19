@@ -20,6 +20,7 @@
 #include "BKE_image.hh"
 
 #include "IMB_imbuf.hh"
+#include "IMB_partial_update.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -132,7 +133,7 @@ static wmOperatorStatus gaussian_blur_exec(bContext *C, wmOperator *op)
     }
   }
 
-  BKE_image_mark_dirty(image, ibuf);
+  IMB_mark_dirty(ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);
@@ -222,7 +223,7 @@ static wmOperatorStatus box_blur_exec(bContext *C, wmOperator *op)
     }
   }
 
-  BKE_image_mark_dirty(image, ibuf);
+  IMB_mark_dirty(ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);
@@ -315,7 +316,7 @@ static wmOperatorStatus bilateral_filter_exec(bContext *C, wmOperator *op)
     }
   }
 
-  BKE_image_mark_dirty(image, ibuf);
+  IMB_mark_dirty(ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);
@@ -435,7 +436,7 @@ static wmOperatorStatus fxaa_exec(bContext *C, wmOperator *op)
     }
   }
 
-  BKE_image_mark_dirty(image, ibuf);
+  IMB_mark_dirty(ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);

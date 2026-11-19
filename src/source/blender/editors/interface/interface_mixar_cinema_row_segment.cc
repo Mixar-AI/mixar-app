@@ -38,8 +38,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "BLI_rect.h"
-#include "BLI_utildefines.h"
+#include "BLI_rect.hh"
+#include "BLI_utildefines.hh"
 
 #include "UI_interface_c.hh"
 #include "UI_mixar_motion.hh"

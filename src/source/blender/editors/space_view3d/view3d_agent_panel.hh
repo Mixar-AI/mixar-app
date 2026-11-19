@@ -23,7 +23,7 @@
 #pragma once
 
 #include "BLI_map.hh"
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 #include "BLI_vector.hh"
 #include "UI_mixar_motion.hh"
 #include <string>

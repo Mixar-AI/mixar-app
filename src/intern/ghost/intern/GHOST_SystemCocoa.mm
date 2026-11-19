@@ -2303,13 +2303,15 @@ extern "C" void Mixar_WindowSetChromeless(void *window_handle, bool chromeless)
  * Initialization / Finalization.
  */
 
-GHOST_SystemCocoa::GHOST_SystemCocoa()
+GHOST_SystemCocoa::GHOST_SystemCocoa(const bool background)
 {
   modifier_mask_ = 0;
   outside_loop_event_processed_ = false;
   need_delayed_application_become_active_event_processing_ = false;
 
   ignore_window_sized_messages_ = false;
+  background_mode_ = background;
+
   ignore_momentum_scroll_ = false;
   multi_touch_scroll_ = false;
   last_warp_timestamp_ = 0;
@@ -2445,6 +2447,12 @@ GHOST_TSuccess GHOST_SystemCocoa::init()
        * application without a macOS tab bar, and should explicitly opt-out of this.
        * This is also controlled by the macOS user default #NSWindowTabbingEnabled. */
       NSWindow.allowsAutomaticWindowTabbing = NO;
+
+      if (background_mode_) {
+        /* Do not display the application in the Dock when started in background-mode,
+         * without which the app icon would bounce indefinitely. */
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
+      }
 
       [NSApp finishLaunching];
     }
@@ -2644,7 +2652,7 @@ uint32_t GHOST_SystemCocoa::getCursorPreferredLogicalSize() const
    *
    * Take care, for hardware cursors this is already applied on-top of the cursor bitmap,
    * there doesn't seem to be a way to express that the cursor data is pre-scaled.
-   * Therefor, a larger cursor will work but look blurry.
+   * Therefore, a larger cursor will work but look blurry.
    * Only use this for software cursors. */
   const CGFloat default_size = 21.0;
 

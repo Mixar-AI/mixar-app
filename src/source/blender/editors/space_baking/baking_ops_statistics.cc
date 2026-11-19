@@ -21,6 +21,7 @@
 #include "BKE_image.hh"
 
 #include "IMB_imbuf.hh"
+#include "IMB_partial_update.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -164,7 +165,7 @@ static wmOperatorStatus normalize_image_exec(bContext *C, wmOperator *op)
     CLOG_WARN(LOG_BAKING, "normalize_image: source range too small (%.6f), skipping", src_range);
   }
 
-  BKE_image_mark_dirty(image, ibuf);
+  IMB_mark_dirty(ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);

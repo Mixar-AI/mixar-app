@@ -96,8 +96,9 @@ class MIXIE_OT_moodboard_prompt_generate(Operator):
             with dispatch_scope() as feedback:
                 result = op_callable('INVOKE_DEFAULT', **(props or {}))
         except RuntimeError as exc:
-            # A refusal (missing input, busy catalog) is 'rejected'; only a
-            # raised or caught exception is 'error' (see generation_dispatch).
+            # Missing input is 'needs_input', another refusal (busy catalog)
+            # 'rejected'; only a raised or caught exception is 'error' (see
+            # generation_dispatch).
             generation_dispatch(context, attempt, failure_outcome(feedback),
                                 reason=feedback.get('reason'))
             # bpy_operator.cc gives a nested call its OWN ReportList, so only

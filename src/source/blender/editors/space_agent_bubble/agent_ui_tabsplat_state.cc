@@ -9,8 +9,8 @@
 
 #include "MEM_guardedalloc.h"
 #include "BKE_context.hh"
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 #include "DNA_scene_types.h"
 #include "DNA_windowmanager_types.h"
 #include "RNA_access.hh"

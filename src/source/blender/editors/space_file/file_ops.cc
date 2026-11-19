@@ -7,14 +7,14 @@
  * \ingroup spfile
  */
 
-#include "BLI_fileops.h"
-#include "BLI_linklist.h"
-#include "BLI_listbase.h"
-#include "BLI_math_base.h"
+#include "BLI_fileops.hh"
+#include "BLI_linklist.hh"
+#include "BLI_listbase.hh"
+#include "BLI_math_base_c.hh"
 #include "BLI_path_utils.hh"
-#include "BLI_string.h"
-#include "BLI_string_utf8.h"
-#include "BLI_utildefines.h"
+#include "BLI_string.hh"
+#include "BLI_string_utf8.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_appdir.hh"
 #include "BKE_blendfile.hh"
@@ -26,7 +26,7 @@
 #include "BLT_translation.hh"
 
 #ifdef WIN32
-#  include "BLI_winstuff.h"
+#  include "BLI_winstuff.hh"
 #endif
 
 #include "ED_fileselect.hh"
@@ -1770,10 +1770,10 @@ void file_sfile_filepath_set(SpaceFile *sfile, const char *filepath)
 void file_draw_check_ex(bContext *C, ScrArea *area)
 {
   /* May happen when manipulating non-active spaces. */
-  if (UNLIKELY(area->spacetype != SPACE_FILE)) {
+  if (area->spacetype != SPACE_FILE) [[unlikely]] {
     return;
   }
-  SpaceFile *sfile = static_cast<SpaceFile *>(area->spacedata.first);
+  SpaceFile *sfile = area->spacedata.first_as<SpaceFile>();
   wmOperator *op = sfile->op;
   if (op) { /* fail on reload */
     if (op->type->check) {
@@ -1890,7 +1890,7 @@ static wmOperatorStatus file_external_operation_exec(bContext *C, wmOperator *op
   if (!(fileentry->typeflag & FILE_TYPE_DIR) && (operation == FILE_EXTERNAL_OPERATION_FOLDER_OPEN))
   {
     const char *root = filelist_dir(sfile->files);
-    BLI_strncpy(filepath, root, sizeof(filepath));
+    STRNCPY(filepath, root);
   }
   else {
     filelist_file_get_full_path(sfile->files, fileentry, filepath);
@@ -2958,11 +2958,11 @@ static bool can_create_dir_from_user_input(const char dir[FILE_MAX_LIBEXTRA])
   return true;
 }
 
-void file_directory_enter_handle(bContext *C, void * /*arg_unused*/, void *arg_but)
+void file_directory_enter_handle(bContext *C, void * /*arg_unused*/, void * /*arg_but*/)
 {
   SpaceFile *sfile = CTX_wm_space_file(C);
   FileSelectParams *params = ED_fileselect_get_active_params(sfile);
-  if (UNLIKELY(params == nullptr)) {
+  if (params == nullptr) [[unlikely]] {
     return;
   }
 
@@ -3003,15 +3003,8 @@ void file_directory_enter_handle(bContext *C, void * /*arg_unused*/, void *arg_b
   BLI_path_normalize_dir(params->dir, sizeof(params->dir));
 
   if (filelist_is_dir(sfile->files, params->dir)) {
-    if (!STREQ(params->dir, filelist_dir(sfile->files))) {
-      /* Keep focus to allow Tab auto-completion. #150689. */
-      blender::ui::Button *but = static_cast<blender::ui::Button *>(arg_but);
-      textbutton_activate_but(C, but);
-      button_clear_selection(but);
-      ED_file_change_dir(C);
-    }
     /* Avoids flickering when nothing's changed. */
-    else if (!STREQ(params->dir, old_dir)) {
+    if (!STREQ(params->dir, old_dir)) {
       /* If directory exists, enter it immediately. */
       ED_file_change_dir(C);
     }
@@ -3055,7 +3048,7 @@ void file_filename_enter_handle(bContext *C, void * /*arg_unused*/, void *arg_bu
 {
   SpaceFile *sfile = CTX_wm_space_file(C);
   FileSelectParams *params = ED_fileselect_get_active_params(sfile);
-  if (UNLIKELY(params == nullptr)) {
+  if (params == nullptr) [[unlikely]] {
     return;
   }
 
@@ -3389,10 +3382,10 @@ static wmOperatorStatus file_start_filter_exec(bContext *C, wmOperator * /*op*/)
   const FileSelectParams *params = ED_fileselect_get_active_params(sfile);
 
   if (area) {
-    for (ARegion &region : area->regionbase) {
-      if (ui::textbutton_activate_rna(C, &region, params, "filter_search")) {
-        break;
-      }
+    int regiontype = sfile->browse_mode == FILE_BROWSE_MODE_FILES ? RGN_TYPE_UI : RGN_TYPE_HEADER;
+    ARegion *region = BKE_region_find_in_listbase_by_type(&area->regionbase, regiontype);
+    if (region) {
+      ED_region_activate_rna_prop(C, region, params, "filter_search");
     }
   }
 

@@ -511,26 +511,16 @@ def test_capture_still_works_on_video_output_scenes():
     assert restore_media < restore_format
 
 
-def test_splat_scene_stills_capture_through_a_real_render():
-    """A splat scene's keyframe still must be a real EEVEE render.
-
-    ``render.opengl`` produces a blank frame in splat scenes: the KIRI
-    proxy draws only during interactive viewport redraws (never inside an
-    OpenGL render), the splat mesh itself is eye-hidden, and the
-    ``splat_render_camera`` handlers that push camera matrices into the
-    geometry-nodes sockets fire only for real renders. The capture path
-    must branch to ``render.render`` with the shot camera and restore
-    engine, samples, and scene camera afterwards.
-    """
+def test_splat_scene_stills_use_the_ordinary_viewport_capture():
+    """Built-in Gaussian splats draw in the viewport, so a splat scene's
+    keyframe still goes through the same ``render.opengl`` capture as any
+    other scene: no EEVEE detour, no camera matrices pushed anywhere."""
     capture = _read("core/capture.py")
 
-    assert "def _render_splat_still" in capture
-    assert "scene_has_splats(scene)" in capture
-    assert "_render_splat_still(scene, camera)" in capture
-    assert "enable_render_updates(scene.objects)" in capture
-    assert "bpy.ops.render.render(write_still=True)" in capture
-    assert "render.engine = old_engine" in capture
-    assert "scene.camera = old_camera" in capture
+    assert "_render_splat_still" not in capture
+    assert "splat_render_camera" not in capture
+    assert "scene_has_splats" not in capture
+    assert "bpy.ops.render.opengl(" in capture
 
 
 def test_navigate_supervises_walk_for_esc_and_cursor_reset():

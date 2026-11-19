@@ -28,11 +28,11 @@ qa = QA()
 assert not qa.status()['busy']
 CODE = '''
 import time
-from mixar.modules.moodboard.core import splat_render_camera as splat
+from mixar.modules.moodboard.core import splat_lifecycle as splat
 from mixar.modules.space_mixie_chat.core import preview_render
 assert not bpy.app.is_job_running('RENDER') and preview_render._job is None
 window = drv.main_window()
-original = splat._saved_splat_proxies
+original = splat._splat_names
 stats = dict(calls=0, seconds=0)
 
 def scan():
@@ -43,7 +43,7 @@ def scan():
         stats['calls'] += 1
         stats['seconds'] += time.perf_counter() - start
 
-splat._saved_splat_proxies = scan
+splat._splat_names = scan
 rows = []
 vertices = [(x, y, z) for x in (-.5, .5) for y in (-1, 1) for z in (-1.5, 1.5)]
 faces = [(0,4,6,2), (1,3,7,5), (0,1,5,4), (2,6,7,3), (0,2,3,1), (4,5,7,6)]
@@ -91,7 +91,7 @@ try:
                 obj.select_set(True)
             bpy.context.view_layer.objects.active = active
 finally:
-    splat._saved_splat_proxies = original
+    splat._splat_names = original
 result = rows
 '''
 

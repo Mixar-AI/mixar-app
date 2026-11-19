@@ -15,9 +15,9 @@ endif()
 # or MINSIZEREL location, to the debug libs, which is not good as this will cause
 # all sorts of linking issues with MSVC. Map them explicitly to Release libs.
 # for further reading: https://gitlab.kitware.com/cmake/cmake/-/issues/20319
-set(CMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL MinSizeRel RelWithDebInfo Release Debug)
-set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO RelWithDebInfo Release MinSizeRel Debug)
-set(CMAKE_MAP_IMPORTED_CONFIG_RELEASE Release RelWithDebInfo MinSizeRel Debug)
+set(CMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL MinSizeRel RelWithDebInfo Release)
+set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO RelWithDebInfo Release MinSizeRel)
+set(CMAKE_MAP_IMPORTED_CONFIG_RELEASE Release RelWithDebInfo MinSizeRel)
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(MSVC_CLANG ON)
@@ -356,7 +356,7 @@ if(NOT EXISTS "${LIBDIR}/.git")
   )
 endif()
 
-include(platform_old_libs_update)
+include("${CMAKE_CURRENT_LIST_DIR}/platform_old_libs_update.cmake")
 
 # Only supported in the VS IDE & Clang Tidy needs to be on.
 if(CMAKE_GENERATOR MATCHES "^Visual Studio.+" AND WITH_CLANG_TIDY)
@@ -421,6 +421,10 @@ endif()
 
 if(WITH_MESHOPTIMIZER)
   find_package(meshoptimizer REQUIRED CONFIG)
+endif()
+
+if(WITH_KTX)
+  find_package(Ktx REQUIRED CONFIG)
 endif()
 
 windows_find_package(ZLIB) # We want to find before finding things that depend on it like PNG.
@@ -585,6 +589,8 @@ if(WITH_PYTHON)
   set(PYTHON_LIBRARY_DEBUG ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/libs/python${_PYTHON_VERSION_NO_DOTS}_d.lib)
 
   set(PYTHON_INCLUDE_DIR ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/include)
+  # Needed to locate bundled modules, see `find_python_module_file`.
+  set(PYTHON_LIBPATH ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/lib)
   set(PYTHON_NUMPY_INCLUDE_DIRS ${LIBDIR}/python/${_PYTHON_VERSION_NO_DOTS}/lib/site-packages/numpy/_core/include)
   set(NUMPY_FOUND ON)
   # uncached vars
@@ -853,7 +859,7 @@ if(WITH_CYCLES AND WITH_CYCLES_OSL)
   find_package(OSL REQUIRED CONFIG)
 endif()
 
-if(WITH_CYCLES AND WITH_CYCLES_EMBREE)
+if(WITH_EMBREE)
   windows_find_package(Embree)
   if(NOT Embree_FOUND)
     set(EMBREE_ROOT_DIR ${LIBDIR}/embree)
@@ -1084,8 +1090,6 @@ if(WITH_VULKAN_BACKEND)
     set(VULKAN_ROOT_DIR ${LIBDIR}/vulkan)
     set(VULKAN_INCLUDE_DIR ${VULKAN_ROOT_DIR}/include)
     set(VULKAN_INCLUDE_DIRS ${VULKAN_INCLUDE_DIR})
-    set(VULKAN_LIBRARY ${VULKAN_ROOT_DIR}/lib/vulkan-1.lib)
-    set(VULKAN_LIBRARIES ${VULKAN_LIBRARY})
   else()
     message(WARNING "Vulkan SDK was not found, disabling WITH_VULKAN_BACKEND")
     set(WITH_VULKAN_BACKEND OFF)
@@ -1127,7 +1131,7 @@ endif()
 set(ZSTD_INCLUDE_DIRS ${LIBDIR}/zstd/include)
 set(ZSTD_LIBRARIES ${LIBDIR}/zstd/lib/zstd_static.lib)
 
-if(WITH_CYCLES AND (WITH_CYCLES_DEVICE_ONEAPI OR (WITH_CYCLES_EMBREE AND EMBREE_SYCL_SUPPORT)))
+if((WITH_EMBREE AND EMBREE_SYCL_SUPPORT) OR (WITH_CYCLES AND WITH_CYCLES_DEVICE_ONEAPI))
   set(LEVEL_ZERO_ROOT_DIR ${LIBDIR}/level_zero)
   set(CYCLES_SYCL ${LIBDIR}/dpcpp CACHE PATH "Path to oneAPI DPC++ compiler")
   mark_as_advanced(CYCLES_SYCL)
@@ -1150,6 +1154,8 @@ if(WITH_CYCLES AND (WITH_CYCLES_DEVICE_ONEAPI OR (WITH_CYCLES_EMBREE AND EMBREE_
   )
   # Cycles doesn't currently support the OpenCL backend
   list(FILTER _sycl_unified_runtime_libraries_glob EXCLUDE REGEX "opencl")
+  # Only bundle the v2 Level Zero adapter, not the legacy ur_adapter_level_zero.dll (#159584).
+  list(FILTER _sycl_unified_runtime_libraries_glob EXCLUDE REGEX "ur_adapter_level_zerod?\\.dll")
 
   foreach(sycl_unified_runtime_library IN LISTS _sycl_unified_runtime_libraries_glob)
     # We do not know, which library we would discover first, debug or release, so we check for both.
@@ -1159,11 +1165,10 @@ if(WITH_CYCLES AND (WITH_CYCLES_DEVICE_ONEAPI OR (WITH_CYCLES_EMBREE AND EMBREE_
     # there is a safe guard against it below.
     string(REPLACE "d.dll" ".dll" sycl_unified_runtime_library_release ${sycl_unified_runtime_library})
 
-    list(FIND _sycl_unified_runtime_libraries_glob ${sycl_unified_runtime_library_debug} debug_index)
-    list(FIND _sycl_unified_runtime_libraries_glob ${sycl_unified_runtime_library_release} release_index)
-    if(NOT debug_index EQUAL -1)
+    if(sycl_unified_runtime_library_debug IN_LIST _sycl_unified_runtime_libraries_glob)
       set(sycl_unified_runtime_library_release ${sycl_unified_runtime_library})
-    elseif(NOT release_index EQUAL -1 AND NOT sycl_unified_runtime_library_release STREQUAL sycl_unified_runtime_library)
+    elseif(sycl_unified_runtime_library_release IN_LIST _sycl_unified_runtime_libraries_glob AND
+           NOT sycl_unified_runtime_library_release STREQUAL sycl_unified_runtime_library)
       set(sycl_unified_runtime_library_debug ${sycl_unified_runtime_library})
     else()
       # If there is no debug pair version of the library, then we are assuming
@@ -1172,8 +1177,7 @@ if(WITH_CYCLES AND (WITH_CYCLES_DEVICE_ONEAPI OR (WITH_CYCLES_EMBREE AND EMBREE_
       set(sycl_unified_runtime_library_release ${sycl_unified_runtime_library})
       set(sycl_unified_runtime_library_debug ${sycl_unified_runtime_library})
     endif()
-    list(FIND _sycl_runtime_libraries ${sycl_unified_runtime_library_release} found_index)
-    if(found_index EQUAL -1)
+    if(NOT sycl_unified_runtime_library_release IN_LIST _sycl_runtime_libraries)
       list(APPEND _sycl_runtime_libraries RELEASE ${sycl_unified_runtime_library_release})
       list(APPEND _sycl_runtime_libraries DEBUG ${sycl_unified_runtime_library_debug})
       # NOTE(Sirgienko) Due to a bug in DPC++ runtime, in versions 6.2 and 6.3
@@ -1194,8 +1198,15 @@ if(WITH_CYCLES AND (WITH_CYCLES_DEVICE_ONEAPI OR (WITH_CYCLES_EMBREE AND EMBREE_
 endif()
 
 if(WITH_TRACY)
-  set(Tracy_ROOT_DIR ${LIBDIR}/tracy)
   find_package(Tracy REQUIRED CONFIG)
+endif()
+
+if(WITH_JOLT)
+  find_package(Jolt REQUIRED CONFIG)
+endif()
+
+if(WITH_OPENTIMELINEIO)
+  find_package(OpenTimelineIO REQUIRED CONFIG)
 endif()
 
 # Add the MSVC directory to the path so when building with ASAN enabled tools such as

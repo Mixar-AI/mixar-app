@@ -34,6 +34,10 @@ if "_icon_cache" in locals():
 # (icon_name -> icon_value) map
 _icon_cache = {}
 
+# Prefix used by key-maps which are shared between spaces.
+# Listed in `bl_keymap_utils.keymap_hierarchy` instead of dynamically expanding, see note in: `keymap_ui_hierarchy`.
+_KEYMAP_PREFIX_GENERIC = "Generic Tool:"
+
 
 def _keymap_fn_from_seq(keymap_data):
 
@@ -501,7 +505,7 @@ class ToolSelectPanelHelper:
             keymap_fn[0](km)
         keymap_fn[0] = km.name
 
-        # Ensure we have a default key map, so the add-ons keymap is properly overlayed.
+        # Ensure we have a default key map, so the add-ons keymap is properly overlaid.
         if kc_default is not kc:
             kc_default.keymaps.new(km_idname, **km_kwargs)
 
@@ -570,10 +574,17 @@ class ToolSelectPanelHelper:
                         continue
                     visited.add(km_name)
 
-                    yield (km_name, cls.bl_space_type, 'WINDOW', [])
-                    # Callable types don't use fall-backs.
                     if isinstance(km_name, str):
+                        # Generic tools are shared between spaces, so they're listed in the hierarchy directly.
+                        # Expanding here would repeat the key-map for each mode,
+                        # misleading users by implying per-mode bindings.
+                        if km_name.startswith(_KEYMAP_PREFIX_GENERIC):
+                            continue
+                        yield (km_name, cls.bl_space_type, 'WINDOW', [])
                         yield (km_name + " (fallback)", cls.bl_space_type, 'WINDOW', [])
+                    else:
+                        # Callable types don't use fall-backs.
+                        yield (km_name, cls.bl_space_type, 'WINDOW', [])
 
     # -------------------------------------------------------------------------
     # Layout Generators
@@ -773,8 +784,9 @@ class ToolSelectPanelHelper:
             return None, None
 
     @staticmethod
-    def tool_active_from_context(context):
-        space_type = context.space_data.type
+    def tool_active_from_context(context, space_type=None):
+        if space_type is None:
+            space_type = context.space_data.type
         return ToolSelectPanelHelper._tool_active_from_context(context, space_type)
 
     @staticmethod

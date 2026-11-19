@@ -69,6 +69,9 @@ class GHOST_WindowX11 : public GHOST_Window {
   void setCustomDecoration(int min_width, int min_height, float radius) override;
   float getWindowCornerRadius() const override { return corner_radius_; }
   bool hasCustomDecoration() const override { return custom_decoration_; }
+  /* X11 host frost is composited into the RGBA render target before present.
+   * The completed pixels are opaque, so an opaque Vulkan swapchain still
+   * supports this path. The requested visual must have a real alpha channel. */
   bool supportsTransparentRendering() const override { return want_context_params_.use_alpha; }
   GHOST_TSuccess beginWindowDrag() override;
   GHOST_TSuccess beginWindowResize(int edges) override;

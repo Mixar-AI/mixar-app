@@ -8,14 +8,14 @@
 
 #include <algorithm> /* Mixar: `std::min` in the drawer / N-panel clamp. */
 
-#include "BLI_math_vector.h"
-#include "BLI_utildefines.h"
+#include "BLI_math_vector_c.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
 
 /* Mixar: Zen-mode gating for the persp/ortho button (see below). */
-#include "BLI_string.h"
+#include "BLI_string.hh"
 
 #include "DNA_workspace_types.h"
 

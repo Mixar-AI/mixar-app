@@ -65,6 +65,10 @@ struct ARegion {
   bool overlap = true, zen = false;
   rcti winrct{0, 999, 0, 799};
 };
+static void ED_region_blend_rect(const ARegion *region, rcti *rect)
+{
+  *rect = region->winrct;
+}
 static bool BLI_rcti_isect(const rcti *a, const rcti *b, rcti *)
 {
   return a->xmin <= b->xmax && b->xmin <= a->xmax && a->ymin <= b->ymax && b->ymin <= a->ymax;

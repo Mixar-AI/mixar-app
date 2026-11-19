@@ -13,7 +13,7 @@
 
 #pragma once
 #include <string>
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 #include "RNA_access.hh"
 
 /* Mixar 5.2 port: namespace wrap. */

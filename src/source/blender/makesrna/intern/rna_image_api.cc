@@ -25,20 +25,24 @@
 
 #ifdef RNA_RUNTIME
 
-#  include "BLI_listbase.h"
-#  include "BLI_math_base.h"
-#  include "BLI_string.h"
+#  include "BLI_listbase.hh"
+#  include "BLI_math_base_c.hh"
+#  include "BLI_string.hh"
 
 #  include "BKE_context.hh"
 #  include "BKE_image.hh"
 #  include "BKE_image_format.hh"
+#  include "BKE_image_gpu.hh"
 #  include "BKE_image_save.hh"
 #  include "BKE_library.hh"
 #  include "BKE_main.hh"
+
 #  include "BKE_report.hh"
 #  include "BKE_scene.hh"
+#  include "GPU_texture.hh"
 
 #  include "IMB_imbuf.hh"
+#  include "IMB_partial_update.hh"
 
 #  include "DNA_image_types.h"
 #  include "DNA_scene_types.h"
@@ -177,8 +181,7 @@ static void rna_Image_update(Image *image, ReportList *reports)
     IMB_byte_from_float(ibuf);
   }
 
-  ibuf->userflags |= IB_DISPLAY_BUFFER_INVALID;
-  BKE_image_partial_update_mark_full_update(image);
+  IMB_partial_update_mark_full(ibuf);
 
   BKE_image_release_ibuf(image, ibuf, nullptr);
 }
@@ -200,7 +203,6 @@ static void rna_Image_scale(
     BKE_reportf(reports, RPT_ERROR, "Image '%s' failed to load image buffer", image->id.name + 2);
     return;
   }
-  BKE_image_partial_update_mark_full_update(image);
   WM_main_add_notifier(NC_IMAGE | NA_EDITED, image);
 }
 
@@ -216,7 +218,7 @@ static int rna_Image_gl_load(
     BKE_image_multilayer_index(image->rr, &iuser);
   }
 
-  gpu::Texture *tex = BKE_image_get_gpu_texture(image, &iuser);
+  gpu::Texture *tex = BKE_image_acquire_gpu_texture(image, &iuser);
 
   if (tex == nullptr) {
     BKE_reportf(reports, RPT_ERROR, "Failed to load image texture '%s'", image->id.name + 2);
@@ -224,26 +226,22 @@ static int rna_Image_gl_load(
     return 0x0502; /* GL_INVALID_OPERATION */
   }
 
+  GPU_texture_free(tex);
+
   return 0; /* GL_NO_ERROR */
 }
 
 static int rna_Image_gl_touch(
     Image *image, ReportList *reports, int frame, int layer_index, int pass_index)
 {
-  int error = 0; /* GL_NO_ERROR */
-
-  BKE_image_tag_time(image);
-
-  if (image->runtime->gputexture[TEXTARGET_2D][0] == nullptr) {
-    error = rna_Image_gl_load(image, reports, frame, layer_index, pass_index);
-  }
-
-  return error;
+  /* Load tags as well, so this is the same and effectively was already since the
+   * initial implementation. */
+  return rna_Image_gl_load(image, reports, frame, layer_index, pass_index);
 }
 
 static void rna_Image_gl_free(Image *image)
 {
-  BKE_image_free_gputextures(image);
+  BKE_image_free_gpu_texture_caches(image);
 
   /* Remove the no-collect flag, image is available for garbage collection again. */
   image->flag &= ~IMA_NOCOLLECT;

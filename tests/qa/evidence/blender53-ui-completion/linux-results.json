@@ -1,0 +1,286 @@
+{
+  "SPDX-FileCopyrightText": "2026 Adeveda Enterprises Private Limited",
+  "SPDX-License-Identifier": "GPL-2.0-or-later",
+  "verdict": "PASS for requested free Linux X11 UI/compositor scope on OpenGL and Vulkan",
+  "runtime": {
+    "base": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+    "patch_sha256": "3e4b14768da27be42616a2a78897e9926f6c10fc607161222b6a5194f75878d3",
+    "binary_sha256": "4c6f0f03dcd3c38b41b9a7dbc9e0c67c7b228184ec5fecbe37d1d613cf92c9a9"
+  },
+  "environment": {
+    "gpu": "NVIDIA L4",
+    "driver": "595.71.05",
+    "opengl": "Private Xvfb :97 + VirtualGL EGL + Openbox inside owned sandbox",
+    "vulkan": "Private NVIDIA Xorg :98 + owned network-disabled Openbox helper; actual Vulkan presentation",
+    "backend": "Owned sandbox backend; no paid generation/provider request"
+  },
+  "regression": {
+    "before": "Vulkan expanded bubble RGB[30,30,30] under both red and blue bands; blur oracle fails because backdrop low frequency ~4.2e-15. OpenGL-only window-alpha gate is also present in develop b042cdd60 (Blender5.2 baseline).",
+    "fix": "X11 Agent bubbles request RGBA on Vulkan as well as OpenGL; non-GL X11 visual is verified32bitTrueColor with XRender alpha, otherwise explicit opaque fallback. Wayland Vulkan unchanged.",
+    "guard": "Actual extracted native request block failed before fix;42 focused tests pass after.",
+    "after": "Both native cases pass color change, blur-frequency suppression, sharp foreground, neutral composer, corners, move, resize, pill, recreate, own-file save/load."
+  },
+  "backends": {
+    "opengl": {
+      "renderer": "NVIDIA L4/PCIe/SSE2",
+      "native_case": "PASS",
+      "broad_case": "PASS",
+      "native_originals_reviewed": 22,
+      "broad_originals_reviewed": 20,
+      "settled_workspace_originals_reviewed": 2,
+      "lifecycle_metrics": {
+        "expanded": {
+          "low_frequency": 5.5413,
+          "high_low_ratio": 0.00408,
+          "corner_error": 0,
+          "red_delta": 14.756,
+          "blue_delta": 14.756
+        },
+        "moved": {
+          "low_frequency": 5.5272,
+          "high_low_ratio": 0.00517,
+          "corner_error": 0,
+          "red_delta": 15.154,
+          "blue_delta": 15.154
+        },
+        "resized": {
+          "low_frequency": 5.5386,
+          "high_low_ratio": 0.00403,
+          "corner_error": 0,
+          "red_delta": 15.002,
+          "blue_delta": 15.002
+        },
+        "pill": {
+          "low_frequency": 5.5368,
+          "high_low_ratio": 0.0053,
+          "corner_error": 0,
+          "red_delta": 14.91,
+          "blue_delta": 14.91
+        },
+        "recreated": {
+          "low_frequency": 5.5413,
+          "high_low_ratio": 0.00408,
+          "corner_error": 0,
+          "red_delta": 14.756,
+          "blue_delta": 14.756
+        },
+        "saved": {
+          "low_frequency": 5.5413,
+          "high_low_ratio": 0.00408,
+          "corner_error": 0,
+          "red_delta": 14.756,
+          "blue_delta": 14.756
+        },
+        "loaded": {
+          "low_frequency": 5.5914,
+          "high_low_ratio": 0.00403,
+          "corner_error": 0,
+          "red_delta": 14.834,
+          "blue_delta": 14.834
+        }
+      },
+      "neutral_bright_rgb": [
+        57.0,
+        57.0,
+        57.0
+      ],
+      "neutral_dark_rgb": [
+        26.0,
+        26.0,
+        26.0
+      ],
+      "fixture_removed": true
+    },
+    "vulkan": {
+      "renderer": "NVIDIA L4",
+      "native_case": "PASS",
+      "broad_case": "PASS",
+      "native_originals_reviewed": 22,
+      "broad_originals_reviewed": 20,
+      "settled_workspace_originals_reviewed": 2,
+      "lifecycle_metrics": {
+        "expanded": {
+          "low_frequency": 5.5356,
+          "high_low_ratio": 0.00535,
+          "corner_error": 0,
+          "red_delta": 15.023,
+          "blue_delta": 15.023
+        },
+        "moved": {
+          "low_frequency": 5.534,
+          "high_low_ratio": 0.00479,
+          "corner_error": 0,
+          "red_delta": 14.743,
+          "blue_delta": 14.743
+        },
+        "resized": {
+          "low_frequency": 5.5628,
+          "high_low_ratio": 0.00563,
+          "corner_error": 0,
+          "red_delta": 15.015,
+          "blue_delta": 15.015
+        },
+        "pill": {
+          "low_frequency": 5.589,
+          "high_low_ratio": 0.00289,
+          "corner_error": 0,
+          "red_delta": 15.09,
+          "blue_delta": 15.09
+        },
+        "recreated": {
+          "low_frequency": 5.5356,
+          "high_low_ratio": 0.00535,
+          "corner_error": 0,
+          "red_delta": 15.023,
+          "blue_delta": 15.023
+        },
+        "saved": {
+          "low_frequency": 5.5356,
+          "high_low_ratio": 0.00535,
+          "corner_error": 0,
+          "red_delta": 15.023,
+          "blue_delta": 15.023
+        },
+        "loaded": {
+          "low_frequency": 5.5922,
+          "high_low_ratio": 0.00419,
+          "corner_error": 0,
+          "red_delta": 14.853,
+          "blue_delta": 14.853
+        }
+      },
+      "neutral_bright_rgb": [
+        59.0,
+        59.0,
+        59.0
+      ],
+      "neutral_dark_rgb": [
+        28.0,
+        28.0,
+        28.0
+      ],
+      "fixture_removed": true
+    }
+  },
+  "reviewed_originals_total": 88,
+  "review_manifests": [
+    "Local ignored build/qa/blender53-ui-complete/linux/native-visual-review.json",
+    "Local ignored build/qa/blender53-ui-complete/linux/opengl-broad-visual-review.json",
+    "Local ignored build/qa/blender53-ui-complete/linux/vulkan-broad-visual-review.json"
+  ],
+  "broad_scope": [
+    "empty/focused composer",
+    "populated transcript/expanded step",
+    "three-line committed idle draft",
+    "Agent",
+    "3D",
+    "Image",
+    "Video",
+    "Splats",
+    "Add-on",
+    "Library",
+    "Queue",
+    "Zen",
+    "Moodboard",
+    "Engine",
+    "File/Edit menus",
+    "Texturing",
+    "restore Zen"
+  ],
+  "review_followups": {
+    "Video": "Preserved original and live follow-up show all enabled footer controls; initial reviewer misread resolved by reopening original.",
+    "small_outline": "Expected partially occluded View3D Scale toolbar below island, not an extra window.",
+    "settled_viewport": "Engine/Texturing cube visible after shader-compilation job stops;four native original images reviewed."
+  },
+  "stalls": {
+    "opengl": {
+      "before": {
+        "count": 21,
+        "categories": {
+          "other_recorded_stall": 9,
+          "viewport_draw_with_background_job": 1,
+          "viewport_draw": 11
+        },
+        "max_duration_ms": 1960
+      },
+      "after": {
+        "count": 25,
+        "categories": {
+          "other_recorded_stall": 10,
+          "viewport_draw_with_background_job": 1,
+          "viewport_draw": 14
+        },
+        "max_duration_ms": 1973
+      }
+    },
+    "vulkan": {
+      "before": {
+        "count": 6,
+        "categories": {
+          "other_recorded_stall": 3,
+          "viewport_draw_with_background_job": 1,
+          "viewport_draw": 2
+        },
+        "max_duration_ms": 2657
+      },
+      "after": {
+        "count": 9,
+        "categories": {
+          "bootstrap_import_stack": 1,
+          "other_recorded_stall": 4,
+          "viewport_draw_with_background_job": 1,
+          "viewport_draw": 3
+        },
+        "max_duration_ms": 3077
+      }
+    }
+  },
+  "isolation": {
+    "other_containers": 32,
+    "other_container_identity_state_mounts_unchanged": true,
+    "shared_blender52_pins_unchanged": true,
+    "shared_worktree_clean": true,
+    "all_four_owned_containers_stopped": true,
+    "private_apps_displays_helper_stopped_removed": true,
+    "proof": "Local ignored build/qa/blender53-ui-complete/linux/isolation-after.json"
+  },
+  "limits": [
+    "X11 NVIDIA L4 qualification only; Wayland Vulkan unchanged/unqualified.",
+    "No paid generation, provider output or whole-release certification.",
+    "Stall counts include unequal fresh-profile startup/replay/diagnostic work and are not a before/after performance benchmark. Residual UI stalls remain recorded.",
+    "X11 pixels prove host-frost appearance; no assertion about an external desktop compositor blur API."
+  ],
+  "representative_originals": [
+    {
+      "path": "linux-vulkan-before.png",
+      "original": "vulkan-native/expanded-red/desktop.png",
+      "sha256": "2138f11203cb6e76c676055490a36d7fc6424b56a3c6362bd096badf14c45495"
+    },
+    {
+      "path": "linux-vulkan-after.png",
+      "original": "vulkan-qualified-native/checker/desktop.png",
+      "sha256": "9d2d149bb316ee2d2ebd094f8c46ab2ec2c2ee44e8be9a7a9878d263e173af54"
+    },
+    {
+      "path": "linux-vulkan-pill-blue.png",
+      "original": "vulkan-qualified-native/pill-blue/desktop.png",
+      "sha256": "c388bd50d83493f8760e8d0d8fd5763f8249d0880b235d12ae5b536c50d77715"
+    },
+    {
+      "path": "linux-opengl-idle-draft.png",
+      "original": "opengl-qualified-broad/populated-idle/desktop.png",
+      "sha256": "42e3e1aab061ea1547e3315a3104c428b18d5731c9727c098956b6e72f153326"
+    }
+  ],
+  "input_sha256": {
+    "src/intern/ghost/intern/GHOST_WindowX11.cc": "5fb3021dca75d288a7f4f0b072a92535604e1a03b4c8be69ba62f33bdcc8c6d6",
+    "src/intern/ghost/intern/GHOST_WindowX11.hh": "a98dee9c09542e34d1190a73aeda239be7fe868f3259e1d88c784159a5286d0c",
+    "src/source/blender/windowmanager/intern/wm_window.cc": "2157c494afee8daf4e80c63dd32244cb2f766ebbdd1ce7f9abb3d9d8d6683d4c",
+    "tests/test_linux_vulkan_glass.py": "80bce1e857c6b3e04d9fdde89d461004062de94176ca956cd55eb2d2445b4055",
+    "tests/qa/linux_compositor_e2e.py": "e8f5a64a9fec72283ca6ed5ebe9089ba825b6692efef7149b46ea63057ae3be8",
+    "tests/qa/linux_compositor_native.py": "755770b76182b50306c1e2d7943ba2519a79ef0f40726e7ff74e99cf25a67358",
+    "tests/qa/linux_x11_native.py": "7348530085315b50a3607aeb2a652651d92cec2af313397495336e00f33765d2",
+    "tests/qa/linux_visual_ui_e2e.py": "9840aca37b45020e974bbe51b9548e793ba10be2cae63e97cd2052c768e463a2",
+    "tests/qa/blender53_visual_ui_e2e.py": "3b519800459d57a70a37025ca090087f862d29ca56941684613d870b6396249d"
+  }
+}

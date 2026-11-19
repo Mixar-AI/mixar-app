@@ -465,8 +465,8 @@ msgstr "Na moodboardu vybráno „{name}“"
 msgid "Select in Scene"
 msgstr "Vybrat ve scéně"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Vybere v zobrazení proxy úchyt tohoto splat světa"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekce"
@@ -474,8 +474,11 @@ msgstr "Kolekce"
 msgid "That splat world is no longer in this file"
 msgstr "Tento splat svět už v souboru není"
 
-msgid "This splat world has no proxy handle"
-msgstr "Tento splat svět nemá proxy úchyt"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Vybráno „{name}“"
@@ -5570,6 +5573,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6755,8 +6761,14 @@ msgstr "Nepodporovaný typ souboru splatu „{ext}“ (očekáváno .spz nebo .p
 msgid "File not found: {path}"
 msgstr "Soubor nebyl nalezen: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Z {name} nebyly importovány žádné objekty"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Nepodařilo se načíst obrázek: {error}"
@@ -6911,8 +6923,8 @@ msgstr "Ve výsledku generování světa chybí URL splatu (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Ve výsledku generování světa chybí URL kolizního tělesa (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Nepodařilo se stáhnout/převést svět: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Svět byl importován, ale nevytvořil žádné objekty"
@@ -10963,14 +10975,32 @@ msgstr "Usadit do počátku"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Posune splat tak, aby jeho podlaha ležela na Z=0 a střed jeho půdorysu byl v počátku (stejné usazení jako u generovaných světů)"
 
+msgid "Source"
+msgstr "Zdroj"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standardní"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Není vybrán žádný soubor splatu"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Importované splaty ({count}): {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussovský splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12540,9 +12570,6 @@ msgstr "Zahrnout všechny vlivy kostí"
 
 msgid "Lighting Mode"
 msgstr "Režim osvětlení"
-
-msgid "Standard"
-msgstr "Standardní"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fyzikálně založené jednotky osvětlení glTF"
@@ -18794,9 +18821,6 @@ msgstr "Přechod"
 
 msgid "No masks"
 msgstr "Žádné masky"
-
-msgid "Source"
-msgstr "Zdroj"
 
 msgid "No node group loaded"
 msgstr "Není načtena žádná skupina uzlů"
@@ -28500,9 +28524,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kreslení karty vyžaduje zpětné volání kreslení aktivní oblasti"
 
@@ -29772,6 +29793,9 @@ msgstr "Poloměr rohů zaoblených prvků UI"
 msgid "Mixie Chat"
 msgstr ""
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29783,18 +29807,6 @@ msgstr "Cesty přetažení musí být neprázdné řetězce"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Cesty přetažení musí být neprázdné pole JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globální oblasti"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Globální oblasti okna (horní lišta, stavový řádek). Rozšíření Mixar — zpřístupněno, aby úvodní průvodce mohl horní liště vyžádat překreslení."
 
 msgid "QA UI Dump"
 msgstr "Výpis UI pro QA"

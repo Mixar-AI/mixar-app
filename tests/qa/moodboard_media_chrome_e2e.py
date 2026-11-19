@@ -41,7 +41,11 @@ if {initial!r}:
     # A tile of 1000 region pixels fits a retina drawer (pixel_size 2) but
     # overflows a 1x drawer, where its action row lands outside the region
     # and the dump drops Export; size it to the drawer instead.
-    b=region.view2d.region_to_view(min(1000,int(region.width*.7)),0)
+    # At 1x DPI the standalone editor can be shorter than the tile's zoomed
+    # height. Keep its title below the fixed top toolbar at every test zoom;
+    # otherwise the title crop measures toolbar glyphs as filename ink.
+    b=region.view2d.region_to_view(min(1000,int(region.width*.7),
+                                    int(region.height*1.1)),0)
     media.scale=(b[0]-a[0])/MOODBOARD_IMAGE_BASE_SIZE
 w=media.scale*MOODBOARD_IMAGE_BASE_SIZE
 h=w*media.image.size[1]/media.image.size[0]

@@ -12,7 +12,7 @@
 
 #include <cstdint>
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 #include "BLI_vector.hh"
 
 #include "DNA_scene_types.h"
@@ -58,7 +58,7 @@ static FooterCache g_footer_cache = {FooterThemeCache{}, {}, 0, -1, false};
  */
 static uintptr_t get_theme_version()
 {
-  bTheme *btheme = static_cast<bTheme *>(U.themes.first);
+  bTheme *btheme = U.themes.first_as<bTheme>();
   return btheme ? reinterpret_cast<uintptr_t>(btheme) : 0;
 }
 
@@ -67,7 +67,7 @@ static uintptr_t get_theme_version()
  */
 static void update_theme_cache()
 {
-  bTheme *btheme = static_cast<bTheme *>(U.themes.first);
+  bTheme *btheme = U.themes.first_as<bTheme>();
   if (!btheme) {
     /* Use defaults if no theme */
     g_footer_cache.theme.bottom_padding = FOOTER_DEFAULT_BOTTOM_PADDING;

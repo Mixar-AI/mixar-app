@@ -6,8 +6,8 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_utildefines.h"
-#include "BLI_listbase.h"
+#include "BLI_utildefines.hh"
+#include "BLI_listbase.hh"
 
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -161,7 +161,7 @@ void agent_ui_motion_blend_read_after_liblink(BlendLibReader * /*reader*/,
   auto *screen = reinterpret_cast<bScreen *>(parent_id);
   ListBaseT<ARegion> *regions = &sl->regionbase;
   for (ScrArea &area : screen->areabase) {
-    if (area.spacedata.first == sl) {
+    if (area.spacedata.first() == sl) {
       regions = &area.regionbase;
       break;
     }

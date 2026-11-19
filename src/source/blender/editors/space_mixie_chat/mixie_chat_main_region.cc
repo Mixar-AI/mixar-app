@@ -12,10 +12,10 @@
 
 #include <cmath>
 
-#include "BLI_listbase.h"
-#include "BLI_rect.h"
-#include "BLI_time.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_rect.hh"
+#include "BLI_time.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
@@ -57,7 +57,7 @@ void mixie_chat_main_region_cursor(wmWindow *win, ScrArea *area, ARegion *region
   bool needs_redraw = false;
   bool any_hovered = false;
 
-  SpaceMixieChat *smixie = reinterpret_cast<SpaceMixieChat *>(area->spacedata.first);
+  SpaceMixieChat *smixie = reinterpret_cast<SpaceMixieChat *>(area->spacedata.first());
   MixieChatRuntime *rt = mixie_chat_ensure_runtime(smixie);
 
   /* The floating Agent Bubble keeps the default cursor everywhere: the
@@ -385,7 +385,7 @@ int mixie_chat_ui_handler(bContext *C, const wmEvent *event, void * /*userdata*/
       return WM_UI_HANDLER_CONTINUE;
     }
 
-    SpaceMixieChat *smixie = reinterpret_cast<SpaceMixieChat *>(area->spacedata.first);
+    SpaceMixieChat *smixie = reinterpret_cast<SpaceMixieChat *>(area->spacedata.first());
     if (!smixie) {
       return WM_UI_HANDLER_CONTINUE;
     }

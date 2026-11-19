@@ -465,8 +465,8 @@ msgstr "Nuotaikų lentoje pasirinkta „{name}“"
 msgid "Select in Scene"
 msgstr "Pasirinkti scenoje"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Pasirenka šio splato pasaulio pakaitalo rankenėlę peržiūros lange"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekcija"
@@ -474,8 +474,11 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "To splato pasaulio šiame faile jau nebėra"
 
-msgid "This splat world has no proxy handle"
-msgstr "Šis splato pasaulis neturi pakaitalo rankenėlės"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Pasirinkta „{name}“"
@@ -5570,6 +5573,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6755,8 +6761,14 @@ msgstr "Nepalaikomas splato failo tipas „{ext}“ (tikimasi .spz arba .ply)"
 msgid "File not found: {path}"
 msgstr "Failas nerastas: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Iš {name} neimportuota objektų"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Nepavyko perskaityti paveikslo: {error}"
@@ -6911,8 +6923,8 @@ msgstr "Pasaulio generavimo rezultate trūksta splato (SPZ) URL"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Pasaulio generavimo rezultate trūksta susidūrimo tūrio (GLB) URL"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Nepavyko atsisiųsti arba konvertuoti pasaulio: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Pasaulis importuotas, bet objektų nesukūrė"
@@ -10963,14 +10975,32 @@ msgstr "Pagrindas pradžioje"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Perkelia splatą taip, kad grindys būtų ties Z=0, o pėdsako centras – pradžios taške (tas pats pagrindimas kaip sugeneruotiems pasauliams)"
 
+msgid "Source"
+msgstr "Šaltinis"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standartinis"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Nepasirinktas splato failas"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Importuota splatų: {count}: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gauso splatas (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Prideda teksto lauką į nuotaikų lentą ({shortcut})"
@@ -12540,9 +12570,6 @@ msgstr "Įtraukti visas kaulų įtakas"
 
 msgid "Lighting Mode"
 msgstr "Apšvietimo veiksena"
-
-msgid "Standard"
-msgstr "Standartinis"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fiziniai glTF apšvietimo vienetai"
@@ -18794,9 +18821,6 @@ msgstr "Maišymas"
 
 msgid "No masks"
 msgstr "Nėra kaukių"
-
-msgid "Source"
-msgstr "Šaltinis"
 
 msgid "No node group loaded"
 msgstr "Mazgų grupė neįkelta"
@@ -28500,9 +28524,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kortelės piešimui reikia aktyvios srities piešimo iškvietos"
 
@@ -29772,6 +29793,9 @@ msgstr "Suapvalintų sąsajos elementų kampų spindulys"
 msgid "Mixie Chat"
 msgstr "Mixie pokalbis"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29783,18 +29807,6 @@ msgstr "Numetimo keliai turi būti netuščios eilutės"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Numetimo keliai turi būti netuščias JSON masyvas"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Visuotinės sritys"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Lango visuotinės sritys (viršutinė juosta, būsenos juosta). „Mixar“ plėtinys — atvertas, kad supažindinimas galėtų kreiptis į viršutinę juostą perpiešimui."
 
 msgid "QA UI Dump"
 msgstr "QA sąsajos išrašas"

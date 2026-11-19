@@ -9,7 +9,7 @@
 
 #include "BLF_api.hh"
 #include "BKE_context.hh"
-#include "BLI_string.h"
+#include "BLI_string.hh"
 #include "ED_screen.hh"
 #include "RNA_access.hh"
 #include "UI_interface.hh"

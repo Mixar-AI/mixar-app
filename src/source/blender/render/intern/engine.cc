@@ -10,17 +10,19 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "BKE_compositor.hh"
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.h"
-#include "BLI_math_bits.h"
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_math_bits.hh"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 
 #include "DNA_layer_types.h"
 #include "DNA_object_types.h"
 
 #include "BKE_camera.h"
+#include "BKE_compositor.hh"
 #include "BKE_global.hh"
 #include "BKE_node.hh"
 #include "BKE_report.hh"
@@ -79,7 +81,7 @@ void RE_engines_exit()
     DRW_gpu_context_disable();
   }
 
-  for (type = static_cast<RenderEngineType *>(R_engines.first); type; type = next) {
+  for (type = R_engines.first(); type; type = next) {
     next = type->next;
 
     BLI_remlink(&R_engines, type);
@@ -271,7 +273,7 @@ static RenderResult *render_result_from_bake(
 
 static void render_result_to_bake(RenderEngine *engine, RenderResult *rr)
 {
-  RenderLayer *rl = static_cast<RenderLayer *>(rr->layers.first);
+  RenderLayer *rl = rr->layers.first();
   RenderPass *rpass = RE_pass_find_by_name(rl, RE_PASSNAME_COMBINED, "");
   if (!rpass) {
     return;
@@ -310,7 +312,9 @@ static void render_result_to_bake(RenderEngine *engine, RenderResult *rr)
     float *bake_result = result + bake_offset * channels_num;
 
     for (int tx = 0; tx < w; tx++) {
-      if (bake_pixel->object_id == engine->bake.object_id) {
+      if (bake_pixel->object_id == engine->bake.object_id && bake_pixel->primitive_id != -1 &&
+          !bake_pixel->is_margin)
+      {
         memcpy(bake_result, pass_rect, channels_size);
       }
       pass_rect += channels_num;
@@ -398,8 +402,8 @@ void RE_engine_update_result(RenderEngine *engine, RenderResult *result)
     re_ensure_passes_allocated_thread_safe(re);
     render_result_merge(re->result, result);
     result->renlay = static_cast<RenderLayer *>(
-        result->layers.first); /* weak, draws first layer always */
-    re->display->display_update(result, nullptr);
+        result->layers.first()); /* weak, draws first layer always */
+    re->display->display_update(result);
   }
 }
 
@@ -458,8 +462,8 @@ void RE_engine_end_result(
     /* draw */
     if (!re->display->test_break()) {
       result->renlay = static_cast<RenderLayer *>(
-          result->layers.first); /* weak, draws first layer always */
-      re->display->display_update(result, nullptr);
+          result->layers.first()); /* weak, draws first layer always */
+      re->display->display_update(result);
     }
   }
 
@@ -848,10 +852,6 @@ bool RE_bake_engine(Render *re,
   RE_engine_free(engine);
   re->engine = nullptr;
 
-  if (BKE_reports_contain(re->reports, RPT_ERROR)) {
-    G.is_break = true;
-  }
-
   return true;
 }
 
@@ -866,7 +866,11 @@ static bool possibly_using_gpu_compositor(const Render *re)
   /* Note a secondary Render instance from a Render Layers node has a null pipeline scene,
    * but no compositing is performed for it so we can return false. */
   const Scene *scene = re->pipeline_scene_eval;
-  return scene && scene->compositing_node_group && (scene->r.scemode & R_DOCOMP);
+  if (!scene) {
+    return false;
+  }
+
+  return bke::compositor::is_enabled(*scene, bke::compositor::ExecutionMode::Render);
 }
 
 static void engine_render_view_layer(Render *re,
@@ -907,10 +911,10 @@ static void engine_render_view_layer(Render *re,
        * context initialization. For the non-background renders the GPU context is already
        * initialized for the Blender interface and no workaround is needed.
        *
-       * Technically it is enough to only call WM_init_gpu() here, but it expects to only be called
-       * once, and from here it is not possible to know whether GPU sub-system is initialized or
-       * not. So instead temporarily enable the render context, which will take care of the GPU
-       * context initialization.
+       * Technically it is enough to only call WM_init_gpu_offscreen() here, but it expects
+       * to only be called once, and from here it is not possible to know whether GPU
+       * sub-system is initialized or not. So instead temporarily enable the render context,
+       * which will take care of the GPU context initialization.
        *
        * For demo file and tracking progress of possible fixes on driver side refer to #120007. */
       DRW_render_context_enable(engine->re);
@@ -1021,12 +1025,15 @@ bool RE_engine_render(Render *re, bool do_all)
   /* Lock drawing in UI during data phase. */
   re->display->draw_lock();
 
-  if ((type->flag & RE_USE_GPU_CONTEXT) && !GPU_backend_supported()) {
-    /* Clear UI drawing locks. */
-    re->display->draw_unlock();
-    BKE_report(re->reports, RPT_ERROR, "Cannot initialize the GPU");
-    G.is_break = true;
-    return true;
+  if (type->flag & RE_USE_GPU_CONTEXT) {
+    WM_init_gpu_backend();
+    if (!GPU_backend_supported()) {
+      /* Clear UI drawing locks. */
+      re->display->draw_unlock();
+      BKE_report(re->reports, RPT_ERROR, "Cannot initialize the GPU");
+      G.is_break = true;
+      return true;
+    }
   }
 
   /* Create engine. */
@@ -1148,8 +1155,7 @@ bool RE_engine_render(Render *re, bool do_all)
   /* Clear tile data */
   engine->flag &= ~RE_ENGINE_RENDERING;
 
-  render_result_free_list(&engine->fullresult,
-                          static_cast<RenderResult *>(engine->fullresult.first));
+  render_result_free_list(&engine->fullresult, engine->fullresult.first());
 
   /* re->engine becomes zero if user changed active render engine during render */
   if (!engine_keep_depsgraph(engine) || !re->engine) {
@@ -1455,6 +1461,47 @@ void RE_engine_gpu_context_unlock(RenderEngine *engine)
       BLI_mutex_unlock(&engine->blender_gpu_context_mutex);
     }
   }
+}
+
+void RE_engine_view_pause_set(RenderEngine *engine, const bool pause)
+{
+  SET_FLAG_FROM_TEST(engine->flag, pause, RE_ENGINE_VIEW_PAUSED);
+}
+
+bool RE_engine_view_pause_get(const RenderEngine *engine)
+{
+  return (engine->flag & RE_ENGINE_VIEW_PAUSED) != 0;
+}
+
+void RE_engine_view_auto_pause_set(RenderEngine *engine, const bool pause)
+{
+  SET_FLAG_FROM_TEST(engine->flag, pause, RE_ENGINE_VIEW_PAUSED_AUTO);
+}
+
+bool RE_engine_view_pause_notify(RenderEngine *engine, const bContext *context)
+{
+  const bool is_paused = (engine->flag & (RE_ENGINE_VIEW_PAUSED | RE_ENGINE_VIEW_PAUSED_AUTO)) !=
+                         0;
+  const bool was_paused = (engine->flag & RE_ENGINE_VIEW_PAUSED_NOTIFIED) != 0;
+
+  if (is_paused == was_paused) {
+    return false;
+  }
+
+  SET_FLAG_FROM_TEST(engine->flag, is_paused, RE_ENGINE_VIEW_PAUSED_NOTIFIED);
+
+  if (is_paused) {
+    if (engine->type->view_pause) {
+      engine->type->view_pause(engine, context);
+    }
+  }
+  else {
+    if (engine->type->view_resume) {
+      engine->type->view_resume(engine, context);
+    }
+  }
+
+  return true;
 }
 
 /** \} */
