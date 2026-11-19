@@ -15,7 +15,7 @@
 #include "agent_ui_pane_kit.hh"
 #include "agent_ui_text.hh"
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 #include "BLT_translation.hh"
 
 namespace blender {

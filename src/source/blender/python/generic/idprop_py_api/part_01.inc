@@ -1,7 +1,4 @@
 /* SPDX-FileCopyrightText: 2023 Blender Authors
- * SPDX-License-Identifier: GPL-2.0-or-later */
-
-/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -17,7 +14,7 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_utildefines.h"
+#include "BLI_utildefines.hh"
 
 #include "idprop_py_api.hh"
 #include "idprop_py_ui_api.hh"
@@ -129,7 +126,7 @@ static PyObject *idprop_py_from_idp_idparray(ID *id, IDProperty *prop)
     PyObject *wrap = BPy_IDGroup_WrapData(id, array++, prop);
 
     /* BPy_IDGroup_MapDataToPy sets the error */
-    if (UNLIKELY(wrap == nullptr)) {
+    if (wrap == nullptr) [[unlikely]] {
       Py_DECREF(seq);
       return nullptr;
     }
@@ -424,3 +421,42 @@ static const char *idp_try_read_name(PyObject *name_obj)
   }
   return name;
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name ID-Property from Python (Internal Conversions)
+ * \{ */
+
+/**
+ * The `idp_from_Py*` functions expect that the input type has been checked before
+ * and return nullptr if the IDProperty can't be created.
+ *
+ * \param prop_exist: If not null, attempt to assign given `ob` value to this property first, and
+ * only create a new one if not possible.
+ * If no assignment (or conversion and assignment) is possible, the current
+ * value remains unchanged.
+ *
+ * \param do_conversion: If `true`, allow some 'reasonable' conversion of input value to match the
+ * `prop_exist` property type. E.g. can convert an `int` to a `float`, but not
+ * the other way around.
+ *
+ * \param can_create: Whether creating a new IDProperty is allowed.
+ *
+ * \return `prop_exist` if given and it could be assigned given `ob` value, a new IDProperty
+ *         otherwise.
+ */
+
+static IDProperty *idp_from_PyFloat(IDProperty *prop_exist,
+                                    const char *name,
+                                    PyObject *ob,
+                                    const bool do_conversion,
+                                    const bool can_create)
+{
+  IDProperty *prop = nullptr;
+  const double value = PyFloat_AsDouble(ob);
+  if (prop_exist) {
+    if (prop_exist->type == IDP_DOUBLE) {
+      IDP_double_set(prop_exist, value);
+      prop = prop_exist;
+    }

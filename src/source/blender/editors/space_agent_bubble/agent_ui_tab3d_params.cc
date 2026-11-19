@@ -36,9 +36,9 @@
 
 #include "BLF_api.hh"
 
-#include "BLI_rect.h"
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 
 #include "BLT_translation.hh"
 

@@ -465,8 +465,8 @@ msgstr "„{name}” kijelölve a moodboardon"
 msgid "Select in Scene"
 msgstr "Kijelölés a jelenetben"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "A splatvilág proxyfogantyújának kijelölése a nézetablakban"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Gyűjtemény"
@@ -474,8 +474,11 @@ msgstr "Gyűjtemény"
 msgid "That splat world is no longer in this file"
 msgstr "Ez a splatvilág már nincs ebben a fájlban"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ennek a splatvilágnak nincs proxyfogantyúja"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "„{name}” kijelölve"
@@ -6758,8 +6761,8 @@ msgstr "Nem támogatott splat fájltípus: „{ext}” (.spz vagy .ply várt)"
 msgid "File not found: {path}"
 msgstr "A fájl nem található: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Nem importálható objektum innen: {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "A kép olvasása sikertelen: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "A kártyarajzoláshoz az aktív terület rajzolási visszahívása kell"
 
@@ -29775,6 +29775,9 @@ msgstr "Saroksugár a lekerekített felületelemekhez"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Az ejtési útvonalak nem lehetnek üres karakterláncok"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Az ejtési útvonalaknak nem üres JSON-tömbnek kell lenniük"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globális területek"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Ablakszintű globális területek (felső sáv, állapotsáv). Mixar-kiterjesztés — elérhető, hogy a bevezető a felső sávot újrarajzolhassa."
 
 msgid "QA UI Dump"
 msgstr "QA felületdump"

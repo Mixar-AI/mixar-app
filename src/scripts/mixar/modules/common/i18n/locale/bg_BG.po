@@ -465,8 +465,8 @@ msgstr "Избрано е '{name}' върху мудборда"
 msgid "Select in Scene"
 msgstr "Избор в сцената"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Изберете прокси дръжката на този свят от сплат в 3D изгледа"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Колекция"
@@ -474,8 +474,11 @@ msgstr "Колекция"
 msgid "That splat world is no longer in this file"
 msgstr "Този свят от сплат вече го няма в този файл"
 
-msgid "This splat world has no proxy handle"
-msgstr "Този свят от сплат няма прокси дръжка"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Избрано е '{name}'"
@@ -6758,8 +6761,8 @@ msgstr "Неподдържан тип файл за сплат '{ext}' (очак
 msgid "File not found: {path}"
 msgstr "Файлът не е намерен: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Не са внесени обекти от {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Изображението не можа да се прочете: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Изчертаването на картата изисква обратната връзка за изчертаване на активната област"
 
@@ -29775,6 +29775,9 @@ msgstr "Радиус на ъглите за заоблени елементи н
 msgid "Mixie Chat"
 msgstr "Чат с Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Пътищата при пускане трябва да са непра
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Пътищата при пускане трябва да са непразен JSON масив"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Глобални области"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Области, глобални за прозореца (горна лента, лента за състояние). Разширение на Mixar — открито, за да може въвеждането да адресира горната лента за прерисуване."
 
 msgid "QA UI Dump"
 msgstr "Дъмп на интерфейса за QA"

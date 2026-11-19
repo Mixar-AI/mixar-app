@@ -22,8 +22,8 @@
 #include <cstdio>
 #include <cstring>
 
-#include "BLI_rect.h"
-#include "BLI_string.h"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
 
 #include "DNA_screen_types.h"
 

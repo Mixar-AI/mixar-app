@@ -15,8 +15,8 @@
 #include <cstring>
 
 #include "BLF_api.hh"
-#include "BLI_time.h"
-#include "BLI_utildefines.h"
+#include "BLI_time.hh"
+#include "BLI_utildefines.hh"
 
 #include "DNA_windowmanager_types.h"
 

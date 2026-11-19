@@ -465,8 +465,8 @@ msgstr "மூட்போர்டில் '{name}' தேர்ந்தெ�
 msgid "Select in Scene"
 msgstr "காட்சியில் தேர்ந்தெடு"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "வியூபோர்ட்டில் இந்த ஸ்பிளாட் உலகின் பதிலி கைப்பிடியைத் தேர்ந்தெடுக்கிறது"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "சேகரிப்பு"
@@ -474,8 +474,11 @@ msgstr "சேகரிப்பு"
 msgid "That splat world is no longer in this file"
 msgstr "அந்த ஸ்பிளாட் உலகம் இனி இந்தக் கோப்பில் இல்லை"
 
-msgid "This splat world has no proxy handle"
-msgstr "இந்த ஸ்பிளாட் உலகத்துக்குப் பதிலி கைப்பிடி இல்லை"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' தேர்ந்தெடுக்கப்பட்டது"
@@ -6758,8 +6761,8 @@ msgstr "ஆதரிக்கப்படாத ஸ்பிளாட் கோ�
 msgid "File not found: {path}"
 msgstr "கோப்பு இல்லை: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-இலிருந்து பொருள்கள் இறக்குமதி செய்யப்படவில்லை"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "படத்தைப் படிக்க முடியவில்லை: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "அட்டை வரைவுக்குச் செயலில் உள்ள பகுதியின் வரைவு அழைப்பு தேவை"
 
@@ -29775,6 +29775,9 @@ msgstr "வட்டமான இடைமுக உறுப்புகளு�
 msgid "Mixie Chat"
 msgstr "Mixie அரட்டை"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "இழுத்து விடும் பாதைகள் கால
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "இழுத்து விடும் பாதைகள் காலியற்ற JSON வரிசையாக இருக்க வேண்டும்"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "உலகளாவிய பகுதிகள்"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "சாளர-உலகளாவிய பகுதிகள் (மேல்பட்டை, நிலைப்பட்டை). Mixar நீட்டிப்பு — தொடக்க வழிகாட்டல் மேல்பட்டையை மீண்டும் வரைவதற்கு அணுக இது வெளிப்படுத்தப்பட்டுள்ளது."
 
 msgid "QA UI Dump"
 msgstr "QA இடைமுக வெளியீடு"

@@ -465,8 +465,8 @@ msgstr "เลือก '{name}' บนมู้ดบอร์ดแล้ว"
 msgid "Select in Scene"
 msgstr "เลือกในฉาก"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "เลือกตัวจับพร็อกซีของโลกสแปลตนี้ในวิวพอร์ต"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "คอลเลกชัน"
@@ -474,8 +474,11 @@ msgstr "คอลเลกชัน"
 msgid "That splat world is no longer in this file"
 msgstr "โลกสแปลตนั้นไม่อยู่ในไฟล์นี้แล้ว"
 
-msgid "This splat world has no proxy handle"
-msgstr "โลกสแปลตนี้ไม่มีตัวจับพร็อกซี"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "เลือก '{name}' แล้ว"
@@ -6758,8 +6761,8 @@ msgstr "ไม่รองรับไฟล์สแปลตชนิด '{ext
 msgid "File not found: {path}"
 msgstr "ไม่พบไฟล์: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "ไม่มีวัตถุที่นำเข้าจาก {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "อ่านภาพไม่สำเร็จ: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "การวาดการ์ดต้องใช้คอลแบ็กวาดของบริเวณที่ใช้งาน"
 
@@ -29775,6 +29775,9 @@ msgstr "รัศมีมุมขององค์ประกอบ UI ท�
 msgid "Mixie Chat"
 msgstr "แชต Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "เส้นทางที่วางต้องเป็นข้อ
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "เส้นทางที่วางต้องเป็นอาร์เรย์ JSON ที่ไม่ว่าง"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "พื้นที่ส่วนกลาง"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "พื้นที่ทั่วหน้าต่าง (แถบบน, แถบสถานะ) ส่วนขยายของ Mixar — เปิดให้การเริ่มต้นใช้งานสั่งวาดแถบบนใหม่ได้"
 
 msgid "QA UI Dump"
 msgstr "ดัมป์ UI ของ QA"

@@ -15,11 +15,11 @@
 #include "BKE_global.hh"
 #include "BKE_main.hh"
 
-#include "BLI_listbase.h"
-#include "BLI_string_utf8.h"
-#include "BLI_time.h"
+#include "BLI_listbase.hh"
+#include "BLI_string_utf8.hh"
+#include "BLI_time.hh"
 
-#include "BLI_timecode.h"
+#include "BLI_timecode.hh"
 #include "BLT_translation.hh"
 
 #include "ED_screen.hh"
@@ -90,7 +90,7 @@ void template_running_jobs(Layout *layout, bContext *C)
 
   /* another scene can be rendering too, for example via compositor */
   for (Scene &scene : bmain->scenes) {
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_ANY)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_ANY)) {
       cancel_fn = set_global_break;
       icon = ICON_NONE;
       owner = &scene;
@@ -99,47 +99,45 @@ void template_running_jobs(Layout *layout, bContext *C)
       continue;
     }
 
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_SEQ_BUILD_PROXY)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_SEQ_BUILD_PROXY)) {
       cancel_fn = cancel_all_scene_jobs;
       icon = ICON_SEQUENCE;
       owner = &scene;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_SEQ_BUILD_PREVIEW)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_SEQ_BUILD_PREVIEW)) {
       cancel_fn = cancel_all_scene_jobs;
       icon = ICON_SEQUENCE;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_SEQ_DRAW_THUMBNAIL)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_SEQ_DRAW_THUMBNAIL)) {
       cancel_fn = cancel_all_scene_jobs;
       icon = ICON_SEQUENCE;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_CLIP_BUILD_PROXY)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_CLIP_BUILD_PROXY)) {
       cancel_fn = cancel_all_scene_jobs;
       icon = ICON_TRACKER;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_CLIP_PREFETCH)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_CLIP_PREFETCH)) {
       cancel_fn = cancel_all_scene_jobs;
       icon = ICON_TRACKER;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_CLIP_TRACK_MARKERS)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_CLIP_TRACK_MARKERS)) {
       cancel_fn = cancel_all_scene_jobs;
       icon = ICON_TRACKER;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_CLIP_SOLVE_CAMERA)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_CLIP_SOLVE_CAMERA)) {
       cancel_fn = cancel_all_scene_jobs;
       icon = ICON_TRACKER;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_RENDER)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_RENDER)) {
       cancel_fn = [&scene](bContext &C) {
-        /* Mixar: RE_RenderFrame picks render_cancel vs render_complete from
-         * G.is_break. Stopping only the WM job leaves it unset, so a stopped
-         * render still delivers its partial pixels through render_complete. */
+        /* Render completion selects cancel vs complete from G.is_break. */
         G.is_break = true;
         WM_jobs_stop_all_from_owner(CTX_wm_manager(&C), &scene);
       };
@@ -150,13 +148,13 @@ void template_running_jobs(Layout *layout, bContext *C)
       }
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_COMPOSITE)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_COMPOSITE)) {
       cancel_fn = cancel_all_scene_jobs;
       icon = ICON_RENDERLAYERS;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_OBJECT_BAKE_TEXTURE) ||
-        WM_jobs_test(wm, &scene, WM_JOB_TYPE_OBJECT_BAKE))
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_OBJECT_BAKE_TEXTURE) ||
+        WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_OBJECT_BAKE))
     {
       /* Skip bake jobs in compositor to avoid compo header displaying progress bar
        * which is not being updated (bake jobs only need to update NC_IMAGE context). */
@@ -167,27 +165,27 @@ void template_running_jobs(Layout *layout, bContext *C)
       }
       continue;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_DPAINT_BAKE)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_DPAINT_BAKE)) {
       cancel_fn = set_global_break;
       icon = ICON_MOD_DYNAMICPAINT;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_POINTCACHE)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_POINTCACHE)) {
       cancel_fn = set_global_break;
       icon = ICON_PHYSICS;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_OBJECT_SIM_FLUID)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_OBJECT_SIM_FLUID)) {
       cancel_fn = set_global_break;
       icon = ICON_MOD_FLUIDSIM;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_OBJECT_SIM_OCEAN)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_OBJECT_SIM_OCEAN)) {
       cancel_fn = set_global_break;
       icon = ICON_MOD_OCEAN;
       break;
     }
-    if (WM_jobs_test(wm, &scene, WM_JOB_TYPE_SOUND_MIXDOWN)) {
+    if (WM_jobs_progress_test(wm, &scene, WM_JOB_TYPE_SOUND_MIXDOWN)) {
       cancel_fn = set_global_break;
       icon = ICON_FILE_SOUND;
       break;
@@ -200,9 +198,9 @@ void template_running_jobs(Layout *layout, bContext *C)
         if (area.spacetype != SPACE_FILE) {
           continue;
         }
-        const SpaceFile *sfile = static_cast<SpaceFile *>(area.spacedata.first);
+        const SpaceFile *sfile = area.spacedata.first_as<SpaceFile>();
 
-        if (WM_jobs_test(wm, sfile->files, WM_JOB_TYPE_FILESEL_READDIR)) {
+        if (WM_jobs_progress_test(wm, sfile->files, WM_JOB_TYPE_FILESEL_READDIR)) {
           icon = ICON_FILEBROWSER;
           owner = sfile->files;
           cancel_fn = [sfile](bContext &C) {
@@ -211,7 +209,7 @@ void template_running_jobs(Layout *layout, bContext *C)
           break;
         }
 
-        if (WM_jobs_test(wm, sfile->files, WM_JOB_TYPE_ASSET_LIBRARY_LOAD)) {
+        if (WM_jobs_progress_test(wm, sfile->files, WM_JOB_TYPE_ASSET_LIBRARY_LOAD)) {
           const bool needs_cancelling_online_assets =
               sfile->asset_params && asset_system::is_or_contains_remote_libraries(
                                          sfile->asset_params->asset_library_ref);
@@ -234,7 +232,7 @@ void template_running_jobs(Layout *layout, bContext *C)
 
   /* Blend file wide jobs. */
   if (owner == nullptr) {
-    if (WM_jobs_test(wm, bmain, WM_JOB_TYPE_GENERATE_TEXTURE_CACHE)) {
+    if (WM_jobs_progress_test(wm, bmain, WM_JOB_TYPE_GENERATE_TEXTURE_CACHE)) {
       owner = bmain;
       cancel_fn = set_global_break;
       icon = ICON_TEXTURE;
@@ -325,7 +323,7 @@ void template_running_jobs(Layout *layout, bContext *C)
   if (ED_screen_animation_no_scrub(wm)) {
     Button *but = uiDefIconTextBut(block,
                                    ButtonType::But,
-                                   ICON_CANCEL,
+                                   ICON_STATUS_ERROR_FILLED,
                                    IFACE_("Anim Player"),
                                    0,
                                    0,

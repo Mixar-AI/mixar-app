@@ -8,6 +8,7 @@ import re
 import time
 
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -343,7 +344,7 @@ class MReplaceMaskType(bpy.types.Operator):
     )
 
     item_name: StringProperty(name="Item")
-    item_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    item_coll: CollectionProperty(type=MPaintNamedItem)
     image_enum: EnumProperty(name="Image", items=_replace_mask_image_items)
 
     load_item: BoolProperty(default=False)

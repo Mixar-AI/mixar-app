@@ -465,8 +465,8 @@ msgstr "'{name}' diseleksi di moodboard"
 msgid "Select in Scene"
 msgstr "Seleksi di Adegan"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Menyeleksi pegangan proksi dunia splat ini di jendela tampilan"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Koleksi"
@@ -474,8 +474,11 @@ msgstr "Koleksi"
 msgid "That splat world is no longer in this file"
 msgstr "Dunia splat tersebut tidak lagi ada di berkas ini"
 
-msgid "This splat world has no proxy handle"
-msgstr "Dunia splat ini tidak memiliki pegangan proksi"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' diseleksi"
@@ -6758,8 +6761,8 @@ msgstr "Tipe berkas splat '{ext}' tidak didukung (seharusnya .spz atau .ply)"
 msgid "File not found: {path}"
 msgstr "Berkas tidak ditemukan: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Tidak ada objek yang diimpor dari {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Gagal membaca gambar: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Penggambaran kartu memerlukan callback penggambaran wilayah aktif"
 
@@ -29775,6 +29775,9 @@ msgstr "Radius sudut untuk elemen UI membulat"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Jalur yang diletakkan harus berupa string yang tidak kosong"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Jalur yang diletakkan harus berupa array JSON yang tidak kosong"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Area Global"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Area global jendela (bilah atas, bilah status). Ekstensi Mixar — diekspos agar orientasi dapat menjangkau bilah atas untuk penggambaran ulang."
 
 msgid "QA UI Dump"
 msgstr "Dump UI QA"

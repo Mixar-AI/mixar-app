@@ -23,9 +23,9 @@
 #include <cstring>
 #include <string>
 
-#include "BLI_math_color.h"
-#include "BLI_rect.h"
-#include "BLI_utildefines.h"
+#include "BLI_math_color_c.hh"
+#include "BLI_rect.hh"
+#include "BLI_utildefines.hh"
 
 #include "DNA_userdef_types.h"
 

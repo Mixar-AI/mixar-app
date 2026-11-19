@@ -465,8 +465,8 @@ msgstr "'{name}' moodboard'da seçildi"
 msgid "Select in Scene"
 msgstr "Sahnede Seç"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Bu splat dünyasının vekil tutamacını görüş alanında seçer"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Koleksiyon"
@@ -474,8 +474,11 @@ msgstr "Koleksiyon"
 msgid "That splat world is no longer in this file"
 msgstr "Bu splat dünyası artık bu dosyada değil"
 
-msgid "This splat world has no proxy handle"
-msgstr "Bu splat dünyasının vekil tutamacı yok"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' seçildi"
@@ -6758,8 +6761,8 @@ msgstr "Desteklenmeyen splat dosya türü '{ext}' (.spz veya .ply bekleniyordu)"
 msgid "File not found: {path}"
 msgstr "Dosya bulunamadı: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name} dosyasından nesne içe aktarılmadı"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Görsel okunamadı: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kart çizimi, etkin bölgenin çizim geri çağrısını gerektirir"
 
@@ -29775,6 +29775,9 @@ msgstr "Yuvarlatılmış arayüz öğelerinin köşe yarıçapı"
 msgid "Mixie Chat"
 msgstr "Mixie Sohbet"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Bırakma yolları boş olmayan dizeler olmalıdır"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Bırakma yolları boş olmayan bir JSON dizisi olmalıdır"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Genel Alanlar"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Pencere genelindeki alanlar (üst çubuk, durum çubuğu). Mixar uzantısı — başlangıç turunun üst çubuğu yeniden çizim için hedefleyebilmesi amacıyla sunulur."
 
 msgid "QA UI Dump"
 msgstr "QA Arayüz Dökümü"

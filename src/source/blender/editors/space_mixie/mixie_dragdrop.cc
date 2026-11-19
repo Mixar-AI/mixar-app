@@ -139,7 +139,7 @@ static void moodboard_image_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop
   }
   /* Handle Image ID drops */
   else if (drag->type == WM_DRAG_ID) {
-    wmDragID *drag_id = static_cast<wmDragID *>(drag->ids.first);
+    wmDragID *drag_id = drag->ids.first_as<wmDragID>();
     if (drag_id && drag_id->id && GS(drag_id->id->name) == ID_IM) {
       Image *image = reinterpret_cast<Image *>(drag_id->id);
       RNA_string_set(drop->ptr, "image_name", image->id.name + 2);

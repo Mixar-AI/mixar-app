@@ -6,6 +6,7 @@
 """Property declarations for MBakeToLayer operator."""
 
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -51,7 +52,7 @@ class BakeToLayerProperties:
     name: StringProperty(default="")
 
     uv_map: StringProperty(default="", update=update_bake_to_layer_uv_map)
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     uv_map_1: StringProperty(default="")
 
@@ -73,7 +74,7 @@ class BakeToLayerProperties:
     overwrite_current: BoolProperty(default=False)
 
     overwrite_name: StringProperty(default="")
-    overwrite_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    overwrite_coll: CollectionProperty(type=MPaintNamedItem)
 
     overwrite_image_name: StringProperty(default="")
     overwrite_segment_name: StringProperty(default="")
@@ -96,7 +97,7 @@ class BakeToLayerProperties:
         default="",
     )
 
-    cage_object_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    cage_object_coll: CollectionProperty(type=MPaintNamedItem)
 
     cage_extrusion: FloatProperty(
         name="Cage Extrusion",

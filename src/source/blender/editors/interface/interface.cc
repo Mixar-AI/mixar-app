@@ -24,16 +24,16 @@
 #include "DNA_screen_types.h"
 #include "DNA_userdef_types.h"
 
-#include "BLI_listbase.h"
-#include "BLI_rect.h"
+#include "BLI_listbase.hh"
+#include "BLI_rect.hh"
 #include "BLI_set.hh"
-#include "BLI_string.h"
-#include "BLI_string_utf8.h"
+#include "BLI_string.hh"
+#include "BLI_string_utf8.hh"
 #include "BLI_vector.hh"
 
-#include "BLI_utildefines.h"
+#include "BLI_utildefines.hh"
 
-#include "BKE_animsys.h"
+#include "BKE_animsys.hh"
 #include "BKE_context.hh"
 #include "BKE_idprop.hh"
 #include "BKE_report.hh"
@@ -75,6 +75,8 @@
 
 #include "CLG_log.h"
 
+#include "buttons/interface_label.hh"
+#include "buttons/interface_label_markdown.hh"
 #include "interface_intern.hh"
 #include "mixar/scenes_toggle.hh"
 #include "mixar/toolbar.hh"
@@ -121,7 +123,9 @@ static bool but_is_unit_radians(const Button *but)
   return but_is_unit_radians_ex(unit, unit_type);
 }
 
-/* ************* window matrix ************** */
+/* -------------------------------------------------------------------- */
+/** \name Window Matrix
+ * \{ */
 
 void block_to_region_fl(const ARegion *region, const Block *block, float *x, float *y)
 {
@@ -390,7 +394,7 @@ static void update_window_matrix(const wmWindow *window, const ARegion *region, 
 
 void region_winrct_get_no_margin(const ARegion *region, rcti *r_rect)
 {
-  Block *block = static_cast<Block *>(region->runtime->uiblocks.first);
+  Block *block = region->runtime->uiblocks.first();
   if (block && (block->flag & BLOCK_LOOP) && (block->flag & BLOCK_PIE_MENU) == 0) {
     BLI_rcti_rctf_copy_floor(r_rect, &block->rect);
     BLI_rcti_translate(r_rect, region->winrct.xmin, region->winrct.ymin);
@@ -400,7 +404,11 @@ void region_winrct_get_no_margin(const ARegion *region, rcti *r_rect)
   }
 }
 
-/* ******************* block calc ************************* */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Block Calculation
+ * \{ */
 
 void block_translate(Block *block, float x, float y)
 {
@@ -575,6 +583,25 @@ static void block_bounds_calc_popup(
 {
   const int oldbounds = block->bounds;
 
+  /* Place the default button under the cursor. */
+  if (bounds_calc == BLOCK_BOUNDS_POPUP_MOUSE) {
+    if (const Button *but = block_active_default_button_find(block)) {
+      block->bounds_offset[0] = -(but->rect.xmin + 0.8f * BLI_rctf_size_x(&but->rect));
+      block->bounds_offset[1] = -BLI_rctf_cent_y(&but->rect);
+
+      /* Mixar: the default button now sits under the cursor. When the popup is created from a
+       * left-button press (first creation only: the event state is unset while refreshing), the
+       * pending release would land on it and answer the dialog; have the handler swallow it.
+       * See #PopupBlockHandle::mixar_swallow_open_release. */
+      const wmEvent *event_state = window->runtime->eventstate;
+      if (block->handle && !block->handle->refresh && event_state &&
+          event_state->type == LEFTMOUSE && event_state->val == KM_PRESS)
+      {
+        block->handle->mixar_swallow_open_release = true;
+      }
+    }
+  }
+
   /* compute mouse position with user defined offset */
   block_bounds_calc(block);
 
@@ -694,6 +721,12 @@ void block_bounds_set_explicit(Block *block, int minx, int miny, int maxx, int m
   block->bounds_type = BLOCK_BOUNDS_NONE;
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Float Precision
+ * \{ */
+
 static float but_get_float_precision(Button *but)
 {
   if (but->type == ButtonType::Num) {
@@ -764,7 +797,11 @@ static int but_calc_float_precision(Button *but, double value)
   return calc_float_precision(prec, value);
 }
 
-/* ************** BLOCK ENDING FUNCTION ************* */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Matching from Old Block
+ * \{ */
 
 bool button_rna_equals(const Button *a, const Button *b)
 {
@@ -859,6 +896,11 @@ static bool but_equals_old(const Button *but, const Button *oldbut)
     }
   }
 
+  if (but->type == ButtonType::Label) {
+    return static_cast<const ButtonLabel *>(but)->label_type ==
+           static_cast<const ButtonLabel *>(oldbut)->label_type;
+  }
+
   return true;
 }
 
@@ -950,7 +992,7 @@ static void but_update_old_active_from_new(Button *oldbut, Button *but)
   BLI_assert(oldbut->active || oldbut->semi_modal_state);
 
   /* flags from the buttons we want to refresh, may want to add more here... */
-  const int flag_copy = BUT_REDALERT | BUT_DISABLED | UI_HAS_ICON | UI_SELECT_DRAW;
+  const int64_t flag_copy = BUT_REDALERT | BUT_DISABLED | UI_HAS_ICON | UI_SELECT_DRAW;
   const int drawflag_copy = BUT_HAS_QUICK_TOOLTIP | BUT_NO_TOOLTIP;
 
   /* still stuff needs to be copied */
@@ -963,6 +1005,7 @@ static void but_update_old_active_from_new(Button *oldbut, Button *but)
   oldbut->icon = but->icon;
   oldbut->iconadd = but->iconadd;
   oldbut->alignnr = but->alignnr;
+  oldbut->custom_data = but->custom_data;
 
   oldbut->text_direction = but->text_direction;
 
@@ -991,12 +1034,20 @@ static void but_update_old_active_from_new(Button *oldbut, Button *but)
   but_extra_icons_update_from_old_but(but, oldbut);
   std::swap(but->extra_op_icons, oldbut->extra_op_icons);
 
+  std::swap(but->icon_overlay_text, oldbut->icon_overlay_text);
+
   if (oldbut->type == ButtonType::SearchMenu) {
     ButtonSearch *search_oldbut = static_cast<ButtonSearch *>(oldbut),
                  *search_but = static_cast<ButtonSearch *>(but);
 
-    std::swap(search_oldbut->arg_free_fn, search_but->arg_free_fn);
     std::swap(search_oldbut->arg, search_but->arg);
+  }
+  if (oldbut->type == ButtonType::Label) {
+    auto *label_oldbut = static_cast<ButtonLabel *>(oldbut);
+    auto *label_but = static_cast<ButtonLabel *>(but);
+    std::swap(label_oldbut->wrap_cache, label_but->wrap_cache);
+    std::swap(label_oldbut->markdown_cache, label_but->markdown_cache);
+    std::swap(label_oldbut->max_lines, label_but->max_lines);
   }
 
   /* copy hardmin for list rows to prevent 'sticking' highlight to mouse position
@@ -1028,6 +1079,12 @@ static void but_update_old_active_from_new(Button *oldbut, Button *but)
       ButtonScrollBar *scroll_oldbut = static_cast<ButtonScrollBar *>(oldbut);
       ButtonScrollBar *scroll_but = static_cast<ButtonScrollBar *>(but);
       scroll_oldbut->visual_height = scroll_but->visual_height;
+      break;
+    }
+    case ButtonType::Image: {
+      ButtonImage *image_oldbut = static_cast<ButtonImage *>(oldbut);
+      ButtonImage *image_but = static_cast<ButtonImage *>(but);
+      std::swap(image_oldbut->key, image_but->key);
       break;
     }
     case ButtonType::ViewItem: {
@@ -1103,10 +1160,10 @@ static bool but_update_from_old_block(Block *block,
 
   /* As long as old and new buttons are aligned, avoid loop-in-loop (calling #but_find_old). */
   std::unique_ptr<Button> *oldbut_uptr;
-  if (LIKELY(but_old_idx->has_value() &&
-             /* Ignore previously matched buttons. */
-             !matched_old_buttons.contains(oldblock->buttons_ptrs[**but_old_idx].get()) &&
-             but_equals_old(but, oldblock->buttons_ptrs[**but_old_idx].get())))
+  if (but_old_idx->has_value() &&
+      /* Ignore previously matched buttons. */
+      !matched_old_buttons.contains(oldblock->buttons_ptrs[**but_old_idx].get()) &&
+      but_equals_old(but, oldblock->buttons_ptrs[**but_old_idx].get())) [[likely]]
   {
     oldbut_uptr = &oldblock->buttons_ptrs[**but_old_idx];
   }
@@ -1168,7 +1225,7 @@ static bool but_update_from_old_block(Block *block,
   }
   else {
     matched_old_buttons.add(oldbut);
-    int flag_copy = BUT_DRAG_MULTI;
+    int64_t flag_copy = BUT_DRAG_MULTI;
 
     /* Stupid special case: The active button may be inside (as in, overlapped on top) a row
      * button which we also want to keep highlighted then. */
@@ -1181,6 +1238,12 @@ static bool but_update_from_old_block(Block *block,
 
   return found_active;
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Activation & Execution
+ * \{ */
 
 bool button_active_only_ex(
     const bContext *C, ARegion *region, Block *block, Button *but, const bool remove_on_failure)
@@ -1277,12 +1340,19 @@ static bool but_is_rna_undo(const Button *but)
 
   /* No owner or type known. Assume we do not undo push as it may be a property from
    * the preferences stored outside datablocks. */
-  if (but->rnapoin.owner_id == nullptr || but->rnapoin.type == nullptr) {
+  if (!but->rnapoin.has_owner_id() || !but->rnapoin.has_type()) {
     return false;
   }
 
-  return ID_CHECK_UNDO(but->rnapoin.owner_id) && RNA_struct_undo_check(but->rnapoin.type);
+  return ID_CHECK_UNDO(but->rnapoin.owner_id) &&
+         RNA_property_undo_check(but->rnaprop, but->rnapoin.type);
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Menu Key Accelerators
+ * \{ */
 
 /* assigns automatic keybindings to menu items for fast access
  * (underline key in menu) */
@@ -1397,6 +1467,8 @@ void button_add_shortcut(Button *but, const char *shortcut_str, const bool do_st
   but->flag |= BUT_HAS_SEP_CHAR;
   button_update(but);
 }
+
+/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Find Key Shortcut for Button
@@ -1708,6 +1780,10 @@ static std::string but_pie_direction_string(const Button *but)
 
 /** \} */
 
+/* -------------------------------------------------------------------- */
+/** \name Menu Block Shortcuts
+ * \{ */
+
 static void menu_block_set_keymaps(const bContext *C, Block *block)
 {
   BLI_assert(block->flag & (BLOCK_LOOP | BLOCK_SHOW_SHORTCUT_ALWAYS));
@@ -1756,6 +1832,12 @@ static void menu_block_set_keymaps(const bContext *C, Block *block)
   }
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Library Override Flag
+ * \{ */
+
 void button_override_flag(Main *bmain, Button *but)
 {
   const eRNAOverrideStatus override_status = RNA_property_override_library_status(
@@ -1768,6 +1850,8 @@ void button_override_flag(Main *bmain, Button *but)
     but->flag &= ~BUT_OVERRIDDEN;
   }
 }
+
+/** \} */
 
 /* -------------------------------------------------------------------- */
 /** \name Button Extra Operator Icons
@@ -1989,6 +2073,10 @@ static void but_predefined_extra_operator_icons_add(Button *but)
 
 /** \} */
 
+/* -------------------------------------------------------------------- */
+/** \name Block Ending
+ * \{ */
+
 void block_update_from_old(const bContext *C, Block *block)
 {
   if (!block->oldblock) {
@@ -2054,7 +2142,7 @@ bool button_context_poll_operator_ex(bContext *C,
                                      const wmOperatorCallParams *optype_params)
 {
   bool result;
-  int old_but_flag = 0;
+  int64_t old_but_flag = 0;
 
   const bContextStore *previous_ctx = CTX_store_get(C);
   if (but) {
@@ -2094,6 +2182,20 @@ bool button_context_poll_operator(bContext *C, wmOperatorType *ot, const Button 
   return button_context_poll_operator_ex(C, but, &params);
 }
 
+void block_post_layout_callbacks_exec(const bContext *C, ARegion *region, Block *block)
+{
+  BLI_assert(region);
+  BLI_assert(block->active);
+  for (const std::function<void(const bContext &C, ui::Block &block)> &callback :
+       region->runtime->post_block_layout_fns)
+  {
+    if (!block_is_search_only(block)) {
+      callback(*C, *block);
+    }
+  }
+  block->post_block_layout_fns_pending = false;
+}
+
 void block_end_ex(const bContext *C,
                   Main *bmain,
                   wmWindow *window,
@@ -2102,7 +2204,8 @@ void block_end_ex(const bContext *C,
                   Depsgraph *depsgraph,
                   Block *block,
                   const int xy[2],
-                  int r_xy[2])
+                  int r_xy[2],
+                  bool postpone_callbacks)
 {
   BLI_assert(block->active);
 
@@ -2148,7 +2251,7 @@ void block_end_ex(const bContext *C,
   }
 
   /* handle pending stuff */
-  if (block->layouts.first) {
+  if (block->layouts.first_) {
     block_layout_resolve(block);
   }
   block_align_calc(block, region);
@@ -2209,9 +2312,19 @@ void block_end_ex(const bContext *C,
   mixar_scenes_toggle_layout(region, block);
 
   block->endblock = true;
+  if (!postpone_callbacks) {
+    /* Post layout callbacks are stored in region data, skip blocks created without a region (like
+     * the `F3` search menu).  */
+    if (region) {
+      block_post_layout_callbacks_exec(C, region, block);
+    }
+  }
+  else {
+    block->post_block_layout_fns_pending = true;
+  }
 }
 
-void block_end(const bContext *C, Block *block)
+void block_end(const bContext *C, Block *block, bool postpone_callbacks)
 {
   wmWindow *window = CTX_wm_window(C);
 
@@ -2223,10 +2336,15 @@ void block_end(const bContext *C, Block *block)
                CTX_data_depsgraph_pointer(C),
                block,
                window->runtime->eventstate->xy,
-               nullptr);
+               nullptr,
+               postpone_callbacks);
 }
 
-/* ************** BLOCK DRAWING FUNCTION ************* */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Block Drawing
+ * \{ */
 
 void fontscale(float *points, float aspect)
 {
@@ -2372,6 +2490,12 @@ void block_draw(const bContext *C, Block *block)
   GPU_matrix_pop();
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Message Bus Subscription
+ * \{ */
+
 static void block_message_subscribe(ARegion *region, wmMsgBus *mbus, Block *block)
 {
   Button *but_prev = nullptr;
@@ -2403,7 +2527,11 @@ void region_message_subscribe(ARegion *region, wmMsgBus *mbus)
   }
 }
 
-/* ************* EVENTS ************* */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Pushed State
+ * \{ */
 
 int button_is_pushed_ex(Button *but, double *value)
 {
@@ -2520,7 +2648,11 @@ static void but_update_select_flag(Button *but, double *value)
   }
 }
 
-/* ************************************************ */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Block Lock
+ * \{ */
 
 void block_lock_set(Block *block, bool val, const char *lockstr)
 {
@@ -2536,9 +2668,14 @@ void block_lock_clear(Block *block)
   block->lockstr = nullptr;
 }
 
-/* *********************** data get/set ***********************
- * this either works with the pointed to data, or can work with
- * an edit override pointer while dragging for example */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Data Get/Set
+ *
+ * This either works with the pointed to data, or can work with
+ * an edit override pointer while dragging for example.
+ * \{ */
 
 void button_v3_get(Button *but, float vec[3])
 {
@@ -2755,11 +2892,6 @@ bool button_is_compatible(const Button *but_a, const Button *but_b)
   }
 
   if (but_a->rnaprop) {
-    /* skip 'rnapoin.data', 'rnapoin.owner_id'
-     * allow different data to have the same props edited at once */
-    if (but_a->rnapoin.type != but_b->rnapoin.type) {
-      return false;
-    }
     if (RNA_property_type(but_a->rnaprop) != RNA_property_type(but_b->rnaprop)) {
       return false;
     }
@@ -2789,7 +2921,7 @@ bool button_supports_cycling(const Button *but)
                ButtonType::ListBox) ||
           (but->type == ButtonType::Menu && button_menu_step_poll(but)) ||
           (but->type == ButtonType::Color &&
-           (static_cast<ButtonColor *>(const_cast<Button *>(but)))->is_pallete_color) ||
+           (static_cast<ButtonColor *>(const_cast<Button *>(but)))->is_palette_color) ||
           (but->menu_step_func != nullptr));
 }
 
@@ -2800,7 +2932,7 @@ double button_value_get(Button *but)
   if (but->editval) {
     return *(but->editval);
   }
-  if (but->poin == nullptr && but->rnapoin.data == nullptr) {
+  if (but->poin == nullptr && !but->rnapoin) {
     return 0.0;
   }
 
@@ -3311,7 +3443,7 @@ char *button_string_get_dynamic(Button *but, int *r_str_size)
     BLI_assert(0);
   }
 
-  if (UNLIKELY(str == nullptr)) {
+  if (str == nullptr) [[unlikely]] {
     /* should never happen, paranoid check */
     *r_str_size = 1;
     str = BLI_strdup("");
@@ -3426,7 +3558,7 @@ bool button_string_eval_number(bContext *C, const Button *but, const char *str, 
 
 bool button_string_set(bContext *C, Button *but, const char *str)
 {
-  if (but->rnaprop && but->rnapoin.data &&
+  if (but->rnaprop && but->rnapoin &&
       ELEM(but->type, ButtonType::Text, ButtonType::TextBox, ButtonType::SearchMenu))
   {
     if (RNA_property_editable(&but->rnapoin, but->rnaprop)) {
@@ -3448,7 +3580,7 @@ bool button_string_set(bContext *C, Button *but, const char *str)
 
       if (type == PROP_POINTER) {
         if (str[0] == '\0') {
-          RNA_property_pointer_set(&but->rnapoin, but->rnaprop, PointerRNA_NULL, nullptr);
+          RNA_property_pointer_set(&but->rnapoin, but->rnaprop, {}, nullptr);
           return true;
         }
 
@@ -3729,7 +3861,11 @@ void button_range_set_soft(Button *but)
   }
 }
 
-/* ******************* Free ******************* */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button & Block Free
+ * \{ */
 
 /**
  * Free data specific to a certain button type.
@@ -3743,10 +3879,6 @@ static void but_free_type_specific(Button *but)
       ButtonSearch *search_but = static_cast<ButtonSearch *>(but);
       MEM_SAFE_DELETE(search_but->item_active_str);
 
-      if (search_but->arg_free_fn) {
-        search_but->arg_free_fn(search_but->arg);
-        search_but->arg = nullptr;
-      }
       break;
     }
     default:
@@ -3841,6 +3973,8 @@ void block_set_active_operator(Block *block, wmOperator *op, const bool free)
 
 void block_free(const bContext *C, Block *block)
 {
+  BLI_assert(!block->post_block_layout_fns_pending);
+
   butstore_clear(block);
 
   for (Button &but : block->buttons()) {
@@ -3866,6 +4000,12 @@ void block_free(const bContext *C, Block *block)
 
   MEM_delete(block);
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Block List
+ * \{ */
 
 void block_listen(const Block *block, const wmRegionListenerParams *listener_params)
 {
@@ -3952,6 +4092,12 @@ void blocklist_free_inactive(const bContext *C, ARegion *region)
     }
   }
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Block Begin
+ * \{ */
 
 void block_region_set(Block *block, ARegion *region)
 {
@@ -4066,6 +4212,12 @@ void block_set_search_only(Block *block, bool search_only)
 {
   SET_FLAG_FROM_TEST(block->flag, search_only, BLOCK_SEARCH_ONLY);
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Update
+ * \{ */
 
 static void but_build_drawstr_float(Button *but, double value)
 {
@@ -4342,6 +4494,12 @@ void block_cm_to_display_space_v3(Block *block, float pixel[3])
   IMB_colormanagement_scene_linear_to_display_v3(pixel, display);
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Definition
+ * \{ */
+
 /**
  * Factory function: Allocate button and set #Button.type.
  */
@@ -4403,6 +4561,9 @@ static std::unique_ptr<Button> but_new(const ButtonType type)
       break;
     case ButtonType::Scroll:
       but = std::make_unique<ButtonScrollBar>();
+      break;
+    case ButtonType::Image:
+      but = std::make_unique<ButtonImage>();
       break;
     case ButtonType::Menu:
       ATTR_FALLTHROUGH;
@@ -4578,7 +4739,7 @@ static Button *def_but(Block *block,
   return but;
 }
 
-void def_but_icon(Button *but, const int icon, const int flag)
+void def_but_icon(Button *but, const int icon, const int64_t flag)
 {
   if (icon) {
     icon_ensure_deferred(
@@ -4691,8 +4852,7 @@ static void def_but_rna__menu(bContext *C, Layout *layout, void *but_p)
     rows = totitems;
   }
 
-  const char *title = RNA_property_ui_name(
-      but->rnaprop, RNA_pointer_is_null(&but->rnapoin) ? nullptr : &but->rnapoin);
+  const char *title = RNA_property_ui_name(but->rnaprop, but->rnapoin ? &but->rnapoin : nullptr);
 
   /* Is there a non-blank label before this button on the same row? */
   Button *but_prev = but->block->prev_but(but);
@@ -5083,7 +5243,7 @@ static Button *def_but_rna(Block *block,
   }
 
   const char *info;
-  if (but->rnapoin.data && !RNA_property_editable_info(&but->rnapoin, prop, &info)) {
+  if (but->rnapoin && !RNA_property_editable_info(&but->rnapoin, prop, &info)) {
     button_disable(but, info);
   }
 
@@ -5091,7 +5251,7 @@ static Button *def_but_rna(Block *block,
     /* If the button shows an ID, automatically set it as focused in context so operators can
      * access it. */
     const PointerRNA pptr = RNA_property_pointer_get(ptr, prop);
-    if (pptr.data && RNA_struct_is_ID(pptr.type)) {
+    if (pptr && RNA_struct_is_ID(pptr.type)) {
       but->context = CTX_store_add(block->contexts, "id", &pptr);
     }
   }
@@ -5171,7 +5331,6 @@ static Button *def_but_operator_ptr(Block *block,
   if (but) {
     but->tip_explicit = tip_explicit;
   }
-  button_retval_set(but, -1);
   button_operator_set(but, ot, opcontext);
 
   /* Enable quick tooltip label if this is a tool button without a label. */
@@ -5185,6 +5344,12 @@ static Button *def_but_operator_ptr(Block *block,
 
   return but;
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Definition Wrappers
+ * \{ */
 
 Button *uiDefBut(Block *block,
                  ButtonTypeWithPointerType but_and_ptr_type,
@@ -5231,7 +5396,7 @@ Button *uiDefButAlert(Block *block, AlertIcon icon, int x, int y, short width, s
       theme::get_color_4ubv(TH_ERROR, color);
       return uiDefButImage(block, ibuf, x, y, ibuf->x, ibuf->y, color);
     }
-    bTheme *btheme = theme::theme_get();
+    const bTheme *btheme = theme::theme_get();
     return uiDefButImage(block, ibuf, x, y, ibuf->x, ibuf->y, btheme->tui.wcol_menu_back.text);
   }
   return nullptr;
@@ -5247,7 +5412,12 @@ void button_retval_set(Button *but, int retval)
   but->retval = retval;
 }
 
-/* Auto-complete helper functions. */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Auto-Complete
+ * \{ */
+
 struct AutoComplete {
   size_t maxncpy;
   int matches;
@@ -5272,9 +5442,12 @@ void autocomplete_update_name(AutoComplete *autocpl, const StringRef name)
 {
   char *truncate = autocpl->truncate;
   const char *startname = autocpl->startname;
+  const int len_max = int(autocpl->maxncpy) - 1;
   int match_index = 0;
-  for (int a = 0; a < std::min<size_t>(name.size(), autocpl->maxncpy) - 1; a++) {
-    if (startname[a] == 0 || startname[a] != name[a]) {
+  for (int a = 0; a < len_max; a++) {
+    /* Past the end of `name`, compare with its null terminator. */
+    const char c = (a < name.size()) ? name[a] : '\0';
+    if (startname[a] == 0 || startname[a] != c) {
       match_index = a;
       break;
     }
@@ -5289,8 +5462,8 @@ void autocomplete_update_name(AutoComplete *autocpl, const StringRef name)
     }
     else {
       /* remove from truncate what is not in bone->name */
-      for (int a = 0; a < std::min<size_t>(name.size(), autocpl->maxncpy) - 1; a++) {
-        if (name[a] == 0) {
+      for (int a = 0; a < len_max; a++) {
+        if (a == name.size()) {
           truncate[a] = 0;
           break;
         }
@@ -5325,6 +5498,12 @@ int autocomplete_end(AutoComplete *autocpl, char *autoname)
   return match;
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Preview Tiles
+ * \{ */
+
 #define PREVIEW_TILE_PAD (0.225f * UI_UNIT_X)
 
 int preview_tile_size_x(const int size_px)
@@ -5349,6 +5528,12 @@ int preview_tile_size_y_no_label(const int size_px)
 }
 
 #undef PREVIEW_TILE_PAD
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name RNA & Operator Button Wrappers
+ * \{ */
 
 static void but_update_and_icon_set(Button *but, int icon)
 {
@@ -5654,16 +5839,18 @@ void button_operator_set_never_call(Button *but)
   but->operator_never_call = true;
 }
 
-/* END Button containing both string label and icon */
+/** \} */
 
-/* cruft to make Block and Button private */
+/* -------------------------------------------------------------------- */
+/** \name Block & Button Flags
+ * \{ */
 
 int blocklist_min_y_get(ListBaseT<Block> *lb)
 {
   int min = 0;
 
   for (Block &block : *lb) {
-    if (&block == lb->first || block.rect.ymin < min) {
+    if (&block == lb->first_ || block.rect.ymin < min) {
       min = block.rect.ymin;
     }
   }
@@ -5686,22 +5873,17 @@ void block_flag_disable(Block *block, int flag)
   block->flag &= ~flag;
 }
 
-void button_flag_enable(Button *but, int flag)
+void button_flag_enable(Button *but, int64_t flag)
 {
   but->flag |= flag;
 }
 
-void button_flag2_enable(Button *but, int flag)
-{
-  but->flag2 |= flag;
-}
-
-void button_flag_disable(Button *but, int flag)
+void button_flag_disable(Button *but, int64_t flag)
 {
   but->flag &= ~flag;
 }
 
-bool button_flag_is_set(Button *but, int flag)
+bool button_flag_is_set(Button *but, int64_t flag)
 {
   return (but->flag & flag) != 0;
 }
@@ -5788,12 +5970,6 @@ const char *button_placeholder_get(Button *but)
   return placeholder;
 }
 
-void button_clear_selection(Button *but)
-{
-  but->selsta = 0;
-  but->selend = 0;
-}
-
 void button_type_set_menu_from_pulldown(Button *but)
 {
   BLI_assert(but->type == ButtonType::Pulldown);
@@ -5828,6 +6004,12 @@ PointerRNA *button_operator_ptr_ensure(Button *but)
   }
   return but->opptr;
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Context & Callbacks
+ * \{ */
 
 void button_context_ptr_set(Block *block, Button *but, const StringRef name, const PointerRNA *ptr)
 {
@@ -6045,6 +6227,12 @@ void button_func_pushed_state_set(Button *but, std::function<bool(const Button &
   button_update(but);
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Menu & Block Buttons
+ * \{ */
+
 Button *uiDefBlockBut(Block *block,
                       BlockCreateFunc func,
                       void *arg,
@@ -6169,6 +6357,12 @@ Button *uiDefIconBlockBut(Block *block,
   return but;
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Search Buttons
+ * \{ */
+
 Button *uiDefSearchBut(Block *block,
                        void *arg,
                        int icon,
@@ -6210,17 +6404,18 @@ void button_func_search_set(Button *but,
     search_create_fn = searchbox_create_generic;
   }
 
-  if (search_but->arg_free_fn != nullptr) {
-    search_but->arg_free_fn(search_but->arg);
-    search_but->arg = nullptr;
-  }
-
   search_but->popup_create_fn = search_create_fn;
   search_but->items_update_fn = search_update_fn;
   search_but->item_active = active;
 
-  search_but->arg = arg;
-  search_but->arg_free_fn = search_arg_free_fn;
+  if (free_arg && !search_arg_free_fn) {
+    search_arg_free_fn = MEM_delete_void;
+  }
+  search_but->arg = std::shared_ptr<void>(
+      arg,
+      search_arg_free_fn ?
+          search_arg_free_fn :
+          [](void *) { /* Pointer does not need freeing, do nothing in the deleter callback. */ });
 
   if (search_exec_fn) {
 #ifndef NDEBUG
@@ -6232,10 +6427,15 @@ void button_func_search_set(Button *but,
 #endif
     /* Handling will pass the active item as arg2 later, so keep it nullptr here. */
     if (free_arg) {
-      button_funcN_set(but, search_exec_fn, search_but->arg, nullptr);
+      /* XXX This is only done so `but_equals_old()` can recognize this button over redraws,
+       * otherwise interaction breaks entirely. Unlike #button_funcN_set(), #button_func_set() sets
+       * arg1, which takes part in the comparison, so the pointer needs to be stable over redraws.
+       * #button_funcN_set() doesn't set it, but takes ownership of the memory and frees it later.
+       * So give it a duplicate of the memory. */
+      button_funcN_set(but, search_exec_fn, MEM_dupalloc_void(search_but->arg.get()), nullptr);
     }
     else {
-      button_func_set(but, search_exec_fn, search_but->arg, nullptr);
+      button_func_set(but, search_exec_fn, search_but->arg.get(), nullptr);
     }
   }
 
@@ -6388,6 +6588,12 @@ Button *uiDefSearchButO_ptr(Block *block,
   return but;
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Property Setters
+ * \{ */
+
 void button_hint_drawstr_set(Button *but, const char *string)
 {
   button_add_shortcut(but, string, false);
@@ -6525,6 +6731,12 @@ void button_func_hold_set(Button *but, ButtonHandleHoldFunc func, void *argN)
   but->hold_argN = argN;
 }
 
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button String Access
+ * \{ */
+
 std::optional<EnumPropertyItem> button_rna_enum_item_get(bContext &C, Button &but)
 {
   PointerRNA *ptr = nullptr;
@@ -6577,7 +6789,7 @@ std::string button_string_get_rna_property_identifier(const Button &but)
 
 std::string button_string_get_rna_struct_identifier(const Button &but)
 {
-  if (but.rnaprop && but.rnapoin.data) {
+  if (but.rnaprop && but.rnapoin) {
     return RNA_struct_identifier(but.rnapoin.type);
   }
   if (but.optype) {
@@ -6759,7 +6971,11 @@ std::string button_extra_icon_string_get_operator_keymap(const bContext &C,
   return but_extra_icon_event_operator_string(&C, &extra_icon).value_or("");
 }
 
-/* Program Init/Exit */
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Init / Exit
+ * \{ */
 
 void init()
 {
@@ -6783,7 +6999,7 @@ void update_text_styles()
     return;
   }
 
-  uiStyle *style = static_cast<uiStyle *>(U.uistyles.first);
+  uiStyle *style = U.uistyles.first();
   const int weight = BLF_default_weight(0);
   style->paneltitle.character_weight = weight;
   style->grouplabel.character_weight = weight;
@@ -6804,6 +7020,12 @@ void interface_tag_script_reload()
 {
   interface_tag_script_reload_queries();
 }
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Button Utilities
+ * \{ */
 
 int button_text_padding(const Button *button)
 {
@@ -6841,5 +7063,7 @@ std::string button_get_link(const Button *button, bContext *C)
   return "";
 #endif
 }
+
+/** \} */
 
 }  // namespace blender::ui

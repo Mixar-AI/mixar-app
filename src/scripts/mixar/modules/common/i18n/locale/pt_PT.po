@@ -465,8 +465,8 @@ msgstr "'{name}' selecionado no moodboard"
 msgid "Select in Scene"
 msgstr "Selecionar na cena"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Seleciona a pega proxy deste mundo de splats na porta de visão"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Coleção"
@@ -474,8 +474,11 @@ msgstr "Coleção"
 msgid "That splat world is no longer in this file"
 msgstr "Esse mundo de splats já não está neste ficheiro"
 
-msgid "This splat world has no proxy handle"
-msgstr "Este mundo de splats não tem pega proxy"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' selecionado"
@@ -6758,8 +6761,8 @@ msgstr "Tipo de ficheiro de splat não suportado '{ext}' (esperado .spz ou .ply)
 msgid "File not found: {path}"
 msgstr "Ficheiro não encontrado: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Nenhum objeto importado de {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Falha ao ler a imagem: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "O desenho de cartões requer a callback de desenho da região ativa"
 
@@ -29775,6 +29775,9 @@ msgstr "Raio dos cantos dos elementos arredondados da interface"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Os caminhos a largar têm de ser cadeias de texto não vazias"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Os caminhos a largar têm de ser uma matriz JSON não vazia"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Áreas globais"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Áreas globais da janela (barra superior, barra de estado). Extensão do Mixar — exposta para que a introdução possa aceder à barra superior para a redesenhar."
 
 msgid "QA UI Dump"
 msgstr "Despejo da interface para QA"

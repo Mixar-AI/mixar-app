@@ -465,8 +465,8 @@ msgstr "Elektis '{name}' sur la inspirtabulo"
 msgid "Select in Scene"
 msgstr "Elektu en sceno"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Elektas la anstataŭan tenilon de ĉi tiu splata mondo en la vidujo"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekto"
@@ -474,8 +474,11 @@ msgstr "Kolekto"
 msgid "That splat world is no longer in this file"
 msgstr "Tiu splata mondo ne plu estas en ĉi tiu dosiero"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ĉi tiu splata mondo ne havas anstataŭan tenilon"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Elektis '{name}'"
@@ -6758,8 +6761,8 @@ msgstr "Nesubtenata tipo de splata dosiero '{ext}' (atenditaj .spz aŭ .ply)"
 msgid "File not found: {path}"
 msgstr "Dosiero ne trovita: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Neniuj objektoj importitaj el {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Malsukcesis legi bildon: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Desegnado de karto postulas la desegnan revokon de la aktiva regiono"
 
@@ -29775,6 +29775,9 @@ msgstr "Angula radiuso por rondigitaj UI-elementoj"
 msgid "Mixie Chat"
 msgstr "Babilo de Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Demetaj vojoj devas esti nemalplenaj ĉenoj"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Demetaj vojoj devas esti nemalplena JSON-tabelo"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Ĝeneralaj areoj"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Fenestro-ĝeneralaj areoj (supra breto, stata breto). Etendo de Mixar — elmetita por ke la enkonduko povu alparoli la supran breton por redesegnado."
 
 msgid "QA UI Dump"
 msgstr "QA-UI-elŝuto"

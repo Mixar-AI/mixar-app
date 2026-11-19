@@ -9,8 +9,8 @@
  * Mixar-specific versioning code for handling space and region updates.
  */
 
-#include "BLI_listbase.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_blender_version.h"
 #include "BKE_main.hh"
@@ -39,7 +39,9 @@ void blo_do_versions_mixar(Main *bmain)
 
           /* Remap old Mixar space type values (24-31) to new range (100-107).
            * The enum values were moved to avoid collisions with upstream Blender. */
-          switch (sl->spacetype) {
+          /* Blender 5.3 uses 24 for its Project editor. Only older files can
+           * contain Mixar's legacy editor IDs in that range. */
+          switch (bmain->versionfile < 503 ? sl->spacetype : SPACE_EMPTY) {
             case 24: sl->spacetype = SPACE_MIXIE; break;
             case 25: sl->spacetype = SPACE_MIXAR_LAYERS; break;
             case 26: sl->spacetype = SPACE_MIXAR_PROPERTIES; break;
@@ -53,7 +55,7 @@ void blo_do_versions_mixar(Main *bmain)
 
           /* Add TOOLS region to MIXIE spaces (ensures toolbar region exists). */
           if (sl->spacetype == SPACE_MIXIE) {
-            ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+            ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first()) ? &area->regionbase :
                                                                    &sl->regionbase;
             if (ARegion *new_tools = do_versions_add_region_if_not_found(
                     regionbase, RGN_TYPE_TOOLS, "tools region", RGN_TYPE_UI))
@@ -85,7 +87,7 @@ void blo_do_versions_mixar(Main *bmain)
             continue;
           }
 
-          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first()) ? &area->regionbase :
                                                                  &sl->regionbase;
           ARegion *new_header = do_versions_add_region_if_not_found(
               regionbase, RGN_TYPE_HEADER, "header for texturing space", RGN_TYPE_WINDOW);
@@ -118,7 +120,7 @@ void blo_do_versions_mixar(Main *bmain)
           if (sl->spacetype != SPACE_VIEW3D) {
             continue;
           }
-          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first()) ? &area->regionbase :
                                                                  &sl->regionbase;
           if (ARegion *strip = do_versions_add_region_if_not_found(
                   regionbase, RGN_TYPE_EXECUTE, "agent scene strip region",
@@ -147,7 +149,7 @@ void blo_do_versions_mixar(Main *bmain)
           if (sl->spacetype != SPACE_VIEW3D) {
             continue;
           }
-          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first) ? &area->regionbase :
+          ListBaseT<ARegion> *regionbase = (sl == area->spacedata.first()) ? &area->regionbase :
                                                                            &sl->regionbase;
           for (ARegion &region_iter : *regionbase) {
             ARegion *region = &region_iter;
@@ -160,6 +162,32 @@ void blo_do_versions_mixar(Main *bmain)
             region->sizex = 0;
             region->sizey = 0;
           }
+        }
+      }
+    }
+  }
+
+  /* Blender 5.3 claims context 20 for the compositor. Preserve the Layers
+   * selection and filter from older files at its new context, 21. */
+  if (!MAIN_MIXAR_VERSION_FILE_ATLEAST(bmain, 100, 5) && bmain->versionfile < 503) {
+    for (bScreen &screen : bmain->screens) {
+      for (ScrArea &area : screen.areabase) {
+        for (SpaceLink &sl : area.spacedata) {
+          if (sl.spacetype != SPACE_PROPERTIES) {
+            continue;
+          }
+          SpaceProperties &space = *reinterpret_cast<SpaceProperties *>(&sl);
+          for (eSpaceButtons_Context *context : {&space.mainb, &space.mainbo, &space.mainbuser}) {
+            if (int(*context) == 20) {
+              *context = BCONTEXT_LAYERS;
+            }
+          }
+          const bool layers_visible = (space.visible_tabs & (1u << 20)) != 0;
+          space.visible_tabs &= ~(1u << BCONTEXT_LAYERS);
+          if (layers_visible) {
+            space.visible_tabs |= (1u << BCONTEXT_LAYERS);
+          }
+          space.visible_tabs |= (1u << BCONTEXT_COMPOSITOR);
         }
       }
     }

@@ -1,11 +1,20 @@
 # SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Execute the production cache sweep against checked graph/iterator doubles.
+"""Execute the shipped cache sweep against checked graph/iterator doubles.
+
+`DRW_cache_free_old_batches` must skip a depsgraph that is not fully evaluated
+(mixar-backend#2027): a scene no window shows keeps a stale graph after a delete
+and the object iterator read its freed `id_orig`. Blender 5.3 carries that guard
+itself (upstream a3889bb09e4, "Fix #163701: crash during viewport garbage
+collector"), so Mixar ships upstream's `draw_context.cc` with no overlay. The
+sweep that ships is compiled here; the control is the same function with the
+guard removed, which is the code Blender 5.2 shipped.
 
 Dirty graphs deliberately reject iteration before any object is dereferenced.
 This is a control-flow regression, not a native lifetime or GPU integration test.
 """
 from pathlib import Path
+import re
 import shutil
 import subprocess
 
@@ -14,10 +23,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 REL = Path('source/blender/draw/intern/draw_context.cc')
 QUERY_REL = Path('source/blender/depsgraph/intern/depsgraph_query.cc')
+OVERLAY = ROOT / 'src' / REL
 # A linked worktree (`<checkout>/.worktrees/<name>`) has no submodule checkout of
 # its own; read the main checkout's, as `settings.sh` does.
 UPSTREAM_ROOTS = (ROOT / 'upstream', ROOT.parents[1] / 'upstream')
-MIXAR_SPDX = ' * SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited\n'
+SIGNATURE = 'void DRW_cache_free_old_batches('
+GUARD = re.compile(
+    r'[ \t]*if \(!DEG_is_fully_evaluated\(depsgraph\)\) \{\n[ \t]*continue;\n[ \t]*\}\n')
 
 
 def upstream(rel):
@@ -32,13 +44,24 @@ def function(text, signature):
     return text[start:text.index('\n}', start) + 2]
 
 
+def shipped_sweep():
+    """The sweep the build compiles: `src/` is overlaid on top of upstream."""
+    text = OVERLAY.read_text() if OVERLAY.exists() else upstream(REL)
+    return function(text, SIGNATURE)
+
+
+def unguarded_sweep():
+    sweep, removed = GUARD.subn('', function(upstream(REL), SIGNATURE))
+    assert removed == 1, 'the control needs exactly one readiness guard to remove'
+    return sweep
+
+
 @pytest.mark.parametrize('unfixed', [False, True], ids=['fixed', 'unfixed-control'])
 def test_sweep_defers_dirty_graphs(tmp_path, unfixed):
     compiler = shutil.which('c++')
     if not compiler:
         pytest.skip('C++ compiler required')
-    sweep = function(upstream(REL) if unfixed else (ROOT / 'src' / REL).read_text(),
-                     'void DRW_cache_free_old_batches(')
+    sweep = unguarded_sweep() if unfixed else shipped_sweep()
     query = function(upstream(QUERY_REL), 'bool DEG_is_fully_evaluated(')
     program = r'''
 #include <cassert>
@@ -51,7 +74,8 @@ using Depsgraph = deg::Depsgraph;
 struct Object {};
 struct ViewLayer { Depsgraph *graph; };
 struct Scene { struct { void *next = nullptr; } id; std::vector<ViewLayer> view_layers; };
-struct Main { struct { void *first; } scenes; };
+struct SceneList { Scene *head; Scene *first() const { return head; } };
+struct Main { SceneList scenes; };
 struct { int vbotimeout = 1, vbocollectrate = 1; } U;
 static int now = 100, freed = 0;
 double BLI_time_now_seconds() { return now; }
@@ -96,14 +120,25 @@ int main() {
     source = tmp_path / 'sweep.cc'
     source.write_text(program)
     binary = tmp_path / 'sweep'
-    subprocess.run([compiler, '-std=c++17', str(source), '-o', str(binary)], check=True,
-                   capture_output=True, text=True)
+    built = subprocess.run([compiler, '-std=c++17', str(source), '-o', str(binary)],
+                           capture_output=True, text=True)
+    assert built.returncode == 0, built.stderr
     result = subprocess.run([str(binary)], capture_output=True, text=True)
     assert result.returncode == (86 if unfixed else 0), result.stderr
 
 
-def test_overlay_only_changes_collection_guard():
-    base = upstream(REL)
-    overlay = (ROOT / 'src' / REL).read_text().replace(MIXAR_SPDX, '', 1)
-    signature = 'void DRW_cache_free_old_batches('
-    assert overlay.replace(function(overlay, signature), function(base, signature)) == base
+def test_upstream_guard_ships_without_an_overlay():
+    """The pin owns the guard, so a whole-file overlay would only shadow upstream."""
+    sweep = function(upstream(REL), SIGNATURE)
+    guard = GUARD.search(sweep)
+    if guard is None:
+        pytest.fail(
+            'upstream DRW_cache_free_old_batches no longer skips depsgraphs that are not '
+            'fully evaluated (mixar-backend#2027): restore the guard in a fenced '
+            'draw_context.cc overlay',
+            pytrace=False,
+        )
+    assert guard.start() < sweep.index('DEG_OBJECT_ITER_BEGIN')
+    assert not OVERLAY.exists(), (
+        'src/source/blender/draw/intern/draw_context.cc shadows upstream, which already '
+        'skips dirty depsgraphs: delete the overlay')

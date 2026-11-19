@@ -566,9 +566,8 @@ msgstr "Izabrano je „{name}“ na mudbordu"
 msgid "Select in Scene"
 msgstr "Izaberi u sceni"
 
-# derived
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Bira pomoćnu ručku ovog sveta splata u prikazu"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 # derived
 msgid "Collection"
@@ -578,9 +577,11 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "Taj svet splata više nije u ovoj datoteci"
 
-# derived
-msgid "This splat world has no proxy handle"
-msgstr "Ovaj svet splata nema pomoćnu ručku"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 # derived
 msgid "Selected '{name}'"
@@ -8378,9 +8379,8 @@ msgstr "Nepodržana vrsta datoteke splata „{ext}“ (očekuje se .spz ili .ply
 msgid "File not found: {path}"
 msgstr "Datoteka nije pronađena: {path}"
 
-# derived
-msgid "No objects imported from {name}"
-msgstr "Nijedan objekat nije uvezen iz {name}"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 # derived
 msgid "Failed to read image: {error}"
@@ -36051,9 +36051,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 # derived
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Crtanje kartice zahteva povratni poziv crtanja aktivnog regiona"
@@ -37690,6 +37687,9 @@ msgstr "Poluprečnik ugla zaobljenih elemenata interfejsa"
 msgid "Mixie Chat"
 msgstr "Mixie čet"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -37704,20 +37704,6 @@ msgstr "Putanje otpuštanja moraju biti neprazni nizovi"
 # derived
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Putanje otpuštanja moraju biti neprazan JSON niz"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-# derived
-msgid "Global Areas"
-msgstr "Globalne oblasti"
-
-# derived
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Oblasti globalne za prozor (gornja traka, statusna traka). Proširenje Mixar — izloženo da uvođenje može da adresira gornju traku za ponovno crtanje."
 
 # derived
 msgid "QA UI Dump"

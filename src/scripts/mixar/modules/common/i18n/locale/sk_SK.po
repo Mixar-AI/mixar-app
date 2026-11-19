@@ -465,8 +465,8 @@ msgstr "Na moodboarde je vybrané „{name}“"
 msgid "Select in Scene"
 msgstr "Vybrať v scéne"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Vyberie zástupný úchyt tohto splatového sveta v zábere"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekcia"
@@ -474,8 +474,11 @@ msgstr "Kolekcia"
 msgid "That splat world is no longer in this file"
 msgstr "Tento splatový svet už nie je v tomto súbore"
 
-msgid "This splat world has no proxy handle"
-msgstr "Tento splatový svet nemá zástupný úchyt"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Vybrané „{name}“"
@@ -6758,8 +6761,8 @@ msgstr "Nepodporovaný typ súboru splatu '{ext}' (očakáva sa .spz alebo .ply)
 msgid "File not found: {path}"
 msgstr "Súbor sa nenašiel: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Z {name} sa neimportovali žiadne objekty"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Čítanie obrázka zlyhalo: {error}"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kreslenie karty vyžaduje funkciu spätného volania kreslenia aktívnej oblasti"
 
@@ -29775,6 +29775,9 @@ msgstr "Polomer rohov zaoblených prvkov rozhrania"
 msgid "Mixie Chat"
 msgstr "Chat Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "Cesty pustenia musia byť neprázdne reťazce"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Cesty pustenia musia byť neprázdnym poľom JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globálne oblasti"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Oblasti globálne pre okno (horný panel, stavový panel). Rozšírenie Mixar — sprístupnené, aby úvodné predstavenie mohlo odkázať na horný panel kvôli prekresleniu."
 
 msgid "QA UI Dump"
 msgstr "Výpis rozhrania QA"

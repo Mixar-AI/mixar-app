@@ -15,10 +15,14 @@
 
 #include "GHOST_Context.hh"
 
-#ifdef _WIN32
+#if defined(WITH_GHOST_SDL)
+/* Required to be first as other platforms defines would take precedent otherwise. */
+struct SDL_Window; /* Avoid pulling in the full SDL3 headers. */
+#elif defined(_WIN32)
 #  include "GHOST_SystemWin32.hh"
 #elif defined(__APPLE__)
 #  include "GHOST_SystemCocoa.hh"
+#  include <vulkan/vulkan_metal.h>
 #else
 #  ifdef WITH_GHOST_X11
 #    include "GHOST_SystemX11.hh"
@@ -50,6 +54,9 @@ class StringRefNull;
 #ifndef GHOST_OPENGL_VK_RESET_NOTIFICATION_STRATEGY
 #  define GHOST_OPENGL_VK_RESET_NOTIFICATION_STRATEGY 0
 #endif
+namespace volk {
+struct VolkDeviceTable;
+}
 
 enum GHOST_TVulkanPlatformType {
   GHOST_kVulkanPlatformHeadless = 0,
@@ -69,7 +76,7 @@ struct GHOST_FrameDiscard {
   std::vector<VkSwapchainKHR> swapchains;
   std::vector<VkSemaphore> semaphores;
 
-  void destroy(VkDevice vk_device);
+  void destroy(VkDevice vk_device, const volk::VolkDeviceTable &functions);
 };
 
 struct GHOST_SwapchainImage {
@@ -81,7 +88,7 @@ struct GHOST_SwapchainImage {
    */
   VkSemaphore present_semaphore = VK_NULL_HANDLE;
 
-  void destroy(VkDevice vk_device);
+  void destroy(VkDevice vk_device, const volk::VolkDeviceTable &functions);
 };
 
 struct GHOST_Frame {
@@ -95,7 +102,7 @@ struct GHOST_Frame {
 
   GHOST_FrameDiscard discard_pile;
 
-  void destroy(VkDevice vk_device);
+  void destroy(VkDevice vk_device, const volk::VolkDeviceTable &functions);
 };
 
 class GHOST_ContextVK : public GHOST_Context {
@@ -107,7 +114,10 @@ class GHOST_ContextVK : public GHOST_Context {
    * Constructor.
    */
   GHOST_ContextVK(const GHOST_ContextParams &context_params,
-#ifdef _WIN32
+#if defined(WITH_GHOST_SDL)
+                  /* SDL */
+                  SDL_Window *sdl_window,
+#elif defined(_WIN32)
                   HWND hwnd,
 #elif defined(__APPLE__)
                   /* FIXME CAMetalLayer but have issue with linking. */
@@ -248,7 +258,10 @@ class GHOST_ContextVK : public GHOST_Context {
 #endif
 
  private:
-#ifdef _WIN32
+#if defined(WITH_GHOST_SDL)
+  /* SDL */
+  SDL_Window *sdl_window_;
+#elif defined(_WIN32)
   HWND hwnd_;
 #elif defined(__APPLE__)
   /* Is CAMetalLayer* */
@@ -297,7 +310,7 @@ class GHOST_ContextVK : public GHOST_Context {
   std::vector<VkFence> fence_pile_;
   std::map<VkSwapchainKHR, std::vector<VkFence>> present_fences_;
 
-  const char *getPlatformSpecificSurfaceExtension() const;
+  std::vector<const char *> getPlatformSpecificSurfaceExtensions() const;
   GHOST_TSuccess recreateSwapchain(bool use_hdr_swapchain);
   GHOST_TSuccess initializeFrameData();
   GHOST_TSuccess destroySwapchain();

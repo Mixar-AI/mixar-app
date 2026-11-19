@@ -465,8 +465,8 @@ msgstr "ﺍﻮﮨ ﺐﺨﺘﻨﻣ '{name}' ﺮﭘ ﮈﺭﻮﺑ ﮈﻮﻣ"
 msgid "Select in Scene"
 msgstr "ﮟﯾﺮﮐ ﺐﺨﺘﻨﻣ ﮟﯿﻣ ﺮﻈﻨﻣ"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "ﮟﯾﺮﮐ ﺐﺨﺘﻨﻣ ﮟﯿﻣ ﭦﺭﻮﭘ ﻮﯾﻭ ﻝﮉﻨﯿﮨ ﯽﺴﮐﺍﺮﭘ ﺎﮐ ﺎﯿﻧﺩ ﭧﯿﻠﭙﺳﺍ ﺱﺍ"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "ﮧﻋﻮﻤﺠﻣ"
@@ -474,8 +474,11 @@ msgstr "ﮧﻋﻮﻤﺠﻣ"
 msgid "That splat world is no longer in this file"
 msgstr "ﮟﯿﮩﻧ ﮟﯿﻣ ﻞﺋﺎﻓ ﺱﺍ ﺏﺍ ﺎﯿﻧﺩ ﭧﯿﻠﭙﺳﺍ ﮦﻭ"
 
-msgid "This splat world has no proxy handle"
-msgstr "ﮟﯿﮩﻧ ﻝﮉﻨﯿﮨ ﯽﺴﮐﺍﺮﭘ ﯽﺋﻮﮐ ﺎﮐ ﺎﯿﻧﺩ ﭧﯿﻠﭙﺳﺍ ﺱﺍ"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' ﺍﻮﮨ ﺐﺨﺘﻨﻣ"
@@ -6758,8 +6761,8 @@ msgstr "(ply. ﺎﯾ spz. ﻊﻗﻮﺗ) '{ext}' ﻢﺴﻗ ﻞﺋﺎﻓ ﭧﯿﻠ
 msgid "File not found: {path}"
 msgstr "{path} :ﯽﻠﻣ ﮟﯿﮩﻧ ﻞﺋﺎﻓ"
 
-msgid "No objects imported from {name}"
-msgstr "{name} ﯽﺋﻮﮨ ﮟﯿﮩﻧ ﺪﻣﺁﺭﺩ ﮯﺷ ﯽﺋﻮﮐ ﮯﺳ"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "{error} :ﯽﮑﺳ ﺎﺟ ﯽﮬﮍﭘ ﮟﯿﮩﻧ ﺮﯾﻮﺼﺗ"
@@ -28503,9 +28506,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "ﮯﮨ ﺭﺎﮐﺭﺩ ﮏﯿﺑ ﻝﺎﮐ ﺍﺭﮈ ﺎﮐ ﮯﻗﻼ﻿ﻋ ﻝﺎﻌﻓ ﮯﯿﻟ ﮯﮐ ﮓﻨﺋﺍﺭﮈ ﮈﺭﺎﮐ"
 
@@ -29775,6 +29775,9 @@ msgstr "ﺱﺍﺩﺭ ﺎﮐ ﮯﻧﻮﮐ ﺎﮐ ﺮﺻﺎﻨﻋ UI ﻝﻮﮔ"
 msgid "Mixie Chat"
 msgstr "Mixie ﭧﯿﭼ"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29786,18 +29789,6 @@ msgstr "ﮟﯿﺌﮨﺎﭼ ﮯﻧﻮﮨ ﮓﻧﺮﭩﺳ ﯽﻟﺎﺧ ﺮﯿﻏ �
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ﮟﯿﺌﮨﺎﭼ ﮯﻧﻮﮨ ﻒﺻ JSON ﯽﻟﺎﺧ ﺮﯿﻏ ﮯﺘﺳﺍﺭ ﭖﺍﺭﮈ"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "ﮯﻗﻼ﻿ﻋ ﯽﻤﻟﺎﻋ"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "۔ﮯﮑﺳ ﭻﻨﮩﭘ ﮏﺗ ﺭﺎﺑ ﭖﺎﭨ ﮯﯿﻟ ﮯﮐ ﺍﺭﮈ ﮦﺭﺎﺑﻭﺩ ﮓﻧﮈﺭﻮﺑ ﻥﺁ ﮧﮐﺎﺗ ﯽﺌﮔ ﯽﮐ ﺮﮨﺎﻇ — ﻊﯿﺳﻮﺗ Mixar ۔(ﺭﺎﺑ ﺲﭩﯿﭩﺳﺍ ،ﺭﺎﺑ ﭖﺎﭨ) ﮯﻗﻼ﻿ﻋ ﯽﻤﻟﺎﻋ ﮯﮐ ﻭﮉﻧﻭ"
 
 msgid "QA UI Dump"
 msgstr "QA UI ﭗﻣﮈ"

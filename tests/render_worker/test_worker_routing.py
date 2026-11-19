@@ -540,10 +540,16 @@ def test_generated_and_painted_images_count_as_dirty(monkeypatch):
 
 
 def test_the_worker_reads_render_result_without_has_data():
+    """A --background worker's Render Result never reports has_data (nor, since
+    Blender 5.3, does the app's): the shared reader must not gate on it."""
+    import ast
     from pathlib import Path
     from mixar.modules.common.render_worker import worker_jobs
-    src = Path(worker_jobs.__file__).read_text(encoding="utf-8")
-    assert "_read_png(scene, require_loaded=False)" in src
+    from mixar.modules.space_mixie_chat.core import preview_render
+    assert "pr._read_png(scene)" in Path(worker_jobs.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(Path(preview_render.__file__).read_text(encoding="utf-8"))
+    reader = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_read_png")
+    assert not any(isinstance(n, ast.Attribute) and n.attr == "has_data" for n in ast.walk(reader))
 
 
 def test_the_synchronous_render_lives_only_in_the_worker():

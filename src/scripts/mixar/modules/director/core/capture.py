@@ -80,40 +80,7 @@ def camera_shared_elsewhere(scene, shot) -> bool:
     )
 
 
-def _render_splat_still(scene, camera):
-    """Capture a splat scene's still through a real EEVEE render.
-
-    A viewport OpenGL capture comes out blank in splat scenes: the KIRI
-    proxy draws only during interactive viewport redraws (never inside
-    ``render.opengl``), the splat mesh itself is eye-hidden, and the
-    splat_render_camera handlers that push camera matrices into the
-    geometry-nodes sockets fire only for real renders. So capture the way
-    the Beauty video pass renders: EEVEE evaluating the splat's
-    camera-facing quads, with the render handlers feeding the camera.
-    """
-    from mixar.modules.moodboard.core.splat_render_camera import (
-        enable_render_updates,
-    )
-
-    render = scene.render
-    old_engine = render.engine
-    old_samples = scene.eevee.taa_render_samples
-    old_camera = scene.camera
-    try:
-        # Safe no-op when already enabled; covers splats from files saved
-        # before import-time enabling existed.
-        enable_render_updates(scene.objects)
-        scene.camera = camera
-        render.engine = 'BLENDER_EEVEE'
-        scene.eevee.taa_render_samples = 16
-        return bpy.ops.render.render(write_still=True)
-    finally:
-        render.engine = old_engine
-        scene.eevee.taa_render_samples = old_samples
-        scene.camera = old_camera
-
-
-def _render_viewport_still(context, scene, camera, display_name: str):
+def _render_viewport_still(context, scene, display_name: str):
     target = find_view3d_context(context)
     if target is None:
         raise RuntimeError(rpt_("No 3D viewport is available"))
@@ -139,9 +106,6 @@ def _render_viewport_still(context, scene, camera, display_name: str):
             image_settings.media_type = 'IMAGE'
         image_settings.file_format = 'PNG'
         image_settings.color_mode = 'RGB'
-        from mixar.modules.moodboard.core.splat_render_camera import (
-            scene_has_splats,
-        )
 
         with context.temp_override(
             window=window,
@@ -150,13 +114,12 @@ def _render_viewport_still(context, scene, camera, display_name: str):
             space_data=space,
             scene=scene,
         ):
-            if scene_has_splats(scene):
-                result = _render_splat_still(scene, camera)
-            else:
-                result = bpy.ops.render.opengl(
-                    write_still=True,
-                    view_context=True,
-                )
+            # Built-in Gaussian splats draw in the viewport, so a splat scene
+            # captures through the same OpenGL path as any other.
+            result = bpy.ops.render.opengl(
+                write_still=True,
+                view_context=True,
+            )
         if 'FINISHED' not in result or not os.path.isfile(path):
             raise RuntimeError(rpt_("Viewport capture did not produce an image"))
 
@@ -282,7 +245,6 @@ def capture_beat(context, shot, beat_seconds: float, *, replace_existing: bool =
         image = _render_viewport_still(
             context,
             scene,
-            camera,
             data_("{name} · Keyframe {number:02d}").format(name=shot.name, number=number),
         )
         _key_camera(camera, target_frame)

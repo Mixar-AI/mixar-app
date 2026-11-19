@@ -22,8 +22,8 @@
 #include <cstdlib>
 #include <string>
 
-#include "BLI_rect.h"
-#include "BLI_utildefines.h"
+#include "BLI_rect.hh"
+#include "BLI_utildefines.hh"
 #include "BLI_vector.hh"
 
 #include "BKE_context.hh"

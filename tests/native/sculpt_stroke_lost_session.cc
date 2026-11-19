@@ -44,6 +44,11 @@ int main(int argc, char **argv)
     object_runtime.sculpt_session = nullptr;
     object.mode = OB_MODE_TEXTURE_PAINT;
   }
+  else if (scenario == "texture_paint_session") {
+    /* Blender 5.3 with the experimental 3D texture paint: the mode allocates a session. */
+    session.cache = nullptr;
+    object.mode = OB_MODE_TEXTURE_PAINT;
+  }
   else if (scenario == "vertex_paint" || scenario == "weight_paint") {
     session.cache = nullptr;
     object.mode = scenario == "vertex_paint" ? OB_MODE_VERTEX_PAINT : OB_MODE_WEIGHT_PAINT;

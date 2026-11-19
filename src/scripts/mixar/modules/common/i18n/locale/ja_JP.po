@@ -465,8 +465,8 @@ msgstr "ムードボード上で「{name}」を選択しました"
 msgid "Select in Scene"
 msgstr "シーン内で選択"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "このスプラットワールドのプロキシハンドルをビューポートで選択します"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "コレクション"
@@ -474,8 +474,11 @@ msgstr "コレクション"
 msgid "That splat world is no longer in this file"
 msgstr "そのスプラットワールドはもうこのファイルにありません"
 
-msgid "This splat world has no proxy handle"
-msgstr "このスプラットワールドにはプロキシハンドルがありません"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "「{name}」を選択しました"
@@ -6758,8 +6761,8 @@ msgstr "サポートされていないスプラットファイル形式「{ext}�
 msgid "File not found: {path}"
 msgstr "ファイルが見つかりません: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name} からインポートされたオブジェクトはありません"
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "画像の読み込みに失敗しました: {error}"
@@ -28507,9 +28510,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "カードの描画にはアクティブなリージョンの描画コールバックが必要です"
 
@@ -29779,6 +29779,9 @@ msgstr "丸みのあるUI要素の角の半径"
 msgid "Mixie Chat"
 msgstr "Mixieチャット"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29790,18 +29793,6 @@ msgstr "ドロップのパスは空でない文字列である必要がありま
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ドロップのパスは空でないJSON配列である必要があります"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "グローバルエリア"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "ウィンドウ全体のエリア（トップバー、ステータスバー）。Mixarの拡張機能で、オンボーディングがトップバーを再描画できるよう公開されています。"
 
 msgid "QA UI Dump"
 msgstr "QA UIダンプ"

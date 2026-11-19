@@ -16,6 +16,7 @@
 #include "BKE_image.hh"
 
 #include "IMB_imbuf.hh"
+#include "IMB_partial_update.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -91,7 +92,7 @@ static wmOperatorStatus copy_image_pixels_exec(bContext *C, wmOperator *op)
   }
 
   /* Mark dirty and release. */
-  BKE_image_mark_dirty(dest_image, dest_ibuf);
+  IMB_mark_dirty(dest_ibuf);
   BKE_image_release_ibuf(src_image, src_ibuf, lock);
   BKE_image_release_ibuf(dest_image, dest_ibuf, dest_lock);
 
@@ -172,7 +173,7 @@ static wmOperatorStatus copy_image_channel_pixels_exec(bContext *C, wmOperator *
   }
 
   /* Mark dirty and release. */
-  BKE_image_mark_dirty(dest_image, dest_ibuf);
+  IMB_mark_dirty(dest_ibuf);
   BKE_image_release_ibuf(src_image, src_ibuf, lock);
   BKE_image_release_ibuf(dest_image, dest_ibuf, dest_lock);
 
@@ -235,7 +236,7 @@ static wmOperatorStatus set_image_pixels_exec(bContext *C, wmOperator *op)
   }
 
   /* Mark dirty and release. */
-  BKE_image_mark_dirty(image, ibuf);
+  IMB_mark_dirty(ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   /* Notify. */

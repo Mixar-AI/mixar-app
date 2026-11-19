@@ -21,9 +21,9 @@
 #include "liquid_script.h"
 #include "smoke_script.h"
 
-#include "BLI_fileops.h"
+#include "BLI_fileops.hh"
 #include "BLI_path_utils.hh"
-#include "BLI_utildefines.h"
+#include "BLI_utildefines.hh"
 
 #include "DNA_fluid_types.h"
 #include "DNA_modifier_types.h"
@@ -171,7 +171,7 @@ MANTA::MANTA(int *res, FluidModifierData *fmd)
   /* Setup Mantaflow in Python. */
   initializeMantaflow();
 
-  /* Initializa RNA map with values that Python will need. */
+  /* Initialize RNA map with values that Python will need. */
   initializeRNAMap(fmd);
 
   bool initSuccess = true;
@@ -570,7 +570,7 @@ MANTA::~MANTA()
   tmpString += manta_import;
   tmpString += fluid_delete_all;
 
-  /* Initializa RNA map with values that Python will need. */
+  /* Initialize RNA map with values that Python will need. */
   initializeRNAMap();
 
   /* Leave out fmd argument in parseScript since only looking up IDs. */
@@ -1446,6 +1446,20 @@ bool MANTA::readMesh(FluidModifierData *fmd, int framenr)
     cout << "MANTA::readMesh()" << endl;
   }
 
+  /* Clear mesh data from a previously loaded frame when the requested cache cannot be loaded. */
+  const auto clear_mesh = [this]() {
+    if (mMeshNodes) {
+      mMeshNodes->clear();
+    }
+    if (mMeshTriangles) {
+      mMeshTriangles->clear();
+    }
+    if (mMeshVelocities) {
+      mMeshVelocities->clear();
+    }
+    mMeshFromFile = false;
+  };
+
   if (!mUsingLiquid || !mUsingMesh) {
     return false;
   }
@@ -1460,6 +1474,7 @@ bool MANTA::readMesh(FluidModifierData *fmd, int framenr)
 
   /* Sanity check: Are cache files present? */
   if (!hasMesh(fmd, framenr)) {
+    clear_mesh();
     return false;
   }
 
@@ -1475,7 +1490,11 @@ bool MANTA::readMesh(FluidModifierData *fmd, int framenr)
     pythonCommands.push_back(ss.str());
   }
 
-  return (mMeshFromFile = runPythonString(pythonCommands));
+  mMeshFromFile = runPythonString(pythonCommands);
+  if (!mMeshFromFile) {
+    clear_mesh();
+  }
+  return mMeshFromFile;
 }
 
 bool MANTA::readParticles(FluidModifierData *fmd, int framenr, bool resumable)

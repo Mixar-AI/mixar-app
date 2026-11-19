@@ -123,6 +123,9 @@ class TOPBAR_MT_editor_menus(Menu):
 
         layout.menu("TOPBAR_MT_render")
 
+        if bpy.data.project:
+            layout.menu("TOPBAR_MT_project")
+
         layout.menu("TOPBAR_MT_window")
 
         layout.menu("TOPBAR_MT_help")
@@ -199,11 +202,12 @@ class TOPBAR_MT_file(Menu):
 
         layout.separator()
 
+        layout.menu("TOPBAR_MT_file_project", icon='PROJECT')
+
+        layout.separator()
+
         layout.menu("TOPBAR_MT_file_import", icon='IMPORT')
         layout.menu("TOPBAR_MT_file_export", icon='EXPORT')
-        row = layout.row()
-        row.operator("wm.collection_export_all")
-        row.enabled = context.view_layer.has_export_collections
 
         layout.separator()
 
@@ -324,6 +328,26 @@ class TOPBAR_MT_file_defaults(Menu):
             layout.operator("wm.read_factory_settings")
 
 
+class TOPBAR_MT_file_project(Menu):
+    bl_label = "Project"
+    bl_translation_context = i18n_contexts.editor_preferences
+
+    def draw(self, _context):
+        layout = self.layout
+
+        layout.operator("project.new", text="New...", icon='ADD')
+        layout.operator("project.open", text="Open...", icon='FILE_FOLDER')
+        layout.operator("project.close", text="Close")
+
+        layout.separator()
+
+        if layout.template_recent_projects(rows=10):
+            layout.separator()
+            layout.operator("wm.clear_recent_projects", text="Clear Recent Projects List...", icon='TRASH')
+        else:
+            layout.label(text="No Recent Projects")
+
+
 # Include technical operators here which would otherwise have no way for users to access.
 class TOPBAR_MT_blender_system(Menu):
     bl_label = "System"
@@ -358,6 +382,7 @@ class TOPBAR_MT_file_import(Menu):
     bl_owner_use_filter = False
 
     def draw(self, _context):
+        FileHandler = bpy.types.FileHandler
          # Add Blend file import at the top of the menu
         props = self.layout.operator("wm.open_mainfile", text="Blend (.blend)", icon='FILE_BLEND')
         props.file_extension = 'BLEND'
@@ -365,23 +390,63 @@ class TOPBAR_MT_file_import(Menu):
         # shims (modules/common/ui/operators/native_import_ops.py): they
         # capture import.initiated, then delegate to the real wm operator.
         if bpy.app.build_options.alembic:
-            self.layout.operator("mixar.import_native_alembic", text="Alembic (.abc)")
+            self.layout.operator(
+                "mixar.import_native_alembic",
+                text=FileHandler.label_with_extensions("IO_FH_alembic"),
+                translate=False,
+            )
         if bpy.app.build_options.usd:
             self.layout.operator(
-                "mixar.import_native_usd", text="Universal Scene Description (.usd*)")
+                "mixar.import_native_usd",
+                text=FileHandler.label_with_extensions("IO_FH_usd"),
+                translate=False,
+            )
 
         if bpy.app.build_options.io_gpencil:
-            self.layout.operator("wm.grease_pencil_import_svg", text="SVG as Grease Pencil")
+            self.layout.operator(
+                "wm.grease_pencil_import_svg",
+                text=FileHandler.label_with_extensions("IO_FH_grease_pencil_svg"),
+                translate=False,
+            )
 
         if bpy.app.build_options.io_wavefront_obj:
-            self.layout.operator("mixar.import_native_obj", text="Wavefront (.obj)")
+            self.layout.operator(
+                "mixar.import_native_obj",
+                text=FileHandler.label_with_extensions("IO_FH_obj"),
+                translate=False,
+            )
         if bpy.app.build_options.io_ply:
-            self.layout.operator("mixar.import_native_ply", text="Stanford PLY (.ply)")
+            self.layout.operator(
+                "mixar.import_native_ply",
+                text=FileHandler.label_with_extensions("IO_FH_ply"),
+                translate=False,
+            )
+        if bpy.app.build_options.io_spz:
+            self.layout.operator(
+                "wm.spz_import",
+                text=FileHandler.label_with_extensions("IO_FH_spz"),
+                translate=False,
+            )
         if bpy.app.build_options.io_stl:
-            self.layout.operator("mixar.import_native_stl", text="STL (.stl)")
+            self.layout.operator(
+                "mixar.import_native_stl",
+                text=FileHandler.label_with_extensions("IO_FH_stl"),
+                translate=False,
+            )
 
         if bpy.app.build_options.io_fbx:
-            self.layout.operator("mixar.import_native_fbx", text="FBX (.fbx)")
+            self.layout.operator(
+                "mixar.import_native_fbx",
+                text=FileHandler.label_with_extensions("IO_FH_fbx"),
+                translate=False,
+            )
+
+        if bpy.app.build_options.opentimelineio:
+            self.layout.operator(
+                "wm.otio_import",
+                text=FileHandler.label_with_extensions("IO_FH_otio"),
+                translate=False,
+            )
 
 
 class TOPBAR_MT_file_export(Menu):
@@ -389,7 +454,15 @@ class TOPBAR_MT_file_export(Menu):
     bl_label = "Export"
     bl_owner_use_filter = False
 
-    def draw(self, _context):
+    def draw(self, context):
+        FileHandler = bpy.types.FileHandler
+
+        row = self.layout.row()
+        row.operator("wm.collection_export_all")
+        row.enabled = context.view_layer.has_export_collections
+
+        self.layout.separator()
+
         if hasattr(bpy.types, "MIXAR_PT_web_publish"):
             props = self.layout.operator(
                 "wm.call_panel", text="Publish to Web…", icon='WORLD')
@@ -401,10 +474,17 @@ class TOPBAR_MT_file_export(Menu):
         props = self.layout.operator("wm.save_as_mainfile", text="Blend (.blend)", icon='FILE_BLEND')
         props.file_extension = 'BLEND'
         if bpy.app.build_options.alembic:
-            self.layout.operator("mixar.export_native_alembic", text="Alembic (.abc)")
+            self.layout.operator(
+                "mixar.export_native_alembic",
+                text=FileHandler.label_with_extensions("IO_FH_alembic"),
+                translate=False,
+            )
         if bpy.app.build_options.usd:
             self.layout.operator(
-                "mixar.export_native_usd", text="Universal Scene Description (.usd*)")
+                "mixar.export_native_usd",
+                text=FileHandler.label_with_extensions("IO_FH_usd"),
+                translate=False,
+            )
 
         if bpy.app.build_options.io_gpencil:
             # PUGIXML library dependency.
@@ -415,11 +495,29 @@ class TOPBAR_MT_file_export(Menu):
                 self.layout.operator("wm.grease_pencil_export_pdf", text="Grease Pencil as PDF")
 
         if bpy.app.build_options.io_wavefront_obj:
-            self.layout.operator("mixar.export_native_obj", text="Wavefront (.obj)")
+            self.layout.operator(
+                "mixar.export_native_obj",
+                text=FileHandler.label_with_extensions("IO_FH_obj"),
+                translate=False,
+            )
         if bpy.app.build_options.io_ply:
-            self.layout.operator("mixar.export_native_ply", text="Stanford PLY (.ply)")
+            self.layout.operator(
+                "mixar.export_native_ply",
+                text=FileHandler.label_with_extensions("IO_FH_ply"),
+                translate=False,
+            )
         if bpy.app.build_options.io_stl:
-            self.layout.operator("mixar.export_native_stl", text="STL (.stl)")
+            self.layout.operator(
+                "mixar.export_native_stl",
+                text=FileHandler.label_with_extensions("IO_FH_stl"),
+                translate=False,
+            )
+        if bpy.app.build_options.opentimelineio:
+            self.layout.operator(
+                "wm.otio_export",
+                text=FileHandler.label_with_extensions("IO_FH_otio"),
+                translate=False,
+            )
 
 
 class TOPBAR_MT_file_external_data(Menu):
@@ -556,6 +654,16 @@ class TOPBAR_MT_edit(Menu):
         layout.separator()
 
         layout.operator("screen.userpref_show", text="Preferences...", icon='PREFERENCES')
+
+
+class TOPBAR_MT_project(Menu):
+    bl_label = "Project"
+    bl_translation_context = i18n_contexts.editor_preferences
+
+    def draw(self, _context):
+        layout = self.layout
+
+        layout.operator("screen.project_settings_show", text="Settings...", icon='PREFERENCES')
 
 
 class TOPBAR_MT_window(Menu):
@@ -771,31 +879,12 @@ class TOPBAR_PT_name_marker(Panel):
     bl_ui_units_x = 14
 
     @staticmethod
-    def is_using_pose_markers(context):
-        sd = context.space_data
-        return (
-            sd.type == 'DOPESHEET_EDITOR' and sd.mode in {'ACTION', 'SHAPEKEY'} and
-            sd.show_pose_markers and context.active_action
-        )
-
-    @staticmethod
-    def is_using_sequencer(context):
-        sd = context.space_data
-        return sd.type == 'SEQUENCE_EDITOR'
-
-    @staticmethod
     def get_selected_marker(context):
-        if TOPBAR_PT_name_marker.is_using_pose_markers(context):
-            markers = context.active_action.pose_markers
-        elif TOPBAR_PT_name_marker.is_using_sequencer(context):
-            markers = context.sequencer_scene.timeline_markers
-        else:
-            markers = context.scene.timeline_markers
-
-        for marker in markers:
-            if marker.select:
-                return marker
-        return None
+        sd = context.space_data
+        if sd.type == 'SEQUENCE_EDITOR':
+            with context.temp_override(scene=context.sequencer_scene):
+                return context.selected_markers[0] if context.selected_markers else None
+        return context.selected_markers[0] if context.selected_markers else None
 
     @staticmethod
     def row_with_icon(layout, icon):
@@ -825,7 +914,7 @@ class TOPBAR_PT_name_marker(Panel):
         icon = 'TIME'
         if marker.camera is not None:
             icon = 'CAMERA_DATA'
-        elif self.is_using_pose_markers(context):
+        elif marker.id_data.id_type == 'ACTION':
             icon = 'ARMATURE_DATA'
         row = self.row_with_icon(layout, icon)
         row.prop(marker, "name", text="")
@@ -867,6 +956,7 @@ classes = (
     TOPBAR_MT_file_new,
     TOPBAR_MT_file_recover,
     TOPBAR_MT_file_defaults,
+    TOPBAR_MT_file_project,
     TOPBAR_MT_templates_more,
     TOPBAR_MT_file_import,
     TOPBAR_MT_file_export,
@@ -875,6 +965,7 @@ classes = (
     TOPBAR_MT_file_previews,
     TOPBAR_MT_edit,
     TOPBAR_MT_render,
+    TOPBAR_MT_project,
     TOPBAR_MT_window,
     TOPBAR_MT_help,
     TOPBAR_PT_tool_fallback,

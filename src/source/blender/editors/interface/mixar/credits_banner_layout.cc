@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 #include "UI_interface.hh"
 #include "UI_mixar_motion.hh"
 #include "WM_api.hh"
