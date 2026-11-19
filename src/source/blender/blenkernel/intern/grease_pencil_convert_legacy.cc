@@ -19,9 +19,9 @@
 #include "BKE_curves.hh"
 #include "BKE_deform.hh"
 #include "BKE_fcurve.hh"
-#include "BKE_gpencil_modifier_legacy.h"
 #include "BKE_grease_pencil.hh"
 #include "BKE_grease_pencil_legacy_convert.hh"
+#include "BKE_grease_pencil_modifiers.h"
 #include "BKE_idprop.hh"
 #include "BKE_lib_id.hh"
 #include "BKE_lib_remap.hh"
@@ -38,13 +38,13 @@
 
 #include "BLI_color_types.hh"
 #include "BLI_function_ref.hh"
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 #include "BLI_map.hh"
-#include "BLI_math_matrix.h"
 #include "BLI_math_matrix.hh"
+#include "BLI_math_matrix_c.hh"
 #include "BLI_math_vector_types.hh"
-#include "BLI_string.h"
-#include "BLI_string_utf8.h"
+#include "BLI_string.hh"
+#include "BLI_string_utf8.hh"
 #include "BLI_string_utils.hh"
 #include "BLI_vector.hh"
 
@@ -53,7 +53,7 @@
 #include "DNA_anim_types.h"
 #include "DNA_brush_types.h"
 #include "DNA_gpencil_legacy_types.h"
-#include "DNA_gpencil_modifier_types.h"
+#include "DNA_grease_pencil_modifier_types.h"
 #include "DNA_grease_pencil_types.h"
 #include "DNA_meshdata_types.h"
 #include "DNA_modifier_types.h"
@@ -226,8 +226,10 @@ class AnimDataConvertor {
   using FCurveCallback = bool(bAction *owner_action, FCurve &fcurve);
   using ActionCallback = bool(bAction &action);
 
-  /** \return True if this AnimDataConvertor is valid, i.e. can be used to process animation data
-   * from source ID. */
+  /**
+   * \return True if this AnimDataConvertor is valid, i.e. can be used to process animation data
+   * from source ID.
+   */
   bool is_valid() const
   {
     return this->animdata_src != nullptr;
@@ -236,10 +238,7 @@ class AnimDataConvertor {
   /* Basic common check to decide whether a legacy fcurve should be processed or not. */
   bool legacy_fcurves_is_valid_for_root_path(FCurve &fcurve, StringRefNull legacy_root_path) const
   {
-    if (!fcurve.rna_path) {
-      return false;
-    }
-    StringRefNull rna_path = fcurve.rna_path;
+    const StringRefNull rna_path = fcurve.rna_path();
     if (!rna_path.startswith(legacy_root_path)) {
       return false;
     }
@@ -403,7 +402,7 @@ class AnimDataConvertor {
       return false;
     }
 
-    if (GS(id_src.name) != GS(id_dst.name)) {
+    if (id_src.id_type() != id_dst.id_type()) {
       return true;
     }
 
@@ -420,7 +419,7 @@ class AnimDataConvertor {
         has_animation = true;
         return false;
       }
-      StringRefNull rna_path = fcurve.rna_path;
+      const StringRefNull rna_path = fcurve.rna_path();
       for (const AnimDataFCurveConvertor &fcurve_convertor : this->fcurve_convertors) {
         const std::string rna_path_src = fmt::format(
             "{}{}", this->root_path_src, fcurve_convertor.relative_rna_path_src);
@@ -452,8 +451,7 @@ class AnimDataConvertor {
                                  bAction *owner_action,
                                  FCurve &fcurve,
                                  const std::string &rna_path_dst) {
-      MEM_delete(fcurve.rna_path);
-      fcurve.rna_path = BLI_strdupn(rna_path_dst.c_str(), rna_path_dst.size());
+      fcurve.rna_path_set(rna_path_dst);
       if (fcurve_convertor && fcurve_convertor->convert_cb) {
         fcurve_convertor->convert_cb(fcurve);
       }
@@ -481,7 +479,7 @@ class AnimDataConvertor {
         if (!legacy_fcurves_is_valid_for_root_path(fcurve, this->root_path_src)) {
           return false;
         }
-        StringRefNull rna_path = fcurve.rna_path;
+        const StringRefNull rna_path = fcurve.rna_path();
         const std::string rna_path_dst = fmt::format(
             "{}{}", this->root_path_dst, rna_path.substr(int64_t(this->root_path_src.size())));
         fcurve_convert_cb(nullptr, owner_action, fcurve, rna_path_dst);
@@ -498,7 +496,7 @@ class AnimDataConvertor {
       if (!animation_fcurve_is_valid(owner_action, fcurve)) {
         return false;
       }
-      StringRefNull rna_path = fcurve.rna_path;
+      const StringRefNull rna_path = fcurve.rna_path();
       for (const AnimDataFCurveConvertor &fcurve_convertor : this->fcurve_convertors) {
         const std::string rna_path_src = fmt::format(
             "{}{}", this->root_path_src, fcurve_convertor.relative_rna_path_src);
@@ -573,7 +571,7 @@ class AnimDataConvertor {
         /* Create a new action. */
         animrig::Action &action = animrig::action_add(
             this->conversion_data.bmain,
-            this->animdata_src->action ? this->animdata_src->action->id.name + 2 : nullptr);
+            this->animdata_src->action ? this->animdata_src->action->id.name + 2 : "");
         action.slot_add_for_id(this->id_dst);
 
         const bool ok = animrig::assign_action(&action, {this->id_dst, *this->animdata_dst});
@@ -591,7 +589,7 @@ class AnimDataConvertor {
         /* Create a new tmpact. */
         animrig::Action &tmpact = animrig::action_add(
             this->conversion_data.bmain,
-            this->animdata_src->tmpact ? this->animdata_src->tmpact->id.name + 2 : nullptr);
+            this->animdata_src->tmpact ? this->animdata_src->tmpact->id.name + 2 : "");
         tmpact.slot_add_for_id(this->id_dst);
 
         const bool ok = animrig::assign_tmpaction(&tmpact, {this->id_dst, *this->animdata_dst});
@@ -1519,7 +1517,7 @@ static ModifierData &legacy_object_modifier_common(ConversionData &conversion_da
 
   if (mti->flags & eModifierTypeFlag_RequiresOriginalData) {
     ModifierData *md;
-    for (md = static_cast<ModifierData *>(object.modifiers.first);
+    for (md = object.modifiers.first();
          md && BKE_modifier_get_info(md->type)->type == ModifierTypeType::OnlyDeform;
          md = md->next)
     {
@@ -2885,7 +2883,7 @@ static void legacy_object_modifiers(ConversionData &conversion_data, Object &obj
         break;
     }
 
-    BKE_gpencil_modifier_free_ex(gpd_md, 0);
+    BKE_grease_pencil_modifier_free_ex(gpd_md, 0);
   }
 }
 
@@ -3048,6 +3046,7 @@ static void legacy_gpencil_sanitize_annotations(Main &bmain)
 
           case SPACE_BAKING:
           case SPACE_TEXTURE_SETS:
+          case SPACE_PROJECT:
             break;
         }
       }
@@ -3151,7 +3150,7 @@ void legacy_main(Main &bmain,
         [&conversion_data](BlendfileLinkAppendContext *lapp_context,
                            BlendfileLinkAppendContextItem *item) -> bool {
           ID *item_new_id = BKE_blendfile_link_append_context_item_newid_get(lapp_context, item);
-          if (!item_new_id || GS(item_new_id->name) != ID_GD_LEGACY) {
+          if (!item_new_id || item_new_id->id_type() != ID_GD_LEGACY) {
             return true;
           }
           GreasePencil **item_grease_pencil =

@@ -465,8 +465,8 @@ msgstr "मूडबोर्ड पर '{name}' चयनित किया �
 msgid "Select in Scene"
 msgstr "दृश्य में चयन करें"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "व्यूपोर्ट में इस स्प्लैट जगत का प्रॉक्सी हैंडल चयनित करता है"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "संग्रह"
@@ -474,8 +474,11 @@ msgstr "संग्रह"
 msgid "That splat world is no longer in this file"
 msgstr "वह स्प्लैट जगत अब इस संचिका में नहीं है"
 
-msgid "This splat world has no proxy handle"
-msgstr "इस स्प्लैट जगत का कोई प्रॉक्सी हैंडल नहीं है"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' चयनित किया गया"
@@ -5570,6 +5573,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6755,8 +6761,14 @@ msgstr "असमर्थित स्प्लैट संचिका प्
 msgid "File not found: {path}"
 msgstr "संचिका नहीं मिली: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name} से कोई वस्तु आयात नहीं हुई"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "छवि पढ़ी नहीं जा सकी: {error}"
@@ -6911,8 +6923,8 @@ msgstr "जगत जनरेशन परिणाम में स्प्�
 msgid "World generation result missing collider (GLB) URL"
 msgstr "जगत जनरेशन परिणाम में कोलाइडर (GLB) URL नहीं है"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "जगत डाउनलोड/रूपांतरण विफल: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "जगत आयात हुआ, पर कोई वस्तु नहीं बनी"
@@ -10963,14 +10975,32 @@ msgstr "मूलबिंदु पर ज़मीन पर रखें"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "स्प्लैट को ऐसे खिसकाएँ कि उसका फ़र्श Z=0 पर हो और उसके पदचिह्न का केंद्र मूलबिंदु पर हो (उत्पन्न जगतों जैसा ही)"
 
+msgid "Source"
+msgstr "स्रोत"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "मानक"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "कोई स्प्लैट संचिका चयनित नहीं"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} स्प्लैट आयात किए गए: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "गॉसियन स्प्लैट (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "मूडबोर्ड में पाठ बॉक्स जोड़ें ({shortcut})"
@@ -12540,9 +12570,6 @@ msgstr "सभी हड्डी प्रभाव शामिल करे�
 
 msgid "Lighting Mode"
 msgstr "प्रकाश व्यवस्था रूप"
-
-msgid "Standard"
-msgstr "मानक"
 
 msgid "Physically-based glTF lighting units"
 msgstr "भौतिक-आधारित glTF प्रकाश इकाइयाँ"
@@ -18794,9 +18821,6 @@ msgstr "मिश्रण"
 
 msgid "No masks"
 msgstr "कोई आवरण नहीं"
-
-msgid "Source"
-msgstr "स्रोत"
 
 msgid "No node group loaded"
 msgstr "कोई ग्रन्थि समूह लोड नहीं"
@@ -28500,9 +28524,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "कार्ड बनाने के लिए सक्रिय क्षेत्र का ड्रॉ कॉलबैक आवश्यक है"
 
@@ -29772,6 +29793,9 @@ msgstr "गोल UI तत्वों की कोना त्रिज्�
 msgid "Mixie Chat"
 msgstr "Mixie चैट"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29783,18 +29807,6 @@ msgstr "ड्रॉप पथ गैर-खाली स्ट्रिंग �
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ड्रॉप पथ एक गैर-खाली JSON सरणी होने चाहिए"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "वैश्विक क्षेत्र"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "खिड़की-वैश्विक क्षेत्र (शीर्ष पट्टी, स्थिति पट्टी)। Mixar विस्तार — इसलिए उपलब्ध कि ऑनबोर्डिंग फिर से बनाने के लिए शीर्ष पट्टी तक पहुँच सके।"
 
 msgid "QA UI Dump"
 msgstr "QA UI डंप"

@@ -465,8 +465,8 @@ msgstr "Odabrano '{name}' na moodboardu"
 msgid "Select in Scene"
 msgstr "Odaberi u sceni"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Odabire proxy ručku ovog svijeta splata u prozoru pogleda"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekcija"
@@ -474,8 +474,11 @@ msgstr "Kolekcija"
 msgid "That splat world is no longer in this file"
 msgstr "Tog svijeta splata više nema u ovoj datoteci"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ovaj svijet splata nema proxy ručku"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Odabrano '{name}'"
@@ -5570,6 +5573,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6755,8 +6761,14 @@ msgstr "Nepodržana vrsta datoteke splata '{ext}' (očekuje se .spz ili .ply)"
 msgid "File not found: {path}"
 msgstr "Datoteka nije pronađena: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Iz {name} nisu uvezeni objekti"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Sliku nije bilo moguće pročitati: {error}"
@@ -6911,8 +6923,8 @@ msgstr "Rezultatu generiranja svijeta nedostaje URL splata (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Rezultatu generiranja svijeta nedostaje URL sudarača (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Svijet nije bilo moguće preuzeti/pretvoriti: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Svijet je uvezen, ali nije dao objekte"
@@ -10963,14 +10975,32 @@ msgstr "Prizemlji u ishodištu"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Pomakni splat tako da mu pod leži na Z=0, a središte otiska u ishodištu (isto prizemljenje kao kod generiranih svjetova)"
 
+msgid "Source"
+msgstr "Izvor"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standardno"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Nije odabrana datoteka splata"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Uvezeni splatovi: {count}: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussov splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Dodaje tekstni okvir na moodboard ({shortcut})"
@@ -12540,9 +12570,6 @@ msgstr "Uključi sve utjecaje kostiju"
 
 msgid "Lighting Mode"
 msgstr "Način osvjetljenja"
-
-msgid "Standard"
-msgstr "Standardno"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fizički utemeljene jedinice glTF osvjetljenja"
@@ -18794,9 +18821,6 @@ msgstr "Stapanje"
 
 msgid "No masks"
 msgstr "Nema maski"
-
-msgid "Source"
-msgstr "Izvor"
 
 msgid "No node group loaded"
 msgstr "Nije učitana grupa čvorova"
@@ -28500,9 +28524,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Crtanje kartice zahtijeva povratni poziv crtanja aktivnog područja"
 
@@ -29772,6 +29793,9 @@ msgstr "Polumjer kuta zaobljenih elemenata sučelja"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29783,18 +29807,6 @@ msgstr "Putanje ispuštanja moraju biti neprazni nizovi"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Putanje ispuštanja moraju biti neprazno JSON polje"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globalna područja"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Područja globalna za prozor (gornja traka, traka stanja). Mixarovo proširenje — izloženo da uvod može adresirati gornju traku za ponovno crtanje."
 
 msgid "QA UI Dump"
 msgstr "QA ispis sučelja"

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 
 namespace blender {
 struct ARegion;

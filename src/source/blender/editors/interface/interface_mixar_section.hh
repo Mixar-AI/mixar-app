@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "BLI_sys_types.h" /* uchar, for the card flag accessors below. */
+#include "BLI_sys_types.hh" /* uchar, for the card flag accessors below. */
 namespace blender {
 struct ARegion;
 }  // namespace blender

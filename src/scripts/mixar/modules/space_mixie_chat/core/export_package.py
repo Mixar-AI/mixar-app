@@ -478,32 +478,76 @@ def _texture_stem(name):
     return _safe(name + suffix, fallback="texture")
 
 
+def _pixel_copy(img, name):
+    """A new image holding ``img``'s current pixels, colour space and alpha.
+    ``Image.copy()`` holds no pixels and reloads its source when read: blank
+    for a painted (generated) image, the saved state of an edited one, and
+    nothing at all for an unpacked file once the copy's path points at the
+    file it is about to write (mixar-backend#2020)."""
+    import numpy as np
+    w, h = int(img.size[0]), int(img.size[1])
+    channels = int(img.channels)
+    px = np.empty(w * h * channels, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    if channels != 4:
+        px = px.reshape(-1, channels)
+        rgba = np.ones((w * h, 4), dtype=np.float32)
+        rgba[:, :3] = px[:, :3] if channels >= 3 else px[:, :1]
+        if channels == 2:
+            rgba[:, 3] = px[:, 1]
+        px = rgba.ravel()
+    # ``depth`` is the colour mode's channels x 8 (x 32 for a float buffer):
+    # grey+alpha (2) and RGBA (4) carry alpha.
+    alpha = (int(img.depth) // (32 if img.is_float else 8)) in (2, 4)
+    cp = bpy.data.images.new(name, w, h, alpha=alpha, float_buffer=img.is_float)
+    # Set before the pixels (changing either drops them). Saving a generated
+    # image targets sRGB, so a file-backed byte image is tagged data (its
+    # bytes go out as the file holds them) and a float colour image stays
+    # scene-linear (encoded to sRGB on save); copying the name shifted both.
+    if img.source == "GENERATED" or img.colorspace_settings.is_data:
+        cp.colorspace_settings.name = img.colorspace_settings.name
+    elif not img.is_float:
+        cp.colorspace_settings.is_data = True
+    cp.alpha_mode = img.alpha_mode
+    cp.pixels.foreach_set(px)
+    return cp
+
+
 def _save_textures(images, folder, size=None):
     """Write PNG copies (optionally downscaled to ``size``) -> {orig: copy}.
     File names are unique per folder (a ``_2``… counter breaks any clash
-    left after ``_texture_stem``'s character replacement)."""
+    left after ``_texture_stem``'s character replacement). On failure the
+    copies made so far are freed: an in-process export runs on the user's
+    own document."""
     os.makedirs(folder, exist_ok=True)
     out = {}
     used = set()
-    for img in images:
-        if img.size[0] == 0:
-            continue
-        cp = img.copy()
-        cp.name = f"{img.name}_{size}" if size else f"{img.name}_pkg"
-        if size and max(img.size) > size:
-            w, h = img.size
-            s = size / max(w, h)
-            cp.scale(max(1, int(w * s)), max(1, int(h * s)))
-        stem = _texture_stem(img.name)
-        fname, n = stem + ".png", 1
-        while fname.lower() in used:
-            n += 1
-            fname = f"{stem}_{n}.png"
-        used.add(fname.lower())
-        cp.filepath_raw = os.path.join(folder, fname)
-        cp.file_format = "PNG"
-        cp.save()
-        out[img] = (cp, fname)
+    cp = None
+    try:
+        for img in images:
+            if img.size[0] == 0:
+                continue
+            cp = _pixel_copy(img, f"{img.name}_{size}" if size else f"{img.name}_pkg")
+            if size and max(img.size) > size:
+                w, h = img.size
+                s = size / max(w, h)
+                cp.scale(max(1, int(w * s)), max(1, int(h * s)))
+            stem = _texture_stem(img.name)
+            fname, n = stem + ".png", 1
+            while fname.lower() in used:
+                n += 1
+                fname = f"{stem}_{n}.png"
+            used.add(fname.lower())
+            cp.filepath_raw = os.path.join(folder, fname)
+            cp.file_format = "PNG"
+            cp.save()
+            out[img] = (cp, fname)
+            cp = None
+    except BaseException:
+        for c in [cp] + [c for c, _ in out.values()]:
+            if c is not None:
+                bpy.data.images.remove(c)
+        raise
     return out
 
 

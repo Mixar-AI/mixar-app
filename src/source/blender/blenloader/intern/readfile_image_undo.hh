@@ -23,8 +23,8 @@ inline bool packed_source_changed(const PackedFile *a, const PackedFile *b)
 inline bool packed_sources_changed(const ListBaseT<ImagePackedFile> &a,
                                    const ListBaseT<ImagePackedFile> &b)
 {
-  const ImagePackedFile *pa = static_cast<const ImagePackedFile *>(a.first);
-  const ImagePackedFile *pb = static_cast<const ImagePackedFile *>(b.first);
+  const ImagePackedFile *pa = static_cast<const ImagePackedFile *>(a.first());
+  const ImagePackedFile *pb = static_cast<const ImagePackedFile *>(b.first());
   for (; pa && pb; pa = pa->next, pb = pb->next) {
     if (pa->view != pb->view || pa->tile_number != pb->tile_number ||
         packed_source_changed(pa->packedfile, pb->packedfile))

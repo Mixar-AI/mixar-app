@@ -24,10 +24,10 @@
 #include <string>
 #include <vector>
 
-#include "BLI_math_base.h"
-#include "BLI_rect.h"
-#include "BLI_time.h"
-#include "BLI_utildefines.h"
+#include "BLI_math_base_c.hh"
+#include "BLI_rect.hh"
+#include "BLI_time.hh"
+#include "BLI_utildefines.hh"
 #include "BLI_vector.hh"
 
 #include "BKE_context.hh"
@@ -68,12 +68,12 @@ static const float INK_COL_STROKE[4] = CHAT_ACCENT_LIVE;
 
 static SpaceMixieChat *ink_space_from_area(ScrArea *area)
 {
-  if (!area || !area->spacedata.first ||
+  if (!area || !area->spacedata.first() ||
       (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return nullptr;
   }
-  return static_cast<SpaceMixieChat *>(area->spacedata.first);
+  return area->spacedata.first_as<SpaceMixieChat>();
 }
 
 static float ink_ease_out_cubic(float t)

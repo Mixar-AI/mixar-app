@@ -6,7 +6,7 @@
 
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
-#include "BLI_string.h"
+#include "BLI_string.hh"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 #include "DNA_windowmanager_types.h"

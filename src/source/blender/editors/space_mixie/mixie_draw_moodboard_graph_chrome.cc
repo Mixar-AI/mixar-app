@@ -13,7 +13,7 @@
 
 #include "mixie_draw_moodboard_intern.hh"
 
-#include "BLI_time.h"
+#include "BLI_time.hh"
 
 #include "DNA_theme_types.h"   /* UI_SCALE_FAC */
 #include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */

@@ -13,7 +13,7 @@ like. Three build breaks on this branch were exactly that, the last being
 called that way by `view3d_agent_panel_draw.cc` two files away.
 
 The allow-list below is the escape hatch, and the point of it: adding a name
-to it is a deliberate "I checked this exists in Blender 5.2", which is the
+to it is a deliberate "I checked this exists in Blender 5.3", which is the
 exact moment each of those breaks skipped.
 """
 
@@ -30,15 +30,12 @@ SOURCE = ROOT / "src/source/blender"
 ALLOWED = {
     # Camera and object maths for the gate, the aerial map and the nudge.
     "BKE_camera_sensor_size",
-    "BKE_object_apply_mat4",
     # View3D zoom helpers for the gate fit.
     "BKE_screen_view3d_zoom_from_fac",
     "BKE_screen_view3d_zoom_to_fac",
     "ED_view3d_win_to_3d_on_plane",
     # Depsgraph iteration flags for the aerial map's scene extents.
-    "DEG_ITER_OBJECT_FLAG_LINKED_DIRECTLY",
     "DEG_ITER_OBJECT_FLAG_LINKED_VIA_SET",
-    "DEG_ITER_OBJECT_FLAG_VISIBLE",
     # Headers included for their types only.
     "GPU_shader_shared_utils",
     "GPU_shader_shared",
@@ -89,7 +86,7 @@ def test_no_director_file_invents_an_api():
     )
     assert not unknown, (
         "Director calls an API nothing else in the overlay calls — check it "
-        "against Blender 5.2 and add it to ALLOWED with a reason:\n  "
+        "against Blender 5.3 and add it to ALLOWED with a reason:\n  "
         + "\n  ".join(unknown)
     )
 

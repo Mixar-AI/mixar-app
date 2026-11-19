@@ -8,6 +8,7 @@
 import os
 import time
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
@@ -141,7 +142,7 @@ class LAYERS_OT_AddPaintLayer(Operator):
         default=False
     )
 
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     image_resolution: EnumProperty(
         name='Image Resolution',

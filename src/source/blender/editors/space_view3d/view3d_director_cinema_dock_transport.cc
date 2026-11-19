@@ -17,7 +17,7 @@
 
 #include <algorithm>
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 
 #include "BLT_translation.hh"
 

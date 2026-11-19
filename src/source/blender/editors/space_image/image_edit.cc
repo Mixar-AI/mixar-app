@@ -9,11 +9,12 @@
 
 #include "DNA_brush_types.h"
 #include "DNA_mask_types.h"
+#include "DNA_mesh_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
 
-#include "BLI_listbase.h"
-#include "BLI_rect.h"
+#include "BLI_listbase.hh"
+#include "BLI_rect.hh"
 
 #include "BKE_colortools.hh"
 #include "BKE_context.hh"
@@ -79,7 +80,7 @@ void ED_space_image_set(Main *bmain, SpaceImage *sima, Image *ima, bool automati
 
 void ED_space_image_sync(Main *bmain, Image *image, bool ignore_render_viewer)
 {
-  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  wmWindowManager *wm = bmain->wm.first();
   for (wmWindow &win : wm->windows) {
     const bScreen *screen = WM_window_get_active_screen(&win);
     for (ScrArea &area : screen->areabase) {
@@ -115,8 +116,7 @@ void ED_space_image_auto_set(const bContext *C, SpaceImage *sima)
     return;
   }
 
-  BMEditMesh *em = BKE_editmesh_from_object(ob);
-  BMesh *bm = em->bm;
+  BMesh *bm = BKE_editmesh_bmesh_get_for_write(ob);
   BMFace *efa = BM_mesh_active_face_get(bm, true, false);
   if (efa == nullptr) {
     return;
@@ -428,9 +428,6 @@ bool ED_image_slot_cycle(Image *image, int direction)
     image->render_slot = ((cur == 1) ? 0 : 1);
   }
 
-  if (cur != image->render_slot) {
-    BKE_image_partial_update_mark_full_update(image);
-  }
   return (cur != image->render_slot);
 }
 
@@ -496,12 +493,7 @@ bool ED_space_image_show_uvedit(const SpaceImage *sima, Object *obedit)
   }
 
   if (obedit && obedit->type == OB_MESH) {
-    BMEditMesh *em = BKE_editmesh_from_object(obedit);
-    bool ret;
-
-    ret = EDBM_uv_check(em);
-
-    return ret;
+    return EDBM_uv_check(id_cast<const Mesh *>(obedit->data));
   }
 
   return false;

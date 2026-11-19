@@ -1,0 +1,290 @@
+{
+  "case": "BOARD-20",
+  "reviewer": "gltf_cycles_merge",
+  "verdict": "PASS within Board popup, visible transform toolbar and Engine resize framebuffer scope",
+  "runtime_revision": "58b795ae6383329687d2fd95f7b80dc9a3ce17e4",
+  "client_replay_sha256": "f1427f1317230849fa0e93fffc557f1a9873ab26e5b3c55d17a20823a13827c3",
+  "capture": "Main-window framebuffer; not native OS compositor capture",
+  "coverage": {
+    "png_paths": 18,
+    "distinct_original_contents": 13,
+    "full_originals_opened": 13,
+    "exact_sha256_duplicates": 5,
+    "all_original_contents_reviewed": true,
+    "source_images_modified": false,
+    "app_calls": false
+  },
+  "state_evidence": {
+    "state_pass": true,
+    "scenario_seconds": 22.49,
+    "hit_receipt": "replay/hit-zones-state.json",
+    "scales": [
+      1.0,
+      1.25,
+      1.5
+    ],
+    "board_button_centers_x": [
+      899,
+      1122,
+      1348
+    ],
+    "underlying_tools_right_edges": [
+      900,
+      1124,
+      1349
+    ],
+    "all_grip_close_reopen": true,
+    "active_tool_after_all_scales": "builtin.rotate",
+    "engine_receipt": "replay/engine-resize-state.json",
+    "engine_tools_right_edges_before_after_restored": [
+      904,
+      984,
+      904
+    ],
+    "engine_visible_row_gesture": [
+      903,
+      1598,
+      973,
+      1598
+    ],
+    "independent_visible_row_diagnostic": "build/qa/blender53-ui-completion/mac/engine-resize-diagnostic/visible-row-result.json",
+    "diagnostic_sha256": "cf0edbb80d5bf4923fb5dcca90fc440973c5ab5d27efed7dcf394d79f4a5ec1b",
+    "diagnostic_operator": "SCREEN_OT_region_scale on press/move, no modal after release",
+    "earlier_midpoint_run_accepted": false
+  },
+  "images": [
+    {
+      "path": "replay/board-1.0-after.png",
+      "sha256": "4e6bc01adaaccdb87840ccbea03e4c59603071f4a0beeac9ebdf1ce2074103ff",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.0-after.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Board menu visibly opens: Frame All, Arrange submenu and Clear Board are readable and contained. Drawer action controls and grip remain drawn."
+    },
+    {
+      "path": "replay/board-1.0-before.png",
+      "sha256": "73ba96e6adff2d0445c50a848da347559c7f0454204dc05cde2ceb3799825682",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.0-before.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Open Moodboard drawer shows action column, grip, empty-canvas guide and Add Mesh placeholder; underlying toolbar remains partially visible behind the overlay."
+    },
+    {
+      "path": "replay/board-1.0-toolbar-after-click.png",
+      "sha256": "8e9c9b7dd28ca0445ce49c9bbd1dd227dea10e58e824e330e66df19d99beb73e",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.0-toolbar-after-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; all three transform controls are visible and sharp. Rotate has a clear green selected background."
+    },
+    {
+      "path": "replay/board-1.0-toolbar-rotate.png",
+      "sha256": "8e9c9b7dd28ca0445ce49c9bbd1dd227dea10e58e824e330e66df19d99beb73e",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Exact SHA256 duplicate of reviewed original",
+      "reviewed_original": "replay/board-1.0-toolbar-after-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; all three transform controls are visible and sharp. Rotate has a clear green selected background."
+    },
+    {
+      "path": "replay/board-1.0-toolbar-before-click.png",
+      "sha256": "803933ce3fb10c908e9c82eaa2b56796565eb758973d73a950a1da47ba274202",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.0-toolbar-before-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; transform controls are visible and sharp. Rotate has no green selected background before the recorded click."
+    },
+    {
+      "path": "replay/board-1.25-after.png",
+      "sha256": "576683cbaefcccb4b60544b2d59e5918097923abeccde87d2112d449ad827cf0",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.25-after.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Board menu visibly opens: Frame All, Arrange submenu and Clear Board are readable and contained. Drawer action controls and grip remain drawn."
+    },
+    {
+      "path": "replay/board-1.25-before.png",
+      "sha256": "a98e8e9be265443c70bdd5b2e1fa0b7077e3851193b082734b4780202bcb3e69",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.25-before.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Open Moodboard drawer shows action column, grip, empty-canvas guide and Add Mesh placeholder; underlying toolbar remains partially visible behind the overlay."
+    },
+    {
+      "path": "replay/board-1.25-toolbar-after-click.png",
+      "sha256": "8df902c4891f6d88c789e54a9d32e5aa20d16988fe5fdaf06f99ae80c76ac6e8",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.25-toolbar-after-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; all three transform controls are visible and sharp. Rotate has a clear green selected background."
+    },
+    {
+      "path": "replay/board-1.25-toolbar-before-click.png",
+      "sha256": "8df902c4891f6d88c789e54a9d32e5aa20d16988fe5fdaf06f99ae80c76ac6e8",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Exact SHA256 duplicate of reviewed original",
+      "reviewed_original": "replay/board-1.25-toolbar-after-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; all three transform controls are visible and sharp. Rotate has a clear green selected background."
+    },
+    {
+      "path": "replay/board-1.25-toolbar-rotate.png",
+      "sha256": "8df902c4891f6d88c789e54a9d32e5aa20d16988fe5fdaf06f99ae80c76ac6e8",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Exact SHA256 duplicate of reviewed original",
+      "reviewed_original": "replay/board-1.25-toolbar-after-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; all three transform controls are visible and sharp. Rotate has a clear green selected background."
+    },
+    {
+      "path": "replay/board-1.5-after.png",
+      "sha256": "5fd6d4985f7aa7c9b226d0b56a8ce6a19da760920a32cf828fea5527420de8cd",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.5-after.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Board menu visibly opens: Frame All, Arrange submenu and Clear Board are readable and contained. Drawer action controls and grip remain drawn."
+    },
+    {
+      "path": "replay/board-1.5-before.png",
+      "sha256": "ec16baa511c50087b171cfcd00ff2306d31d7917d14e6b52a4fb5d2d26a4c031",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.5-before.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Open Moodboard drawer shows action column, grip, empty-canvas guide and Add Mesh placeholder; underlying toolbar remains partially visible behind the overlay."
+    },
+    {
+      "path": "replay/board-1.5-toolbar-after-click.png",
+      "sha256": "949ff3c8fe62057f7a28925f675c27957695a3249e01b7f86d8282837909cd29",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/board-1.5-toolbar-after-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; all three transform controls are visible and sharp. Rotate has a clear green selected background."
+    },
+    {
+      "path": "replay/board-1.5-toolbar-before-click.png",
+      "sha256": "949ff3c8fe62057f7a28925f675c27957695a3249e01b7f86d8282837909cd29",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Exact SHA256 duplicate of reviewed original",
+      "reviewed_original": "replay/board-1.5-toolbar-after-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; all three transform controls are visible and sharp. Rotate has a clear green selected background."
+    },
+    {
+      "path": "replay/board-1.5-toolbar-rotate.png",
+      "sha256": "949ff3c8fe62057f7a28925f675c27957695a3249e01b7f86d8282837909cd29",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Exact SHA256 duplicate of reviewed original",
+      "reviewed_original": "replay/board-1.5-toolbar-after-click.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Drawer is closed; all three transform controls are visible and sharp. Rotate has a clear green selected background."
+    },
+    {
+      "path": "replay/engine-toolbar-before.png",
+      "sha256": "ccf9ecbc9c8ee31520b48919c35af009016ced9f642e50958a86cab21308ecdc",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/engine-toolbar-before.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Narrow single-column Engine toolbar is intact and legible. Engine-mode hover tooltip covers part of the top header, not the tested toolbar."
+    },
+    {
+      "path": "replay/engine-toolbar-expanded.png",
+      "sha256": "70bc11d0ce4e2ef3a73e739b605f037b00b3960648cfb2aa65733fd95b88b2e2",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/engine-toolbar-expanded.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Toolbar visibly expands to two columns, icons remain clear and contained; viewport, Outliner and Moodboard remain drawn."
+    },
+    {
+      "path": "replay/engine-toolbar-restored.png",
+      "sha256": "e9e66da4d74f6936ed7bd26c8caf73968d25e252af75493e0aa1c16311d2ad0e",
+      "dimensions_pixels": [
+        3024,
+        1834
+      ],
+      "review_method": "Full original opened with view_image",
+      "reviewed_original": "replay/engine-toolbar-restored.png",
+      "verdict": "PASS within BOARD20 framebuffer appearance scope",
+      "observation": "Toolbar returns to one column with intact icons and original visible width; resize status text is visible."
+    }
+  ],
+  "limits": [
+    "These are main-window framebuffer images. They do not prove AppKit glass or OS composition; manual native evidence is separate.",
+    "At 125% and 150%, toolbar-before-click, after-click and rotate are byte-identical and already show Rotate selected. These frames prove final selected appearance, not a separate visible Move-to-Rotate transition at those scales; the state replay records the actual tool click and result. At 100%, the captured before/after appearance does change.",
+    "The open drawer covers most of the underlying transform toolbar by design; toolbar controls are fully visible in the closed-drawer captures.",
+    "Engine before image has a readable Engine-mode tooltip across part of the top header. It does not occlude the toolbar being resized.",
+    "The high-frequency distant grid is visible in the perspective viewport. This review qualifies the named controls, not viewport antialiasing or unrelated application surfaces.",
+    "Five QA-pump stall samples, maximum 110ms, occurred during this replay; no universal responsiveness claim follows from these screenshots.",
+    "This review uses only the successful visible-row replay. Earlier midpoint/unsuccessful Engine runs remain diagnostic evidence. Owned-app shutdown and profile cleanup remain the controller responsibility."
+  ],
+  "stalls_during_replay": {
+    "count": 5,
+    "max_ms": 110,
+    "categories": {
+      "timer:__main__._pump": 5
+    }
+  },
+  "artifact_paths": "Paths refer to retained local BOARD20 run; selected originals are packaged beside this report."
+}

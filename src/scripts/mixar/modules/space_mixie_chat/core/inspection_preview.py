@@ -43,7 +43,11 @@ class Inspection:
         p, scene, source = self.params, self.scene, self.source
         view = str(p.get('view', 'camera'))
         shading = str(p.get('shading', 'material'))
-        if shading not in {'solid', 'material'} or p.get('engine') in {'splat', 'kiri', 'gaussian', '3dgs'}:
+        if p.get('engine') in {'splat', 'kiri', 'gaussian', '3dgs'}:
+            # Built-in Gaussian splats render like any object; a splat view is
+            # the material render (older agents still ask for it by name).
+            shading = 'material'
+        if shading not in {'solid', 'material'}:
             raise ValueError('inspection_mode_unsupported')
         if view not in {'camera', 'hero', 'top', 'front'} and not view.startswith('mark:'):
             raise ValueError('inspection_view_unsupported')

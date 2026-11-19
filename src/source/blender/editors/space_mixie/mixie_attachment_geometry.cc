@@ -4,7 +4,7 @@
 #include "mixie_attachment_geometry.hh"
 #include "BKE_context.hh"
 #include "BKE_screen.hh"
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"

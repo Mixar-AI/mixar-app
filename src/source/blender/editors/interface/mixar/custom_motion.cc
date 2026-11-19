@@ -4,7 +4,7 @@
 #include <cmath>
 
 #include "BKE_screen.hh"
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 #include "UI_mixar_custom_motion.hh"
 
 #include "interface_intern.hh"

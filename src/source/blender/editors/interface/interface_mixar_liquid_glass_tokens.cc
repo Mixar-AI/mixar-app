@@ -20,7 +20,7 @@
 
 #include <algorithm>
 
-#include "BLI_utildefines.h"
+#include "BLI_utildefines.hh"
 
 #include "DNA_theme_types.h"
 #include "DNA_userdef_types.h"

@@ -118,6 +118,8 @@ def test_the_build_ships_no_bytecode():
     windows = (ROOT / "scripts/windows/build.bat").read_text(encoding="utf-8")
     runs = [line for line in windows.splitlines() if line.lstrip().startswith('"!PYTHON_BIN!"')]
     assert runs and all(" -B " in line for line in runs), runs
+    # Bundle verification must never import dependencies from the user's site.
+    assert all(" -s " in line for line in runs), runs
     assert any("pip install" in line and "--no-compile" in line for line in runs)
 
 

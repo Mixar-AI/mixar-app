@@ -28,11 +28,11 @@
 #include "BKE_image.hh"
 #include "BKE_main.hh"
 
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 #include "BLI_path_utils.hh"
-#include "BLI_string.h"
-#include "BLI_time.h"
-#include "BLI_utildefines.h"
+#include "BLI_string.hh"
+#include "BLI_time.hh"
+#include "BLI_utildefines.hh"
 
 #include "DNA_image_types.h"
 
@@ -338,7 +338,7 @@ MoodboardVideoSession *video_session_ensure(Main *bmain, Image *image, const voi
   session.end_rest = owner ? VideoEndRest::LastFrame : VideoEndRest::FirstFrame;
   session.fps = VIDEO_FALLBACK_FPS;
   session.frame_count = std::max(image_user.frames, 1);
-  if (ImageAnim *image_anim = static_cast<ImageAnim *>(image->anims.first)) {
+  if (ImageAnim *image_anim = image->anims.first_as<ImageAnim>()) {
     if (image_anim->anim) {
       session.frame_count = std::max(MOV_get_duration_frames(image_anim->anim), 1);
       const float native_fps = MOV_get_fps(image_anim->anim);
