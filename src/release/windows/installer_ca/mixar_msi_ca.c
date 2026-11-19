@@ -21,6 +21,10 @@
  *   that copy is gone: after a move removed the old product, and after this
  *   product's own removal (a copy updated in place keeps its release's
  *   association, which this package's per-user unregister leaves).
+ * - MixarOwnInstallFolder (immediate, execute, mixar_msi_owner.c, #2154):
+ *   before an update in place from an unprivileged token, the installing
+ *   user becomes the owner of the copy's files, so Windows Installer can
+ *   re-apply their security when it overwrites them.
  *
  * Built with the static runtime: it runs before Mixar's own runtime exists.
  * Every action returns success; a failure is logged and leaves Mixar where
