@@ -102,3 +102,23 @@ def test_register_runs_only_when_installing():
             '(NOT UPGRADINGPRODUCTCODE) AND (REMOVE="ALL") AND NOT ALLUSERS</Custom>') in template
     assert ('<Custom Action="UnRegisterMixarMachine" After="UnRegisterMixarUser">'
             '(NOT UPGRADINGPRODUCTCODE) AND (REMOVE="ALL") AND ALLUSERS</Custom>') in template
+
+
+def test_an_unprivileged_update_in_place_owns_the_copy_first():
+    """#2154: Windows Installer re-applies an overwritten file's owner. The #2079 move (elevated) leaves the
+    copy owned by BUILTIN\\Administrators, which the user's token cannot set: every later update failed with
+    1310 / 1603. The user takes ownership of the copy (immediate, impersonated) before InstallInitialize."""
+    template = _template()
+    assert ('<CustomAction Id="MixarOwnInstallFolder" BinaryKey="MixarMsiCa"\n'
+            '            DllEntry="MixarOwnInstallFolder" Execute="immediate" Return="ignore"/>') in template
+    assert ('<Custom Action="MixarOwnInstallFolder" Before="InstallInitialize"><![CDATA[NOT Installed AND '
+            'NOT Privileged AND INSTALL_ROOT AND (MIXAR_SCOPE_ACTION="keep" OR '
+            'MIXAR_SCOPE_ACTION="in_place")]]></Custom>') in template
+    # Still in place: the schedule #2060 chose stays (removing first loses the old product's registration
+    # when a limited-token upgrade rolls back).
+    assert re.search(r'<MajorUpgrade\s+Schedule="afterInstallExecute"', template)
+    ca = (WIX_TEMPLATE.parents[1] / "installer_ca" / "mixar_msi_owner.c").read_text(encoding="utf-8")
+    assert "FILE_ATTRIBUTE_REPARSE_POINT" in ca  # links are neither changed nor followed
+    assert "SetFileSecurityW(walk->path, OWNER_SECURITY_INFORMATION" in ca  # owner only, no re-propagation
+    body = ca[ca.index("UINT __stdcall MixarOwnInstallFolder"):]
+    assert body.count("return ERROR_SUCCESS;") == body.count("return ")  # never fails the install

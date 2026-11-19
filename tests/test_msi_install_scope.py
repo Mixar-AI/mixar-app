@@ -73,7 +73,8 @@ def test_the_custom_action_dll_is_built_and_embedded():
     assert 'string(REGEX REPLACE "/MDd?( |$)" ""' in cmake
     exports = set(_ca("mixar_msi_ca.def").split()[3:])
     assert exports == {"MixarInspect", "MixarMarker", "MixarRelaunchElevated",
-                       "MixarCleanMachineAssociations"}
+                       "MixarCleanMachineAssociations", "MixarOwnInstallFolder"}
+    assert "  mixar_msi_owner.c\n" in cmake
     template = _template() + WIXUI.read_text(encoding="utf-8")
     for entry in exports:
         assert f'BinaryKey="MixarMsiCa" DllEntry="{entry}"' in re.sub(r"\s+", " ", template)

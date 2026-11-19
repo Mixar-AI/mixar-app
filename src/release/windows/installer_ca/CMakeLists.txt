@@ -15,6 +15,7 @@ unset(_config)
 add_library(mixar_msi_ca SHARED
   mixar_msi_ca.c
   mixar_msi_facts.c
+  mixar_msi_owner.c
   mixar_msi_scope.c
   mixar_msi_ca.h
   mixar_msi_scope.h
