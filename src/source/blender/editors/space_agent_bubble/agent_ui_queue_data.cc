@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 #include "BLT_translation.hh"
 #include "DNA_windowmanager_types.h"
 #include "MEM_guardedalloc.h"

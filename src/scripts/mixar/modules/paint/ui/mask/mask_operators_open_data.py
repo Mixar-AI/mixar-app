@@ -10,6 +10,7 @@ as layer masks.
 """
 
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import (
     CollectionProperty,
     EnumProperty,
@@ -90,14 +91,14 @@ class MOpenAvailableDataAsMask(bpy.types.Operator):
     )
 
     uv_map: StringProperty(default="")
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     image_name: StringProperty(name="Image")
-    image_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    image_coll: CollectionProperty(type=MPaintNamedItem)
     image_enum: EnumProperty(name="Image", items=_open_data_image_items)
 
     vcol_name: StringProperty(name="Vertex Color")
-    vcol_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    vcol_coll: CollectionProperty(type=MPaintNamedItem)
 
     blend_type: EnumProperty(
         name="Blend", description="Blend type", items=mask_blend_type_items, default=3

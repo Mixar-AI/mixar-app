@@ -8,12 +8,12 @@
  * Utilities to inspect the interface, extract information.
  */
 
-#include "BLI_listbase.h"
-#include "BLI_math_rotation.h"
-#include "BLI_math_vector.h"
-#include "BLI_rect.h"
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_math_rotation_c.hh"
+#include "BLI_math_vector_c.hh"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 
 #include "DNA_screen_types.h"
 
@@ -107,7 +107,10 @@ bool button_is_interactive_ex(const Button *but, const bool labeledit, const boo
   if ((but->type == ButtonType::Text) &&
       ELEM(but->emboss, EmbossType::None, EmbossType::NoneOrStatus) && !labeledit)
   {
-    return false;
+    /* Make editable text buttons with no emboss interactive. */
+    if (!static_cast<const ButtonText *>(but)->use_label_style) {
+      return false;
+    }
   }
   if ((but->type == ButtonType::ListRow) && labeledit) {
     return false;
@@ -142,7 +145,7 @@ bool button_is_popover_once_compat(const Button *but)
 
 bool button_has_array_value(const Button *but)
 {
-  return (but->rnapoin.data && but->rnaprop && RNA_property_array_check(but->rnaprop));
+  return (but->rnapoin && but->rnaprop && RNA_property_array_check(but->rnaprop));
 }
 
 static wmOperatorType *g_ot_tool_set_by_id = nullptr;
@@ -250,7 +253,7 @@ static bool but_isect_pie_seg(const Block *block, const Button *but)
   const float angle_adjacent_cos = dot_v2v2(but_dir_adjacent, block->pie_data->pie_dir);
 
   /* Tie breaker, so one of the buttons is always selected. */
-  if (UNLIKELY(angle_but_cos == angle_adjacent_cos)) {
+  if (angle_but_cos == angle_adjacent_cos) [[unlikely]] {
     return but->pie_dir > dir_adjacent;
   }
   return angle_but_cos > angle_adjacent_cos;
@@ -258,7 +261,12 @@ static bool but_isect_pie_seg(const Block *block, const Button *but)
 
 bool button_contains_pt(const Button *but, float mx, float my)
 {
-  return BLI_rctf_isect_pt(&but->rect, mx, my) &&
+  rctf rect = but->rect;
+  /* Add a magin to allow selecting points at the border of curves maps. */
+  if (ELEM(but->type, ButtonType::Curve, ButtonType::CurveProfile)) {
+    BLI_rctf_pad(&rect, 4, 4);
+  }
+  return BLI_rctf_isect_pt(&rect, mx, my) &&
          (!but->block->mixar_clip_rect ||
           BLI_rctf_isect_pt(&*but->block->mixar_clip_rect, mx, my)) &&
          (!but->block->mixar_point_is_occluded ||
@@ -739,14 +747,19 @@ bool block_can_add_separator(const Block *block)
   return true;
 }
 
-bool block_has_active_default_button(const Block *block)
+const Button *block_active_default_button_find(const Block *block)
 {
   for (const Button &but : block->buttons()) {
     if ((but.flag & BUT_ACTIVE_DEFAULT) && ((but.flag & UI_HIDDEN) == 0)) {
-      return true;
+      return &but;
     }
   }
-  return false;
+  return nullptr;
+}
+
+bool block_has_active_default_button(const Block *block)
+{
+  return block_active_default_button_find(block) != nullptr;
 }
 
 /** \} */
@@ -801,7 +814,9 @@ Button *region_find_active_but(ARegion *region)
   return nullptr;
 }
 
-Button *region_find_first_but_test_flag(ARegion *region, int flag_include, int flag_exclude)
+Button *region_find_first_but_test_flag(ARegion *region,
+                                        int64_t flag_include,
+                                        int64_t flag_exclude)
 {
   for (Block &block : region->runtime->uiblocks) {
     for (Button &but : block.buttons()) {

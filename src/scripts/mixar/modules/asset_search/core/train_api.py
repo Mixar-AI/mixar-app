@@ -49,6 +49,15 @@ def train_client():
     return metered_client()
 
 
+def _set_prepare_result(operator, result):
+    """A pending request may outlive its Blender operator (e.g. file load)."""
+    try:
+        operator._bg_result = result
+    except ReferenceError:
+        # The modal consumer is gone. Never report failure through freed RNA.
+        logger.debug("[Asset Training] Prepare result discarded: operator removed")
+
+
 def prepare_api(metadata, operator):
     """POST metadata to /train/prepare; result into ``operator._bg_result``."""
     try:
@@ -61,11 +70,11 @@ def prepare_api(metadata, operator):
         )
         if not resp.success:
             msg = resp.message or rpt_("Server returned {status}").format(status=resp.status_code)
-            operator._bg_result = {"success": False, "message": msg}
+            _set_prepare_result(operator, {"success": False, "message": msg})
             return
         data = resp.data or {}
         inner = data.get("data", data)
-        operator._bg_result = {
+        _set_prepare_result(operator, {
             "success": True,
             "action": inner.get("action", "full_train"),
             "new_assets": inner.get("new_assets", []),
@@ -73,11 +82,13 @@ def prepare_api(metadata, operator):
             "asset_count": inner.get("asset_count", 0),
             "unchanged_count": inner.get("unchanged_count", 0),
             "metadata_checksum": inner.get("metadata_checksum"),
-        }
+        })
     except Exception as exc:
         logger.error("[Asset Training] Prepare error: %s", exc)
-        operator._bg_result = {"success": False,
-                               "message": rpt_("Prepare failed: {error}").format(error=exc)}
+        _set_prepare_result(operator, {
+            "success": False,
+            "message": rpt_("Prepare failed: {error}").format(error=exc),
+        })
 
 
 def build_upload_batches(assets):
@@ -148,6 +159,15 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
       operator._upload_embedded                       — images embedded so far
     Final result in ``operator._bg_result``.
     """
+    try:
+        _post_batches(batches, mode, removed_assets, metadata_checksum, operator)
+    except ReferenceError:
+        # Blender can free the modal operator while an upload is in flight.
+        # Do not try to report the failure through that same invalid RNA.
+        logger.debug("[Asset Training] Upload owner was removed; dropping result")
+
+
+def _post_batches(batches, mode, removed_assets, metadata_checksum, operator):
     operator._upload_total = max(len(batches), 1)
     operator._upload_done = 0
     operator._upload_embedded = 0
@@ -236,6 +256,8 @@ def post_batches(batches, mode, removed_assets, metadata_checksum, operator):
             "message": rpt_("{count} assets embedded").format(count=total_embedded),
             "embedded": total_embedded,
         }
+    except ReferenceError:
+        raise  # The owner-lifetime guard must not write to the operator again.
     except Exception as exc:
         logger.error("[Asset Training] Upload error: %s", exc)
         operator._bg_result = {

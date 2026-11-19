@@ -20,6 +20,7 @@
 #include "BKE_image.hh"
 
 #include "IMB_imbuf.hh"
+#include "IMB_partial_update.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -138,7 +139,7 @@ static wmOperatorStatus height_to_normal_exec(bContext *C, wmOperator *op)
     pixels[idx + 2] = 1.0f;
   }
 
-  BKE_image_mark_dirty(image, ibuf);
+  IMB_mark_dirty(ibuf);
   BKE_image_release_ibuf(image, ibuf, lock);
 
   WM_event_add_notifier(C, NC_IMAGE | NA_EDITED, image);
@@ -233,7 +234,7 @@ static wmOperatorStatus blend_normal_maps_exec(bContext *C, wmOperator *op)
     /* Keep alpha unchanged. */
   }
 
-  BKE_image_mark_dirty(base_image, base_ibuf);
+  IMB_mark_dirty(base_ibuf);
   BKE_image_release_ibuf(base_image, base_ibuf, base_lock);
   BKE_image_release_ibuf(detail_image, detail_ibuf, detail_lock);
 

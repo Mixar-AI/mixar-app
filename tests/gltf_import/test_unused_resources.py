@@ -61,7 +61,10 @@ def test_optional_resources(tmp_path, importer, suffix, materials, images, unuse
     def create_material(gltf, index, vertex_color):
         assert vertex_color is None
         gltf.data.materials[index].blender_material[None] = 'material'
-    def create_image(gltf, index):
+    def create_image(gltf, index, use_ktx_loader):
+        # Blender 5.3's image factory requires the loader selector even for
+        # ordinary unused PNGs. A permissive mock hid this migration failure.
+        assert use_ktx_loader is False
         gltf.data.images[index].blender_image_name = 'image'
     material = Mock(create=Mock(side_effect=create_material))
     image = Mock(create=Mock(side_effect=create_image))

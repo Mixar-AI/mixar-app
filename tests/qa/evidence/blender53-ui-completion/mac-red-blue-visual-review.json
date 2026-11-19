@@ -1,0 +1,105 @@
+{
+  "reviewer": "gltf_cycles_merge",
+  "verdict": "PASS within manual empty-island red/blue backdrop scope",
+  "automatic_capture": false,
+  "automatic_UI25_pass": false,
+  "originals": [
+    {
+      "path": "mac-red-native-user.png",
+      "sha256": "4172cbc0848fb610f01d89225e51c15daf3d3fffdaae164be9f4bc06e3e084e7",
+      "size": [
+        3024,
+        1960
+      ],
+      "aligned_bounds": [
+        834,
+        786,
+        1356,
+        460
+      ],
+      "review_method": "Original opened with view_image"
+    },
+    {
+      "path": "mac-blue-native-user.png",
+      "sha256": "0e68eb99b23193281d989482b8aa11d2de546992dfc5757585291cde9b700d50",
+      "size": [
+        3116,
+        1990
+      ],
+      "aligned_bounds": [
+        880,
+        752,
+        1356,
+        460
+      ],
+      "review_method": "Lossless recompressed view opened with view_image; identical decoded original RGBA pixels verified"
+    }
+  ],
+  "blue_view_derivative": {
+    "path": "blue-native-view-lossless.png",
+    "sha256": "0c0fef57e213bfb894cc78745d94debd4286beffdfde1321374909e506e8dca9",
+    "reason": "Original exceeded tool image-output size limit; PNG encoding compressed without changing any decoded pixel, dimension, mode or alpha."
+  },
+  "alignment": {
+    "red_bounds_pixels": [
+      834,
+      786,
+      1356,
+      460
+    ],
+    "blue_bounds_pixels": [
+      880,
+      752,
+      1356,
+      460
+    ],
+    "translation_pixels": [
+      46,
+      -34
+    ],
+    "validation": "Four independent unchanged chrome/control anchors select the same integer shift. Add Objects and Render Engine patches have 99th-percentile absolute channel differences of at most 2 screenshot RGB units; no rescaling or warping used.",
+    "qualification": "Observed framing adjustment, not an automatically synchronized window-position proof."
+  },
+  "observations": [
+    "The island body changes from a red tint to a blue tint with the controlled backdrop; the two captures preserve the same island/control geometry after framing alignment.",
+    "Fine vertical backdrop bands are strongly attenuated beneath the central empty bed while tab labels, icons, Default model chip and other foreground controls remain sharp.",
+    "Rounded outer contour and the inset composer contour remain intact; blue Send is visible without the tooltip that overlays it in red.",
+    "The empty placeholder is low contrast against the tinted bed; populated transcript and bright/dark contrast are separate pending evidence, not passed by this pair."
+  ],
+  "descriptive_metrics": {
+    "red_bed_mean_rgb": [
+      95.9036,
+      36.0,
+      29.0
+    ],
+    "blue_bed_mean_rgb": [
+      29.0,
+      33.0,
+      110.6358
+    ],
+    "blue_minus_red_rgb": [
+      -66.9036,
+      -3.0,
+      81.6358
+    ],
+    "dominant_channel_8px_amplitude_ratios": {
+      "red": 0.001403,
+      "blue": 0.000494
+    },
+    "dominant_channel_64px_amplitude_ratios": {
+      "red": 0.020364,
+      "blue": 0.032437
+    },
+    "foreground_label_gradient_p99": {
+      "red": 204.31,
+      "blue": 204.31
+    },
+    "source": "mac-red-blue-metrics.json"
+  },
+  "limits": [
+    "User-supplied images and stage receipts are manually associated; no automatic stable capture or permission bypass occurred.",
+    "Screenshot RGB/band amplitudes are descriptive, not calibrated optical transmittance, opacity, accessibility contrast certification or a Windows alpha-equation test.",
+    "This pair does not qualify moved/resized/recreated windows, pill lifecycle, bright/dark populated transcript readability or full UI completion.",
+    "Original PNG hashes remain unchanged. No app query, input, launch or capture was performed for this review."
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "status": "complete; scoped visual pass with explicit diagnostic/capture limits",
+  "reviewed_at": "2026-11-14T14:56:57.585848+00:00",
+  "runtime_revisions": {
+    "OpenGL_auth_UI_glass": "34a6797f4bf392ec173caf1128ba4336e431c30e",
+    "Vulkan_and_native_splats": "1a9e791e3b199af1016917a3e2fe37c7272b0212"
+  },
+  "runtime": "Windows Server 2022 / NVIDIA Tesla T4 / Mixar 4.4.7 / Blender 5.3.0 / embedded Python 3.13.13 / UAT8",
+  "inventory_png_files": 481,
+  "covered_png_files": 481,
+  "distinct_sha256_images": 352,
+  "byte_identical_duplicate_files": 129,
+  "passing_run_png_files": 476,
+  "diagnostic_guard_failure_png_files": 5,
+  "cold_compile_limited_png_files": 5,
+  "unreviewed_files": [],
+  "unexpected_files": [],
+  "digest_mismatches": [],
+  "observations": [
+    "No new confirmed product visual defect was found in the reviewed settled Windows surfaces.",
+    "Normal native Windows composer/input remains neutral dark gray, with readable foreground controls and a visibly blurred scene behind the island; the reported solid green input and lost translucency were not reproduced.",
+    "Native glass color response, fine-band suppression, rounded corners, move/resize/recreation and save/load/host-switch restoration agree with the passing quantitative assertions on OpenGL and Vulkan.",
+    "Auth pending/completed/masked cards and Codex refusal/retry states remain readable; hidden/pill/restored surfaces and multiline draft/submission agree with state receipts.",
+    "Corrected headless renders, SPZ/PLY import, real legacy-file migration and actual CPU preview have visible output. The settled CPU GUI replay supplies hide/delete/undo visual comparisons."
+  ],
+  "limitations": [
+    "All 481 PNG files are accounted for by actual visual inspection or verified byte identity to a reviewed image. This does not claim every duplicate file was separately opened. Component reports retain the original-view/contact-sheet methods.",
+    "Five initial headless images are diagnostic because that wrapper failed its QA module-name identity oracle; they are not relabeled a passing guarded run. The corrected named qa_boot run passes all six checks.",
+    "Five early production-default GUI images show cold EEVEE compilation/outline-only content and do not qualify settled shaded appearance. The subsequent explicit CPU replay supplies settled comparisons; no cold-start latency certification is claimed.",
+    "Windows KEY-22 covers 13 applicable credential fault/race cases. Directory ACL denial and owner-only ACL confinement remain untested.",
+    "The private Windows build has CUDA disabled. Preview metadata is actual CPU in default and explicit-CPU runs; these results do not qualify GPU Cycles/CUDA/OptiX.",
+    "Synthetic profile/credential/400-point fixtures and static screenshots do not qualify live balances, real provider calls, production-world quality, every display scale/driver or long-session performance.",
+    "Some fixture reset images show a compact unlabeled/absent connection chip and scene thumbnails can retain the synthetic backdrop briefly; restored native captures show normal controls. No regression or thumbnail refresh timing claim follows from those fixture-limited frames.",
+    "Framebuffer screenshots alone cannot establish OS translucency. Native compositor captures and the separate numerical probes support the glass result."
+  ],
+  "component_counts": {
+    "python_merge_review": 108,
+    "native_merge_compat": 69,
+    "gltf_cycles_merge": 174,
+    "root": 130
+  },
+  "transit_deleted_after_approved_transfer": true
+}

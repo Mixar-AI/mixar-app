@@ -55,6 +55,7 @@ class AssetRepresentation;
 
 /** Defined in `buttons_intern.hh`. */
 struct SpaceProperties_Runtime;
+struct SpaceConsole_Runtime;
 
 namespace ed::space_node {
 struct SpaceNode_Runtime;
@@ -213,6 +214,8 @@ struct SpaceOutliner {
   eSpaceOutliner_StateFilter filter_state = SO_FILTER_OB_ALL;
   eSpaceOutliner_ShowRestrictFlag show_restrict_flags = {};
   short filter_id_type = 0;
+  eSpaceOutliner_SortMethod sort_method = SO_SORT_CUSTOM;
+  char _pad1[6] = {};
 
   ed::outliner::SpaceOutliner_Runtime *runtime = nullptr;
 };
@@ -601,7 +604,7 @@ struct FileDirEntry {
   int preview_icon_id = 0;
 
   eFileEntry_Flag flags = {};
-  /* eFileAttributes defined in BLI_fileops.h */
+  /* eFileAttributes defined in BLI_fileops.hh */
   int attributes = 0;
 };
 
@@ -731,7 +734,7 @@ struct SpaceText {
   eSpaceText_Flags flags = {};
 
   /** User preference, is font_size! */
-  short lheight = 0;
+  short line_height = 0;
 
   int tabnumber = 0;
 
@@ -950,7 +953,7 @@ struct SpaceConsole {
   /** Multiple consoles are possible, not just python. */
   char language[32] = "";
 
-  int lheight = 0;
+  int line_height = 0;
 
   /** Index into history of most recent up/down arrow keys. */
   int history_index = 0;
@@ -958,6 +961,9 @@ struct SpaceConsole {
   /** Selection offset in bytes. */
   int sel_start = 0;
   int sel_end = 0;
+
+  /** Keep last. */
+  SpaceConsole_Runtime *runtime = nullptr;
 };
 
 /** \} */
@@ -1357,7 +1363,7 @@ struct SpaceMixieChat {
  * SpaceMixieChat (same field order, same offsets) so the agent
  * bubble's main + footer regions can reuse mixie chat's
  * custom-drawn C++ rendering via
- * `reinterpret_cast<SpaceMixieChat *>(area->spacedata.first)`.
+ * `reinterpret_cast<SpaceMixieChat *>(area->spacedata.first())`.
  * Each bubble area gets its own MixieChatRuntime, but the message
  * store is shared (lives on Scene as mixie_chat_messages).
  *
@@ -1461,6 +1467,22 @@ struct SpaceTextureSets {
   /** Active texture set index (corresponds to material slot). */
   int active_texture_set_index = 0;
   char _pad[4] = {};
+};
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Blender Project
+ * \{ */
+
+struct SpaceProject {
+  SpaceLink *next = nullptr, *prev = nullptr;
+  /** Storage of regions for inactive spaces. */
+  ListBaseT<ARegion> regionbase = {nullptr, nullptr};
+  char spacetype = 0;
+  char link_flag = 0;
+  char _pad0[6] = {};
+  /* End 'SpaceLink' header. */
 };
 
 /** \} */

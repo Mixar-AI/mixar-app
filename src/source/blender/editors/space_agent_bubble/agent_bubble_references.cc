@@ -10,7 +10,7 @@
 #include "BKE_lib_id.hh"
 #include "BKE_report.hh"
 #include "BKE_screen.hh"
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 #include "BLT_translation.hh"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
@@ -390,7 +390,7 @@ void qa_targets(const wmWindow *win,
   if (!G_MAIN || G_MAIN->wm.is_empty()) {
     return;
   }
-  wmWindowManager *wm = static_cast<wmWindowManager *>(G_MAIN->wm.first);
+  wmWindowManager *wm = G_MAIN->wm.first_as<wmWindowManager>();
   const auto items = agent_bubble_reference_items(win->scene, wm);
   const auto g = agent_bubble_reference_geometry(
       win, region, items, agent_bubble_reference_fraction(wm));
@@ -448,7 +448,7 @@ static wmOperatorStatus preview_sketch_exec(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
   ScrArea *area = CTX_wm_area(C);
-  SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first);
+  SpaceImage *sima = area->spacedata.first_as<SpaceImage>();
   ED_space_image_set(bmain, sima, image, false);
   ARegion *region = BKE_area_find_region_type(area, RGN_TYPE_WINDOW);
   CTX_wm_region_set(C, region);

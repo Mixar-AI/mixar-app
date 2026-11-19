@@ -75,7 +75,7 @@ def test_forced_text_activation_survives_a_rebuild():
     decl = UI_HH[UI_HH.index("bool textbutton_activate_rna(") :]
     decl = decl[: decl.index(";")]
     assert "bool force" in decl
-    body = _function_body(HANDLERS_CC, "bool textbutton_activate_rna(")
+    body = _function_body(HANDLERS_CC, "bool textbutton_activate_rna(const bContext *C,\n                             ARegion *region,\n                             const void *rna_poin_data,\n                             const char *rna_prop_id,\n                             const bool force)")
     force = body[body.index("if (force) {") :]
     assert "button_activate_event(" in force
     assert "button_active_only(" not in force.split("else {")[0]

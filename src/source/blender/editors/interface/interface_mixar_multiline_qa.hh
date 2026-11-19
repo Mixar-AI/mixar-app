@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "BLI_string_utf8.h"
+#include "BLI_string_utf8.hh"
 #include "interface_intern.hh"
 
 namespace blender::ui {

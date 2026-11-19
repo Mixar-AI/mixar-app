@@ -14,11 +14,11 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.h"
-#include "BLI_rect.h"
-#include "BLI_string.h"
+#include "BLI_listbase.hh"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
 #include "BLI_string_ref.hh"
-#include "BLI_time.h"
+#include "BLI_time.hh"
 #include "BLI_vector.hh"
 
 #include "BLF_api.hh"
@@ -59,7 +59,7 @@ static SpaceMixieChat *get_space_mixie_chat(const bContext *C)
    * agent bubble reuses the chat hit-testing logic for selection. */
   if (area && (area->spacetype == SPACE_AGENT_BUBBLE))
   {
-    return static_cast<SpaceMixieChat *>(area->spacedata.first);
+    return area->spacedata.first_as<SpaceMixieChat>();
   }
   return nullptr;
 }

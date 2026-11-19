@@ -30,8 +30,8 @@
 
 #include <string>
 
-#include "BLI_rect.h"
-#include "BLI_sys_types.h"
+#include "BLI_rect.hh"
+#include "BLI_sys_types.hh"
 
 #include "UI_mixar_types.hh"
 

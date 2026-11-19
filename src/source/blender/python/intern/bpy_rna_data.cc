@@ -27,7 +27,7 @@
 #include "../generic/python_compat.hh" /* IWYU pragma: keep. */
 
 #include "BLI_path_utils.hh"
-#include "BLI_string.h"
+#include "BLI_string.hh"
 
 #include "BKE_global.hh"
 #include "BKE_main.hh"
@@ -163,7 +163,7 @@ static PyObject *bpy_rna_data_temp_data(PyObject * /*self*/, PyObject *args, PyO
   BPy_DataContext *ret;
   static const char *_keywords[] = {"filepath", nullptr};
   static _PyArg_Parser _parser = {
-      "|$" /* Optional keyword only arguments. */
+      "|$" /* Optional, keyword only arguments. */
       "O&" /* `filepath` */
       ":temp_data",
       _keywords,

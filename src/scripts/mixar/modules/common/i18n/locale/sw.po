@@ -465,8 +465,8 @@ msgstr "Imechagua '{name}' kwenye ubao wa hisia"
 msgid "Select in Scene"
 msgstr "Chagua kwenye mandhari"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Chagua kishikio mbadala cha ulimwengu huu wa splat katika mtazamo wa kutazama"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Mkusanyiko"
@@ -474,8 +474,11 @@ msgstr "Mkusanyiko"
 msgid "That splat world is no longer in this file"
 msgstr "Ulimwengu huo wa splat haupo tena katika faili hii"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ulimwengu huu wa splat hauna kishikio mbadala"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Imechagua '{name}'"
@@ -5570,6 +5573,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6755,8 +6761,14 @@ msgstr "Aina ya faili ya splat isiyotumika '{ext}' (inatarajiwa .spz au .ply)"
 msgid "File not found: {path}"
 msgstr "Faili haikupatikana: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Hakuna vitu vilivyoingizwa kutoka {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Imeshindwa kusoma taswira: {error}"
@@ -6911,8 +6923,8 @@ msgstr "Tokeo la utengenezaji wa ulimwengu halina URL ya splat (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Tokeo la utengenezaji wa ulimwengu halina URL ya mgongano (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Imeshindwa kupakua/kubadilisha ulimwengu: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Ulimwengu umeingizwa lakini haukutoa vitu"
@@ -10963,14 +10975,32 @@ msgstr "Weka Sakafu kwenye Asili"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Sogeza splat ili sakafu yake ikae kwenye Z=0 na kituo cha eneo lake kiwe asilini (utulivu uleule wa ulimwengu uliotengenezwa)"
 
+msgid "Source"
+msgstr "Chanzo"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Kawaida"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Hakuna faili ya splat iliyochaguliwa"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Splat {count} zimeingizwa: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Splat ya Gauss (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Ongeza sanduku la maandishi kwenye ubao wa hisia ({shortcut})"
@@ -12540,9 +12570,6 @@ msgstr "Jumuisha Athari Zote za Mifupa"
 
 msgid "Lighting Mode"
 msgstr "Njia ya Kuangaza"
-
-msgid "Standard"
-msgstr "Kawaida"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Vipimo vya mwangaza wa glTF vinavyotegemea fizikia"
@@ -18794,9 +18821,6 @@ msgstr "Kuchanganya"
 
 msgid "No masks"
 msgstr "Hakuna vinyago"
-
-msgid "Source"
-msgstr "Chanzo"
 
 msgid "No node group loaded"
 msgstr "Hakuna kundi la nodi lililoletwa"
@@ -28500,9 +28524,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Uchoro wa kadi unahitaji mwitikio wa kuchora wa eneo amilifu"
 
@@ -29772,6 +29793,9 @@ msgstr "Radi ya kona ya vipengee vya UI vyenye kona duara"
 msgid "Mixie Chat"
 msgstr "Mazungumzo ya Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29783,18 +29807,6 @@ msgstr "Njia za udondoshaji lazima ziwe maandishi yasiyo tupu"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Njia za udondoshaji lazima ziwe safu ya JSON isiyo tupu"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Maeneo ya kimataifa"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Maeneo ya kimataifa ya dirisha (upau wa juu, upau wa hali). Kiendelezi cha Mixar — kimewekwa wazi ili utangulizi uweze kushughulikia upau wa juu kwa uchoraji upya."
 
 msgid "QA UI Dump"
 msgstr "Dondoo la UI ya QA"

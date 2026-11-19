@@ -21,8 +21,8 @@
 #include "BKE_context.hh"
 #include "BKE_image.hh"
 
-#include "BLI_rect.h"
-#include "BLI_string.h"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
 
 #include "DNA_image_types.h"
 #include "DNA_scene_types.h"

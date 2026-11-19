@@ -1,7 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
  * SPDX-License-Identifier: GPL-3.0-or-later */
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 
 #include "DNA_windowmanager_types.h"
 #include "ED_moodboard_drawer.hh"

@@ -40,10 +40,10 @@
 #include "BKE_screen.hh"
 #include "BKE_wm_runtime.hh"
 
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 #include "BLI_listbase_iterator.hh"
-#include "BLI_rect.h"
-#include "BLI_timer.h"
+#include "BLI_rect.hh"
+#include "BLI_timer.hh"
 
 #include "DNA_space_types.h"
 
@@ -132,7 +132,7 @@ static void player_sync_frame(const Scene *scene,
                               VideoPlayer &player,
                               MoodboardVideoSession &session)
 {
-  SpaceImage *sima = static_cast<SpaceImage *>(player.area->spacedata.first);
+  SpaceImage *sima = player.area->spacedata.first_as<SpaceImage>();
   if (!sima || sima->spacetype != SPACE_IMAGE) {
     return;
   }
@@ -205,7 +205,7 @@ static void hide_editor_chrome(VideoPlayer &player, ScrArea *area)
   /* No edge arrows or reveal tabs for the hidden regions, no navigation
    * gizmos over the picture: the window shows the movie and our controls. */
   ED_area_mixar_chromeless_set(area_is_player);
-  if (SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first)) {
+  if (SpaceImage *sima = area->spacedata.first_as<SpaceImage>()) {
     player.gizmos_were_hidden = (sima->gizmo_flag & SI_GIZMO_HIDE) != 0;
     sima->gizmo_flag |= SI_GIZMO_HIDE;
   }
@@ -225,7 +225,7 @@ static void hide_editor_chrome(VideoPlayer &player, ScrArea *area)
 static void restore_editor_chrome(const VideoPlayer &player)
 {
   ScrArea *area = player.area;
-  if (SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first)) {
+  if (SpaceImage *sima = area->spacedata.first_as<SpaceImage>()) {
     if (!player.gizmos_were_hidden) {
       sima->gizmo_flag &= ~SI_GIZMO_HIDE;
     }

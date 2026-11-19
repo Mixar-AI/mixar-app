@@ -10,6 +10,7 @@ from mixar.config.logging_config import get_logger
 import time
 
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import BoolProperty, CollectionProperty, StringProperty
 
 from ....core.element.get_elements import get_uv_layer_index
@@ -43,7 +44,7 @@ class MTransferSomeLayerUV(bpy.types.Operator, BaseBakeOperator):
 
     from_uv_map: StringProperty(default="")
     uv_map: StringProperty(default="")
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     remove_from_uv: BoolProperty(
         name="Delete From UV",
@@ -277,7 +278,7 @@ class MTransferLayerUV(bpy.types.Operator, BaseBakeOperator):
     bl_options = {"REGISTER", "UNDO"}
 
     uv_map: StringProperty(default="")
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     @classmethod
     def poll(cls, context):

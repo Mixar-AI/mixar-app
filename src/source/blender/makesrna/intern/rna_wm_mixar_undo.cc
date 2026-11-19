@@ -106,7 +106,7 @@ void RNA_def_wm_mixar_undo(BlenderRNA *brna)
     return;
   }
   /* Runs after RNA_def_wm: the WindowManager struct is registered. */
-  StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager", nullptr);
+  StructRNA *srna_wm = brna->structs_map.lookup_default("WindowManager"_ustr, nullptr);
   if (srna_wm == nullptr) {
     return;
   }

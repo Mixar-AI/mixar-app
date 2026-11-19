@@ -11,6 +11,7 @@ import json
 import time
 
 import bpy
+from mixar.modules.paint.ui.properties.named_item_properties import MPaintNamedItem
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, FloatProperty, IntProperty, StringProperty
 
 from ....core.io.arrangements.layer_arrangements import rearrange_mp_nodes
@@ -156,7 +157,7 @@ class MBakeChannels(bpy.types.Operator, BaseBakeOperator):
     bl_options = {"REGISTER", "UNDO"}
 
     uv_map: StringProperty(default="", update=update_bake_channel_uv_map)
-    uv_map_coll: CollectionProperty(type=bpy.types.PropertyGroup)
+    uv_map_coll: CollectionProperty(type=MPaintNamedItem)
 
     interpolation: EnumProperty(
         name="Image Interpolation Type",

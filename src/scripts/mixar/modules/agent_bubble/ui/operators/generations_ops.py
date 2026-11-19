@@ -259,7 +259,7 @@ class MIXAR_OT_generations_select_splat(Operator):
 
     bl_idname = "mixar.generations_select_splat"
     bl_label = "Select in Scene"
-    bl_description = "Select this splat world's proxy handle in the viewport"
+    bl_description = "Select this splat world in the viewport"
     bl_options = {'REGISTER', 'UNDO'}
 
     collection_name: StringProperty(name="Collection", default="")
@@ -269,24 +269,29 @@ class MIXAR_OT_generations_select_splat(Operator):
         if collection is None:
             self.report({'ERROR'}, "That splat world is no longer in this file")
             return {'CANCELLED'}
-        # The proxy Empty is a splat world's ONE handle — the point cloud and
-        # the collider are hidden, and what the viewport shows is KIRI's GPU
-        # pass, not geometry (moodboard/core/splat_lifecycle.py).
-        proxy = None
+        # The splat object is the world's handle; the collider stays hidden
+        # (moodboard/core/splat_lifecycle.py).
+        from mixar.modules.moodboard.core.splat_native import is_splat
+
+        splat = None
         for obj in collection.all_objects:
-            if obj.get("wl_role") == "proxy":
-                proxy = obj
+            if obj.get("wl_role") == "splat" and is_splat(obj):
+                splat = obj
                 break
-        if proxy is None:
-            self.report({'ERROR'}, "This splat world has no proxy handle")
+        if splat is None:
+            self.report({'ERROR'}, "This splat world has no splat left")
             return {'CANCELLED'}
         try:
             bpy.ops.object.select_all(action='DESELECT')
         except Exception:  # noqa: BLE001 — no object mode / no view layer
             pass
-        proxy.select_set(True)
-        context.view_layer.objects.active = proxy
-        self.report({'INFO'}, rpt_("Selected '{name}'").format(name=proxy.name))
+        try:
+            splat.select_set(True)
+        except RuntimeError:
+            self.report({'ERROR'}, "This splat world is hidden or excluded from the view layer")
+            return {'CANCELLED'}
+        context.view_layer.objects.active = splat
+        self.report({'INFO'}, rpt_("Selected '{name}'").format(name=splat.name))
         return {'FINISHED'}
 
 

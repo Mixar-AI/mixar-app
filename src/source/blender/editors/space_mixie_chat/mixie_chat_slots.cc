@@ -14,7 +14,7 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 
 #include "RNA_access.hh"
 

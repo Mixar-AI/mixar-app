@@ -7,7 +7,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 
 #include "DNA_windowmanager_types.h"
 #include "WM_api.hh"

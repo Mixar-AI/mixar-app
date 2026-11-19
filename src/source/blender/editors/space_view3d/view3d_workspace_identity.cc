@@ -1,6 +1,6 @@
 /* SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
  * SPDX-License-Identifier: GPL-3.0-or-later */
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 #include "BKE_idprop.hh"
 #include "BKE_main.hh"
 #include "DNA_scene_types.h"

@@ -66,7 +66,8 @@ def change_texture_size(_, context):
 
 
 def change_units(_, __):
-	bpy.ops.texel_density.check()
+	if bpy.ops.texel_density.check.poll():
+		bpy.ops.texel_density.check()
 
 
 def change_texture_type(_, context):

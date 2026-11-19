@@ -20,6 +20,7 @@ on lost the reload entirely.
 import re
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 CPP = ROOT / "src/source/blender/editors/space_agent_bubble"
+RNA = ROOT / "src/source/blender/makesrna/intern"
 BUBBLE_CC = (CPP / "space_agent_bubble.cc").read_text(encoding="utf-8")
 GEN_DATA_CC = (CPP / "agent_ui_generations_data.cc").read_text(encoding="utf-8")
 HOVER_PY = (
@@ -49,6 +51,37 @@ def _function_body(source: str, signature_start: str) -> str:
     raise AssertionError(f"unterminated function: {signature_start}")
 
 
+def _load_hover_ops():
+    """A fresh ``hover_ops`` module against the mocked bpy."""
+    sys.modules.setdefault("bpy.utils.previews", MagicMock(name="bpy.utils.previews"))
+    from mixar.modules.testing.mock_bpy import install_bpy_mock
+
+    install_bpy_mock()
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_island_chrome_hover_ops",
+        SCRIPTS / "mixar/modules/agent_bubble/ui/operators/hover_ops.py",
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class _TickBpy:
+    """Just enough bpy for one tick; any ``bpy.ops`` access is recorded."""
+
+    def __init__(self, window_manager):
+        self.context = SimpleNamespace(window_manager=window_manager)
+        self.ops_accesses = 0
+
+    @property
+    def ops(self):
+        self.ops_accesses += 1
+        return MagicMock(name="bpy.ops")
+
+
 # -------------------------------------------------------------------------- #
 # Hover pump
 # -------------------------------------------------------------------------- #
@@ -57,7 +90,7 @@ def _function_body(source: str, signature_start: str) -> str:
 def test_hover_tick_operator_has_a_real_poll():
     body = _function_body(BUBBLE_CC, "void MIXAR_OT_bubble_hover_tick(")
     assert "ot->poll = mixar_bubble_hover_tick_poll;" in body, (
-        "without a poll callback the Python pump's op.poll() is always True"
+        "without a poll callback the RNA dispatch execs on every heartbeat"
     )
 
 
@@ -110,21 +143,8 @@ def test_hover_pump_imports_constants_rather_than_restating_them():
 def test_hover_pump_register_is_a_no_op_off_the_allowlist():
     """Behavioural check against the mocked bpy: unsupported platform, no
     timer; supported platform, only the slow hover-policy timer."""
-    sys.modules.setdefault("bpy.utils.previews", MagicMock(name="bpy.utils.previews"))
-    from mixar.modules.testing.mock_bpy import install_bpy_mock
-
-    install_bpy_mock()
-
-    import importlib.util
-
-    import bpy
-
-    spec = importlib.util.spec_from_file_location(
-        "_island_chrome_hover_ops",
-        SCRIPTS / "mixar/modules/agent_bubble/ui/operators/hover_ops.py",
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = _load_hover_ops()
+    bpy = module.bpy
 
     registered: list = []
     bpy.app.timers.is_registered = lambda fn: fn in registered
@@ -144,6 +164,52 @@ def test_hover_pump_register_is_a_no_op_off_the_allowlist():
     assert len(registered) == 1, "register() must stay idempotent"
     module.unregister()
     assert registered == []
+
+
+def test_hover_tick_dispatches_through_the_window_manager_not_bpy_ops():
+    """bpy.ops flushes and evaluates the view-layer depsgraph before and after
+    every call — from this timer, even while a render holds the interface lock
+    and the main loop deliberately skips depsgraph updates (backend#2058)."""
+    module = _load_hover_ops()
+    wm = MagicMock(name="window_manager")
+    module.bpy = _TickBpy(wm)
+    module._logger = MagicMock(name="logger")
+
+    assert module._hover_tick() == module._TICK_SECONDS
+    wm.mixar_bubble_hover_tick.assert_called_once_with()
+    assert module.bpy.ops_accesses == 0, "the heartbeat must never touch bpy.ops"
+    module._logger.exception.assert_not_called()
+
+
+def test_hover_tick_dispatch_failure_keeps_the_timer_and_logs_once():
+    module = _load_hover_ops()
+    wm = MagicMock(name="window_manager")
+    wm.mixar_bubble_hover_tick.side_effect = RuntimeError("context lost")
+    module.bpy = _TickBpy(wm)
+    module._logger = MagicMock(name="logger")
+
+    for _ in range(3):
+        assert module._hover_tick() == module._TICK_SECONDS
+    assert wm.mixar_bubble_hover_tick.call_count == 3
+    module._logger.exception.assert_called_once()
+
+
+def test_hover_tick_rna_function_is_registered_and_dispatches_the_operator():
+    """``WM_operator_name_call`` runs the operator's native poll itself and
+    does no depsgraph evaluation, unlike bpy.ops."""
+    registry = (RNA / "rna_wm_mixar.cc").read_text(encoding="utf-8")
+    assert '#include "rna_wm_mixar_hover.cc"' in registry
+    assert "RNA_def_mixar_hover(brna);" in registry
+    hover = (RNA / "rna_wm_mixar_hover.cc").read_text(encoding="utf-8")
+    assert '"mixar_bubble_hover_tick"' in hover
+    dispatch = _function_body(hover, "static void rna_WindowManager_mixar_bubble_hover_tick(")
+    assert re.search(
+        r'WM_operator_name_call\(\s*C,\s*"MIXAR_OT_bubble_hover_tick",\s*'
+        r"wm::OpCallContext::ExecDefault",
+        dispatch,
+    )
+    # Nothing reads a result: the function returns nothing.
+    assert "RNA_def_function_return" not in hover
 
 
 # -------------------------------------------------------------------------- #

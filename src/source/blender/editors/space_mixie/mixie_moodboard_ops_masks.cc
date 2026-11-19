@@ -8,6 +8,8 @@
  * \brief Moodboard mask generation operators - box and lasso masks with C++ acceleration
  */
 
+#include "IMB_partial_update.hh"
+
 #include "mixie_moodboard_ops_common.hh"
 
 namespace blender::ed::mixie {
@@ -146,7 +148,7 @@ static wmOperatorStatus moodboard_generate_box_mask_exec(bContext *C, wmOperator
   }
 
   /* Mark image as dirty so it updates */
-  BKE_image_mark_dirty(mask_image, mask_ibuf);
+  IMB_mark_dirty(mask_ibuf);
 
   BKE_image_release_ibuf(mask_image, mask_ibuf, lock);
 
@@ -314,7 +316,7 @@ static wmOperatorStatus moodboard_generate_lasso_mask_exec(bContext *C, wmOperat
   MEM_delete_void(static_cast<void *>(polygon));
 
   /* Mark image as dirty so it updates */
-  BKE_image_mark_dirty(mask_image, mask_ibuf);
+  IMB_mark_dirty(mask_ibuf);
 
   BKE_image_release_ibuf(mask_image, mask_ibuf, lock);
 

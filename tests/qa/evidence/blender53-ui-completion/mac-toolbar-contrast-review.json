@@ -1,0 +1,189 @@
+{
+  "SPDX-FileCopyrightText": "2026 Adeveda Enterprises Private Limited",
+  "SPDX-License-Identifier": "GPL-2.0-or-later",
+  "review": "Zen Move / Rotate / Scale toolbar contrast over a bright viewport",
+  "classification": "Inherited visual limitation within the observed and source-equivalent scope",
+  "verdict": "The pale transform glyphs have poor contrast against their translucent bed over white. Source comparison supports an inherited paint policy, rather than a new Blender 5.3 change. The fixture draws underneath the overlapping toolbar region, not over its glyphs.",
+  "method": {
+    "actual_images_opened": true,
+    "source_comparison": true,
+    "pixel_sampling": "Read original PNG pixels using Pillow without altering the images",
+    "app_calls": false,
+    "new_captures": false,
+    "product_edits": false
+  },
+  "revisions": {
+    "baseline_client": "b042cdd608c5d51d09de923a3faebbb3ffc4c10d",
+    "baseline_upstream_pin": "fbe6228777e7d9afefcd61a413844e790ae75db7",
+    "baseline_blender": "5.2",
+    "current_product": "58b795ae6383329687d2fd95f7b80dc9a3ce17e4",
+    "current_upstream_pin": "02f0899d78e374b63e7181d9061e1f7ab03419cc",
+    "current_blender": "5.3",
+    "qa_evidence_head_at_investigation": "de39d0ddaba90ecb1d50e826c831b016cb3b222c"
+  },
+  "source_equivalence": {
+    "file": "src/source/blender/editors/interface/interface_widgets.cc",
+    "function": "widget_zen_tool_glass",
+    "hash_scope": "UTF-8 bytes from the static void declaration through its matching closing brace, excluding the following newline",
+    "baseline_sha256": "8cb3bf96e113a341e955c40d56788c81b97517ada3c2a2d77331ce62b208eb64",
+    "current_sha256": "8cb3bf96e113a341e955c40d56788c81b97517ada3c2a2d77331ce62b208eb64",
+    "byte_identical": true,
+    "additional_checks": [
+      "zen_toolbar_tool and zen_glass_cell are also byte-identical between the baseline and current source.",
+      "The Python toolbar layout in view3d_header_filter.py is unchanged.",
+      "The PILL token file differs only by a Blender header include rename; the token values are unchanged.",
+      "The glass draw implementation differs only by Blender header include renames.",
+      "The same function hash was independently verified at the observed Mac screenshot runtime 1a9e791e3; current_product 58b795ae6 identifies the source comparison tip, not the screenshot runtime."
+    ],
+    "observed_runtime_sha256": "8cb3bf96e113a341e955c40d56788c81b97517ada3c2a2d77331ce62b208eb64"
+  },
+  "mac_original": {
+    "path": "build/qa/blender53-ui-completion/mac/manual-native-lifecycle/bright-native-user.png",
+    "sha256": "d5833cdcf1480a78fc5b6b03bf204b752665f357ffdda2f61d0f2dee556a8cf7",
+    "size_px": [
+      3248,
+      2122
+    ],
+    "coordinate_system": "Original image pixels; origin at top left",
+    "toolbar_approximate_bounds_xyxy": [
+      128,
+      1043,
+      208,
+      1319
+    ],
+    "inspected_sample_bounds_xyxy": {
+      "move": [
+        139,
+        1060,
+        197,
+        1120
+      ],
+      "rotate": [
+        139,
+        1150,
+        197,
+        1210
+      ],
+      "scale": [
+        139,
+        1240,
+        197,
+        1302
+      ]
+    },
+    "pixels": [
+      {
+        "label": "Move glyph stroke",
+        "xy": [
+          160,
+          1088
+        ],
+        "rgb": [
+          229,
+          229,
+          229
+        ]
+      },
+      {
+        "label": "Toolbar bed beside the Rotate glyph",
+        "xy": [
+          135,
+          1180
+        ],
+        "rgb": [
+          208,
+          208,
+          208
+        ]
+      },
+      {
+        "label": "Bright viewport outside the toolbar",
+        "xy": [
+          225,
+          1180
+        ],
+        "rgb": [
+          255,
+          254,
+          255
+        ]
+      }
+    ],
+    "sampled_glyph_to_bed_contrast_ratio": 1.2244275484206775,
+    "contrast_method": "sRGB relative luminance: linearize channels, weight 0.2126 / 0.7152 / 0.0722, then (lighter + 0.05) / (darker + 0.05)",
+    "measurement_limit": "Representative pixels corroborate the visual finding; this is not a complete glyph mask measurement or a formal accessibility audit. Bounds are visual inspection bounds, not semantic widget geometry.",
+    "observed_runtime": "1a9e791e3b199af1016917a3e2fe37c7272b0212",
+    "packaged_file": "mac-bright-native-user.png"
+  },
+  "earlier_linux_original": {
+    "path": "build/qa/blender53-ui-complete/linux/opengl-qualified-native/bright/desktop.png",
+    "sha256": "65f282017a095cbaf54d99137ba271757d98b7afb97c43efc2db5b0fae45ff7c",
+    "size_px": [
+      1600,
+      1000
+    ],
+    "toolbar_approximate_bounds_xyxy": [
+      403,
+      439,
+      445,
+      583
+    ],
+    "observation": "The same pale transform column is visibly weak against the white viewport. This corroborates cross-platform scope; the earlier compositor pass did not specifically qualify transform glyph contrast."
+  },
+  "paint_policy_evidence": [
+    {
+      "path": "src/source/blender/editors/interface/interface_widgets.cc",
+      "line": 6501,
+      "finding": "floats_over_content is true only for an explicit GlassTool component. Other Zen glass cells, including toolbar tools, receive the manual 0.20 gray wash and style.draw_tint is false."
+    },
+    {
+      "path": "src/source/blender/editors/interface/interface_mixar_liquid_glass_tokens.cc",
+      "line": 155,
+      "finding": "PILL uses neutral gray tint values and defines fallback_alpha = 0.74; the toolbar tint-off branch bypasses that floor."
+    },
+    {
+      "path": "src/source/blender/editors/interface/interface_mixar_liquid_glass_draw.cc",
+      "line": 113,
+      "finding": "The no-backdrop fallback floor is applied to tint alpha only when style.draw_tint is true."
+    },
+    {
+      "path": "tests/glass/test_glass_sections.py",
+      "line": 115,
+      "finding": "The existing tests explicitly preserve the 0.20 toolbar wash and tint-off policy. The test at line 154 reserves the stronger readability floor for explicit GlassTool capsules. Both policies already exist in the 5.2 baseline."
+    }
+  ],
+  "draw_order_evidence": [
+    {
+      "path": "tests/qa/windows_transcript_fixture.py",
+      "line": 26,
+      "finding": "The white fixture registers only on SpaceView3D WINDOW POST_PIXEL. Its draw callback sets blend NONE and paints an opaque rectangle in that region."
+    },
+    {
+      "path": "src/source/blender/editors/screen/area.cc",
+      "line": 594,
+      "finding": "POST_PIXEL callbacks run inside drawing of their own region."
+    },
+    {
+      "path": "src/source/blender/editors/interface/interface_mixar_zen_chrome.cc",
+      "line": 117,
+      "finding": "The floating Zen tools predicate identifies an overlapping TOOLS region, separate from WINDOW."
+    },
+    {
+      "path": "src/source/blender/windowmanager/intern/wm_draw.cc",
+      "line": 1292,
+      "finding": "Non-overlapping regions are composited first. Overlapping regions, including TOOLS, are blended later at lines 1334\u20131342."
+    },
+    {
+      "path": "src/source/blender/windowmanager/intern/wm_draw.cc",
+      "line": 959,
+      "finding": "Region blending explicitly selects GPU_BLEND_ALPHA_PREMULT, so the earlier fixture blend NONE does not determine toolbar region composition."
+    }
+  ],
+  "limits": [
+    "No Blender 5.2 runtime comparison was performed; inherited classification rests on exact relevant source equivalence plus current native visual evidence.",
+    "No non-fixture normal Solid white-background replay was performed.",
+    "No hover, selected-state or disabled-state contrast matrix was measured in this investigation.",
+    "This report does not invalidate the separate island compositor proofs or extend those proofs to transform toolbar contrast."
+  ],
+  "optional_future_characterization": "Remove the QA backdrop handler and use the normal Solid viewport background set to white, then compare white / dark / checker scenes with inactive, hovered and selected Move / Rotate / Scale controls. This would independently characterize the normal scene path; it has not been executed or proven by this review."
+}

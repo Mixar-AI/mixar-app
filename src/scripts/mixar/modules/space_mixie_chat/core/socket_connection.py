@@ -357,6 +357,9 @@ class SocketConnection:
                 "forest_runtime_v1",
                 "terrain_raycast_v1",
                 "inspection_preview_v1",
+                # Splats are built-in objects: engine="splat" captures go
+                # through the ordinary native preview, never KIRI.
+                "native_splats_v1",
                 "notifications",
                 "local_llm",
                 # Client answers blender.liveness on the WS thread; the

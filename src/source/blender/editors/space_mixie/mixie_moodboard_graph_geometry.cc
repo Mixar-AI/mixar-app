@@ -12,7 +12,7 @@
 
 #include "BKE_curve.hh"
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 #include "DNA_theme_types.h"
 #include "DNA_userdef_types.h"
 

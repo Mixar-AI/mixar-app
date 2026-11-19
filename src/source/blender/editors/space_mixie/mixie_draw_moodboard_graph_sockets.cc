@@ -14,7 +14,7 @@
 #include "mixie_draw_moodboard_intern.hh"
 #include "mixie_moodboard_socket_style.hh"
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 #include "DNA_theme_types.h"   /* UI_SCALE_FAC */
 #include "DNA_userdef_types.h" /* extern UserDef U (used by UI_SCALE_FAC) */
 #include "UI_interface_c.hh"

@@ -465,8 +465,8 @@ msgstr "Đã chọn '{name}' trên bảng cảm hứng"
 msgid "Select in Scene"
 msgstr "Chọn trong Cảnh"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Chọn tay cầm đại diện của thế giới splat này trong cổng nhìn"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Bộ Sưu Tập"
@@ -474,8 +474,11 @@ msgstr "Bộ Sưu Tập"
 msgid "That splat world is no longer in this file"
 msgstr "Thế giới splat đó không còn trong tập tin này"
 
-msgid "This splat world has no proxy handle"
-msgstr "Thế giới splat này không có tay cầm đại diện"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Đã chọn '{name}'"
@@ -5570,6 +5573,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6755,8 +6761,14 @@ msgstr "Loại tập tin splat không được hỗ trợ '{ext}' (cần .spz ho
 msgid "File not found: {path}"
 msgstr "Không tìm thấy tập tin: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Không nhập khẩu được đối tượng nào từ {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Không thể đọc hình ảnh: {error}"
@@ -6911,8 +6923,8 @@ msgstr "Kết quả sinh tạo thế giới thiếu URL splat (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Kết quả sinh tạo thế giới thiếu URL vật va chạm (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Không thể tải xuống/chuyển đổi thế giới: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Đã nhập khẩu thế giới nhưng không tạo ra đối tượng nào"
@@ -10963,14 +10975,32 @@ msgstr "Đặt Nền Tại Gốc Tọa Độ"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Di chuyển splat sao cho sàn nằm trên Z=0 và tâm vùng chiếm chỗ nằm tại gốc tọa độ (cách đặt nền giống các thế giới đã sinh tạo)"
 
+msgid "Source"
+msgstr "Nguồn"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Tiêu Chuẩn"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Chưa chọn tập tin splat"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Đã nhập khẩu {count} splat: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Splat Gauss (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12540,9 +12570,6 @@ msgstr "Bao Gồm Toàn Bộ các Ảnh Hưởng của Xương"
 
 msgid "Lighting Mode"
 msgstr "Chế Độ Ánh Sáng"
-
-msgid "Standard"
-msgstr "Tiêu Chuẩn"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Đơn vị chiếu sáng glTF dựa trên vật lý"
@@ -18794,9 +18821,6 @@ msgstr "Pha Trộn"
 
 msgid "No masks"
 msgstr "Không có màn chắn lọc"
-
-msgid "Source"
-msgstr "Nguồn"
 
 msgid "No node group loaded"
 msgstr "Chưa nạp nhóm nút nào"
@@ -28500,9 +28524,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Vẽ thẻ đòi hỏi hàm gọi lại vẽ của vùng đang hoạt động"
 
@@ -29772,6 +29793,9 @@ msgstr "Bán kính góc bo cho các thành phần giao diện bo tròn"
 msgid "Mixie Chat"
 msgstr "Trò Chuyện Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29783,18 +29807,6 @@ msgstr "Các đường dẫn thả phải là chuỗi không rỗng"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Các đường dẫn thả phải là một mảng JSON không rỗng"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Vùng Toàn Cục"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Các vùng toàn cục của cửa sổ (thanh đỉnh, thanh trạng thái). Phần mở rộng của Mixar — được phơi bày để phần hướng dẫn làm quen có thể truy cập thanh đỉnh nhằm vẽ lại."
 
 msgid "QA UI Dump"
 msgstr "Kết Xuất Dữ Liệu Giao Diện QA"

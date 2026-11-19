@@ -17,7 +17,8 @@ template<typename T> struct Set : std::unordered_set<T> {
   }
 };
 template<typename T> struct List {
-  T *first = nullptr;
+  T *first() const { return values.empty() ? nullptr : values.front(); }
+  template<typename U> U *first_as() const { return static_cast<U *>(first()); }
   std::vector<T *> values;
   struct Iterator {
     typename std::vector<T *>::const_iterator iter;
@@ -46,12 +47,10 @@ template<typename T> struct List {
   void add(T &value)
   {
     values.push_back(&value);
-    first = values.front();
   }
   void clear_no_delete()
   {
     values.clear();
-    first = nullptr;
   }
 };
 constexpr int SPACE_AGENT_BUBBLE = 108;
@@ -133,6 +132,7 @@ void storage_exit() {}
 }  // namespace ed::asset::list
 void AS_asset_libraries_exit() {}
 void wm_window_clear_drawable(wmWindowManager *) {}
+void wm_window_make_drawable(wmWindowManager *, wmWindow *) {}
 void BKE_libblock_free_data(int *, bool) {}
 void BKE_libblock_free_data_py(int *) {}
 static bool closed_old_manager = false;
