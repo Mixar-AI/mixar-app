@@ -25,9 +25,15 @@ import numpy as np
 from mixar.config.logging_config import get_logger
 
 from .. import constants as C
-from . import eevee_fit
+from . import device_fit, eevee_fit
 from .cpa2_reader import read_cpa2, sha256_file
-from .payload import build_payload, build_svbrdf_atlas, preview_inputs, svbrdf_preview_inputs
+from .payload import (
+    build_payload,
+    build_svbrdf_atlas,
+    build_table_image_like,
+    preview_inputs,
+    svbrdf_preview_inputs,
+)
 from .svbrdf_reader import SVBRDF, read_svbrdf, representation_class
 
 logger = get_logger(__name__)
@@ -283,41 +289,79 @@ def import_svbrdf(path: str, *, archive_source: bool = True) -> bpy.types.Materi
     return mat
 
 
-def import_axf(path: str, *, archive_source: bool = True) -> bpy.types.Material:
-    """Import an AxF car paint (CarPaint2) or SVBRDF material; other kinds are refused."""
+def import_axf(path: str, *, archive_source: bool = True,
+               fit_to_device: bool = False) -> bpy.types.Material:
+    """Import an AxF car paint (CarPaint2) or SVBRDF material; other kinds are refused.
+
+    Car paints with device readings in the file are compared with them (the material
+    keeps the result as PROP_DEVICE_CHECK). fit_to_device: render refit lobes when the
+    refit generalises (core/device_fit.py); the packed original stays the file."""
     if representation_class(path) == SVBRDF:
         return import_svbrdf(path, archive_source=archive_source)
     m = read_cpa2(path, load_flakes=True)
+    file_lobes = m["lobes"]
     base = m["name"] or os.path.splitext(os.path.basename(path))[0]
-    # The EEVEE fit (pure numpy, never touches bpy, only reads m) runs on a worker thread
-    # while this thread builds the render data and packs the images.
-    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="axf_eevee_fit") as pool, \
+    # The device check, the refit, the EEVEE fit and the source hash never touch bpy
+    # (the fits only read m); they run on worker threads while this thread packs the
+    # images and the original file. The EEVEE fit needs the refit's lobes, so with
+    # fit_to_device it starts once the refit is in.
+    archive = None
+    with ThreadPoolExecutor(max_workers=3, thread_name_prefix="axf_fit") as pool, \
             tempfile.TemporaryDirectory(prefix="mixar_axf_") as tmp:
-        fit_future = pool.submit(eevee_fit.fit, m)
-        payload = build_payload(m)
-        table_img = _packed_data_image(f"AxF {base} Table", payload["table_image"], tmp)
-        flakes_img = coat_img = None
-        if payload["flake_atlas"] is not None:
-            flakes_img = _packed_data_image(f"AxF {base} Flakes", payload["flake_atlas"], tmp)
-        if payload["coat_normal_image"] is not None:
-            coat_img = _packed_data_image(f"AxF {base} Coat Normal", payload["coat_normal_image"], tmp)
-        fit_img = _packed_data_image(f"AxF {base} EEVEE Fit", fit_future.result(), tmp)
+        device_future = pool.submit(device_fit.analyse, m, path, fit_to_device)
+        sha_future = pool.submit(sha256_file, path)
+        fit_future = None if fit_to_device else pool.submit(eevee_fit.fit, m)
+        try:
+            payload = build_payload(m)
+            flakes_img = coat_img = None
+            if payload["flake_atlas"] is not None:
+                flakes_img = _packed_data_image(f"AxF {base} Flakes", payload["flake_atlas"], tmp)
+            if payload["coat_normal_image"] is not None:
+                coat_img = _packed_data_image(f"AxF {base} Coat Normal", payload["coat_normal_image"], tmp)
+            if archive_source:
+                archive = _archive_source(path, os.path.basename(path))
+            device = device_future.result()
+            if device is not None and device["fit"]["accepted"]:
+                # Only the lobe texels of the table image change; flakes and coat do not.
+                m = {**m, "lobes": np.asarray(device["fit"]["lobes"], np.float64)}
+                payload["table_image"] = build_table_image_like(m, payload)
+            if fit_future is None:
+                fit_future = pool.submit(eevee_fit.fit, m)
+            table_img = _packed_data_image(f"AxF {base} Table", payload["table_image"], tmp)
+            fit_img = _packed_data_image(f"AxF {base} EEVEE Fit", fit_future.result(), tmp)
+            source_sha = sha_future.result()
+        except Exception:
+            if archive is not None:
+                bpy.data.images.remove(archive)
+            raise
 
     mat = build_material(m, table_img, flakes_img, name=f"AxF {base}", coat_img=coat_img,
                          fit_img=fit_img)
     mat[C.PROP_SOURCE_NAME] = os.path.basename(path)
-    mat[C.PROP_SOURCE_SHA256] = sha256_file(path)
+    mat[C.PROP_SOURCE_SHA256] = source_sha
+    refit = device is not None and device["fit"]["accepted"]
     mat["axf_model"] = json.dumps({
-        "representation": "CarPaint2", "kd": m["kd"], "lobes": m["lobes"].tolist(),
+        "representation": "CarPaint2", "kd": m["kd"], "lobes": file_lobes.tolist(),
+        "render_lobes": m["lobes"].tolist(),
         "ior": m["ior"], "refractive": m["refractive"], "num_theta_f": m["num_theta_f"],
         "num_theta_i": m["num_theta_i"], "lut": m["lut"].tolist(), "patch_mm": list(m["patch_mm"]),
         "table_space": m["table_space"], "coat_normal_mm": list(m["coat_normal_mm"]),
     })
-    if archive_source:
-        mat[C.PROP_ARCHIVE] = _archive_source(path, os.path.basename(path))
+    mat[C.PROP_LOBES] = C.LOBES_DEVICE_FIT if refit else C.LOBES_FILE
+    if device is not None:
+        mat[C.PROP_DEVICE_CHECK] = json.dumps(device)
+    if archive is not None:
+        mat[C.PROP_ARCHIVE] = archive
     if m["extra_materials"]:
         logger.warning("[AxF] %s holds %d more materials; imported the first (%s)",
                        os.path.basename(path), len(m["extra_materials"]), m["name"])
+    if device is not None:
+        fit = device["fit"]
+        logger.info("[AxF] %s vs device: %.2f / %.2f dE00 (mean / max)%s", os.path.basename(path),
+                    device["file"]["mean"], device["file"]["max"],
+                    "" if not fit["requested"] else
+                    f"; fit to device {'applied' if fit['accepted'] else 'not applied'}: "
+                    f"held out {fit['held_out_mean']:.2f} / {fit['held_out_max']:.2f} ({fit['reason']})")
     logger.info("[AxF] imported %s as %s", os.path.basename(path), mat.name)
     return mat
 

@@ -31,23 +31,69 @@ geometries per scan, 6 mm aperture, 31 bands, 400–700 nm. The pickup sits at 1
 | 45° | −15, 15, 25, 45, 75, 110 |
 | 15° | −45, −30, −15, 15, 45, 80 |
 
-Colour: CIE Lab, D65, 10° observer; ΔE00. Flakes enter as their average.
+The importer makes this comparison itself on every car paint that carries readings
+and shows it in Material Properties ▸ AxF. One convention for every figure here and in
+the app:
 
-| Paint | model vs device ΔE00 mean / max | scan 1 vs scan 2 |
-|---|---|---|
-| silver (metallic) | 2.66 / 8.93 | 0.21 |
-| grey (metallic) | 1.59 / 3.73 | 0.23 |
-| beige | 1.64 / 4.50 | 0.49 |
-| green | 1.34 / 2.97 | one scan |
-| blue (metallic), two files | 0.96 / 2.30 | 0.33 |
-| red | 0.86 / 2.42 | 0.54 |
-| chrome garnish | 0.72 / 2.72 | one scan |
-| black ×2, grill black, piano black, white | 0.20–0.59 / 0.35–2.33 | 0.35 (white) |
+- both sides as reflectance factor `R = π f` (the stored value divided by `cos θ(emitter)`);
+- the device side is the mean of the file's scans at each geometry;
+- the model side is the file's model at the reading's directions, flakes as their
+  patch average (what a 6 mm aperture averages);
+- colour: CIE 1931 2° observer (the observer the files' own colour specifications
+  name), D65, CIELAB against the perfect white, CIEDE2000 (kL = kC = kH = 1).
 
-On metallic paints the model is 16–40 % darker than the device where the half-angle is
-22.5° and 16–62 % brighter at the flop (aspecular 110°). X-Rite's own decoder agrees
-with the model there, so the gap is in the file. Part of it comes from the encoder:
-these files keep one active Cook-Torrance lobe of the three CarPaint2 allows.
+Earlier versions of this note used the 10° observer, per-scan figures and other
+sources; their numbers differ from these by up to about 0.3.
+
+| Paint | scans | model vs device ΔE00 mean / max | scan 1 vs 2, worst geometry |
+|---|---|---|---|
+| silver (metallic) | 2 | 2.59 / 8.77 | 0.53 |
+| beige | 2 | 1.66 / 4.24 | 0.93 |
+| grey (metallic) | 2 | 1.56 / 3.68 | 0.50 |
+| green | 1 | 1.30 / 2.95 | — |
+| blue (metallic), scans_blr | 2 | 0.93 / 2.20 | 0.72 |
+| blue (metallic), exterior | 1 | 0.94 / 2.37 | — |
+| red | 2 | 0.84 / 1.81 | 1.65 |
+| chrome garnish | 1 | 0.71 / 2.69 | — |
+| black | 3 | 0.48 / 1.49 | 1.51 |
+| white | 2 | 0.43 / 1.12 | 1.25 |
+| grill black | 1 | 0.39 / 1.46 | — |
+| black2 | 1 | 0.34 / 1.02 | — |
+| piano black | 1 | 0.22 / 0.36 | — |
+
+On metallic paints the model is 18–39 % darker than the device where the half-angle is
+22.5° (`r45as45`, `r15as45`, `r15as-45`) and up to 65 % brighter at the flop. X-Rite's
+own decoder agrees with the model there, so the gap is in the file. On silver, grey and
+beige it is almost all lightness; on blue and red at those geometries hue and chroma
+are a large part. Part of it comes from the encoder: these files keep one active
+Cook-Torrance lobe of the three CarPaint2 allows. Flakes are not the cause (on or off,
+the figures move by at most about 0.4).
+
+## Fit Lobes to Device (optional)
+
+The import option **Fit Lobes to Device** refits two Cook-Torrance lobes (coefficient
+and width; F0, the colour table, diffuse, clear coat and flakes stay as stored) to the
+readings in the file, and renders the refit only when it predicts angles it has not
+seen better than the file's lobes. Each geometry in turn is left out, the lobes are
+fitted to the other eleven, and the left-out geometry is predicted; the refit is used
+only if that held-out mean and maximum both improve by at least 0.1 ΔE00 and the lobes
+reflect no more light than they receive. Off (the default), the file renders as stored.
+Either way the packed original is unchanged and export writes it byte for byte.
+
+| Paint | file's lobes mean / max | refit, held out mean / max | used |
+|---|---|---|---|
+| silver | 2.59 / 8.77 | 1.51 / 3.12 | yes |
+| grey | 1.56 / 3.68 | 1.20 / 3.16 | yes |
+| beige | 1.66 / 4.24 | 1.39 / 3.28 | yes |
+| green | 1.30 / 2.95 | 0.95 / 2.65 | yes |
+| blue, scans_blr / exterior | 0.93 / 2.20, 0.94 / 2.37 | 0.81 / 1.69, 0.68 / 1.56 | yes |
+| red | 0.84 / 1.81 | 0.57 / 1.37 | yes |
+| white, black, black2, grill black, piano black, chrome garnish | 0.22–0.71 / 0.36–2.69 | held-out mean no better | no |
+
+A refit moves error between geometries: the large 22.5° errors fall, while a few
+near-specular geometries the file already matched rise, by up to about 1.8 ΔE00 on
+silver. Material Properties ▸ AxF lists those geometries. The refit cannot correct hue
+in the colour table, so most of the blue and red hue error at 22.5° remains.
 
 ## Choices the files do not state
 
@@ -90,6 +136,13 @@ Ward or GGX lobe.
   out of files you use with the agent: import with Keep Original File off, or remove the
   originals first.
 
+## Artist controls
+
+The AxF Car Paint node has five inputs for deliberate look changes. Their defaults
+render the measurement exactly: Tint white, **Flake Strength 1** (the flakes as
+measured), Orange Peel 1, Coat Reflection 1, Coat Roughness 0. All validation figures
+use these defaults.
+
 ## Rendering
 
 Cycles. Checked against the reference on CPU (macOS) and Apple Metal. Windows CPU
@@ -99,5 +152,7 @@ platform changes (texel lookups at texel edges). NVIDIA
 CUDA/OptiX builds compile the same kernel code but have not been checked against the
 reference yet. OSL shows a neutral grey stand-in. EEVEE renders a car paint imported
 by this version close to Cycles (median ΔE76 under 1 on a lit sphere, area lights
-approximated by their centre direction); SVBRDF and older car paint imports show a
+approximated by their centre direction). Car paints imported by an earlier version
+show a preview until Material Properties ▸ AxF ▸ Add EEVEE Fit fits them from the
+material's own data (no re-import, no original file needed). SVBRDF materials show a
 preview, not the measured material.

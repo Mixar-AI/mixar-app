@@ -160,6 +160,17 @@ def build_payload(m: dict, atlas_columns: int = C.ATLAS_COLUMNS) -> dict:
     return {"table_image": table_image, "flake_atlas": atlas, "coat_normal_image": coat_image, **info}
 
 
+def build_table_image_like(m: dict, payload: dict) -> np.ndarray:
+    """The table image for m with the atlas layout of an existing payload (a refit
+    changes only the lobe texels)."""
+    atlas = payload["flake_atlas"]
+    flakes = m.get("flakes")
+    patch_shape = flakes.shape[1:3] if flakes is not None else (0, 0)
+    image, _ = build_table_image(m, C.ATLAS_COLUMNS if atlas is not None else 0, patch_shape,
+                                 atlas.shape[:2] if atlas is not None else (0, 0))
+    return image
+
+
 def preview_inputs(m: dict) -> dict:
     """EEVEE preview values derived from the same data (normal incidence)."""
     rgb = table_rgb709(m)[0, 0]

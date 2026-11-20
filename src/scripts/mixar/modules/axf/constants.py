@@ -24,6 +24,12 @@ PROP_ATLAS = "axf_atlas"
 PROP_SOURCE_NAME = "axf_source_name"
 PROP_SOURCE_SHA256 = "axf_source_sha256"
 PROP_ARCHIVE = "axf_archive"
+# Car paints: the model against the device readings in the file (core/device_check.py,
+# JSON), and which Cook-Torrance lobes the table image carries.
+PROP_DEVICE_CHECK = "axf_device_check"
+PROP_LOBES = "axf_lobes"
+LOBES_FILE = "file"
+LOBES_DEVICE_FIT = "device_fit"
 # The packed original .axf: an Image datablock never used for rendering.
 PROP_IS_ARCHIVE = "axf_is_source_archive"
 ARCHIVE_NAME_PREFIX = "AxF Source: "

@@ -20,6 +20,28 @@ from mixar.config.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+def _import_message(mat, archive_source: bool) -> str:
+    """One line: what was imported, whether the scan was kept, and the device check."""
+    from mixar.modules.axf.core.device_text import device_check, reason_text
+    from mixar.modules.common.i18n import rpt_
+
+    kept = rpt_("original .axf kept in the .blend") if archive_source else rpt_("original .axf not kept")
+    msg = rpt_("Imported {name} ({kept})").format(name=mat.name, kept=kept)
+    check = device_check(mat)
+    if check is None:
+        return msg
+    msg += rpt_("; file vs device {mean:.2f} / {max:.2f} dE00").format(
+        mean=check["file"]["mean"], max=check["file"]["max"])
+    fit = check["fit"]
+    if fit["requested"]:
+        if fit["accepted"]:
+            msg += rpt_("; lobes fit to device (unseen angles {mean:.2f} / {max:.2f})").format(
+                mean=fit["held_out_mean"], max=fit["held_out_max"])
+        else:
+            msg += rpt_("; file lobes kept: {reason}").format(reason=reason_text(fit["reason"]))
+    return msg
+
+
 class MIXIE_OT_import_axf(Operator, ImportHelper):
     bl_idname = "mixie.import_axf"
     bl_label = "Import AxF Material"
@@ -40,6 +62,16 @@ class MIXIE_OT_import_axf(Operator, ImportHelper):
         ),
         default=True,
     )
+    fit_to_device: BoolProperty(
+        name="Fit Lobes to Device",
+        description=(
+            "Car paints with device readings in the file: refit the specular lobes to those "
+            "readings and render the refit when it predicts unseen angles better than the "
+            "file's own lobes. Off: render the file as stored. Export always writes the "
+            "original file"
+        ),
+        default=False,
+    )
     assign: BoolProperty(
         name="Assign to Selected",
         description="Assign the material to the selected meshes",
@@ -51,7 +83,8 @@ class MIXIE_OT_import_axf(Operator, ImportHelper):
         from mixar.modules.axf.core.cpa2_reader import AxfFormatError
 
         try:
-            mat = import_axf(self.filepath, archive_source=self.archive_source)
+            mat = import_axf(self.filepath, archive_source=self.archive_source,
+                             fit_to_device=self.fit_to_device)
         except AxfFormatError as e:
             self.report({'ERROR'}, str(e))
             return {'CANCELLED'}
@@ -67,8 +100,7 @@ class MIXIE_OT_import_axf(Operator, ImportHelper):
                         obj.data.materials[0] = mat
                     else:
                         obj.data.materials.append(mat)
-        kept = "original .axf kept in the .blend" if self.archive_source else "original .axf not kept"
-        self.report({'INFO'}, f"Imported {mat.name} ({kept})")
+        self.report({'INFO'}, _import_message(mat, self.archive_source))
         return {'FINISHED'}
 
 

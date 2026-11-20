@@ -1445,6 +1445,141 @@ msgstr "响应中的令牌对不完整"
 msgid "Mixar cannot save your sign-in securely. Enable and unlock a Secret Service keyring (such as GNOME Keyring or KWallet) in your desktop D-Bus session, check that its configuration is writable, then try Sign in again."
 msgstr ""
 
+msgid "it predicts unseen angles better than the file's lobes"
+msgstr ""
+
+msgid "it does not lower the mean error at unseen angles"
+msgstr ""
+
+msgid "it does not lower the largest error at unseen angles"
+msgstr ""
+
+msgid "its lobes would reflect more light than they receive"
+msgstr ""
+
+msgid "Add AxF EEVEE Fit"
+msgstr ""
+
+msgid "WidthMM"
+msgstr ""
+
+msgid "HeightMM"
+msgstr ""
+
+msgid "Add EEVEE Fit"
+msgstr ""
+
+msgid "Car paints imported before the EEVEE fit show a rough preview in EEVEE. Fit the measured paint for EEVEE from the material's own data, in the background. Cycles is unchanged"
+msgstr ""
+
+msgid "All Materials"
+msgstr ""
+
+msgid "Every AxF car paint in the file instead of the active material"
+msgstr ""
+
+msgid "Every AxF car paint already has its EEVEE fit"
+msgstr ""
+
+msgid "Fitting {count} AxF car paint(s) for EEVEE in the background"
+msgstr ""
+
+msgid "original .axf kept in the .blend"
+msgstr ""
+
+msgid "original .axf not kept"
+msgstr ""
+
+msgid "Imported {name} ({kept})"
+msgstr ""
+
+msgid "; file vs device {mean:.2f} / {max:.2f} dE00"
+msgstr ""
+
+msgid "; lobes fit to device (unseen angles {mean:.2f} / {max:.2f})"
+msgstr ""
+
+msgid "; file lobes kept: {reason}"
+msgstr ""
+
+msgid "Import AxF Material"
+msgstr ""
+
+msgid "Import an X-Rite AxF material (car paint or SVBRDF) that renders the measured data exactly in Cycles"
+msgstr ""
+
+msgid "Keep Original File"
+msgstr ""
+
+msgid "Pack the original .axf into the .blend so it can be exported unchanged. The scan then travels with every copy of the .blend. Off: renders the same, cannot be exported back to .axf"
+msgstr ""
+
+msgid "Fit Lobes to Device"
+msgstr ""
+
+msgid "Car paints with device readings in the file: refit the specular lobes to those readings and render the refit when it predicts unseen angles better than the file's own lobes. Off: render the file as stored. Export always writes the original file"
+msgstr ""
+
+msgid "Assign to Selected"
+msgstr ""
+
+msgid "Assign the material to the selected meshes"
+msgstr ""
+
+msgid "Export AxF Material"
+msgstr ""
+
+msgid "Write the active material's original AxF file back out, byte for byte"
+msgstr ""
+
+msgid "Remove Embedded AxF Originals"
+msgstr ""
+
+msgid "Delete the original .axf scans packed into this .blend (for example before sharing it). AxF materials keep rendering exactly; they can no longer be exported to .axf"
+msgstr ""
+
+msgid "Remove embedded AxF originals?"
+msgstr ""
+
+msgid "AxF materials keep rendering; exporting them to .axf will need a re-import."
+msgstr ""
+
+msgid "Remove"
+msgstr "移除"
+
+msgid "X-Rite AxF Material (.axf)"
+msgstr ""
+
+msgid "AxF"
+msgstr ""
+
+msgid "Source: {name}"
+msgstr ""
+
+msgid "Original file kept in the .blend"
+msgstr ""
+
+msgid "Original file not kept"
+msgstr ""
+
+msgid "Model vs Device Readings"
+msgstr ""
+
+msgid "File lobes: {mean:.2f} mean, {max:.2f} max dE00 (worst {geo})"
+msgstr ""
+
+msgid "Rendering device-fit lobes: {mean:.2f} mean, {max:.2f} max at unseen angles"
+msgstr ""
+
+msgid "Trade-off: worse at {geos}"
+msgstr ""
+
+msgid "Rendering the file's lobes: the refit was not used because {reason}"
+msgstr ""
+
+msgid "Fitting for EEVEE…"
+msgstr ""
+
 msgid "Ready for input"
 msgstr "准备就绪，可以输入"
 
@@ -1906,9 +2041,6 @@ msgstr ""
 
 msgid "Couldn't save your API key"
 msgstr ""
-
-msgid "Remove"
-msgstr "移除"
 
 msgid "Start the remove-confirmation flow"
 msgstr "开始移除确认流程"

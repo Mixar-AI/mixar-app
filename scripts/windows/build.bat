@@ -452,7 +452,7 @@ if !ERRORLEVEL! neq 0 (
 echo Site-packages: %SITE_PACKAGES%
 if not exist "%SITE_PACKAGES%" mkdir "%SITE_PACKAGES%"
 
-"!PYTHON_BIN!" -s -B -m pip install --upgrade --no-compile --target "%SITE_PACKAGES%" -r "%REQUIREMENTS_FILE%"
+"!PYTHON_BIN!" -s -B "%SCRIPT_DIR%install_python_requirements.py" "%REQUIREMENTS_FILE%" "%SITE_PACKAGES%"
 if !ERRORLEVEL! neq 0 (
     echo Error: Failed to install Python packages
     exit /b 1

@@ -205,6 +205,14 @@ preserved. Every build reruns CMake after the overlay so restored CMake files
 remove stale targets; existing object files are retained for incremental compilation.
 Bundled configuration, package installation and import checks use Python's `-s`
 flag, so packages in the user's Python installation cannot affect those steps.
+On Windows, an incremental build reuses the embedded packages when the complete
+dependency tree meets its version constraints, installed files match their wheel
+checksums, and `pip check` passes. CMake can recopy older Python files during
+install; the build reinstalls only packages whose files changed.
+The build removes obsolete wheel metadata left by earlier `pip --target`
+upgrades. A missing or incompatible package triggers a fresh install. If that
+install cannot replace a loaded `.pyd`, close Mixar and MCP clients using this
+build before retrying.
 The Mixar-owned `src/scripts/mixar/` package is mirrored separately to remove
 retired Python directories, preserving the generated `_build_env.py` marker.
 The mirror excludes local virtual environments and Python caches and refuses a
