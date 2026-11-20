@@ -1390,6 +1390,20 @@ static void wm_window_ghostwindow_add(wmWindowManager *wm,
     wm_window_titlebar_theme_context_set(win, nullptr);
     ui::theme::get_color_3fv(TH_BACK, window_bg_color);
 
+#ifdef _WIN32
+    /* MIXAR #2158: no eager present for the agent island and pill (their screen and
+     * SPACE_AGENT_BUBBLE area exist before WM_window_open gets here). NVIDIA's "layered on
+     * DXGI swapchain" Vulkan present, used on Optimus laptops, crashed nvoglv64.dll on this
+     * first present of an owned popup window; bisection points at the pill's, followed by its
+     * resize. Their first real draw presents instead. The DPI must still be set before
+     * anything reads #UserDef. */
+    if (Mixar_window_has_agent_bubble(win)) {
+      WM_window_dpi_set_userdef(win);
+      GPU_render_end();
+      return;
+    }
+#endif
+
     /* Until screens get drawn, draw a default background using the window theme color. */
     wm_window_swap_buffer_acquire(win);
     GPU_clear_color(window_bg_color[0], window_bg_color[1], window_bg_color[2], 1.0f);
