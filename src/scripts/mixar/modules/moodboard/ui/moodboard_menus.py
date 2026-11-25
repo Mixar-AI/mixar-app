@@ -159,11 +159,12 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                 layout.separator()
 
                 can_continue = action_node.action_type in {
-                    'IMAGE_GEN', 'VIDEO_GEN', 'VIDEO_UPSCALE',
+                    'IMAGE_GEN', 'VIDEO_GEN', 'VIDEO_UPSCALE', 'IMAGE_UPSCALE',
                 }
                 if can_continue:
                     layout.label(text="Continue With")
-                if action_node.action_type == 'IMAGE_GEN':
+                # An upscaled still continues like any generated one.
+                if action_node.action_type in {'IMAGE_GEN', 'IMAGE_UPSCALE'}:
                     _connected_action(
                         layout,
                         'IMAGE_GEN',
@@ -191,6 +192,11 @@ class MIXIE_MT_moodboard_context_menu(Menu):
                         )
                     if template_available('CHARACTER_SHEET_3D'):
                         _draw_character_sheet_entry(layout, action_node.node_id)
+                    if template_available('IMAGE_UPSCALE'):
+                        _connected_action(
+                            layout, 'IMAGE_UPSCALE', n_("Upscale Image"),
+                            'ZOOM_IN', action_node.node_id,
+                        )
                 if can_continue and _capability_available("video_gen"):
                     _connected_action(
                         layout,
@@ -243,6 +249,10 @@ class MIXIE_MT_moodboard_context_menu(Menu):
             if _capability_available("video_gen"):
                 _connected_action(
                     layout, 'VIDEO_GEN', n_("Generate Video"), 'FILE_MOVIE'
+                )
+            if selected_stills > 0 and template_available('IMAGE_UPSCALE'):
+                _connected_action(
+                    layout, 'IMAGE_UPSCALE', n_("Upscale Image"), 'ZOOM_IN'
                 )
             if selected_images > selected_stills and _capability_available("video_upscale"):
                 _connected_action(

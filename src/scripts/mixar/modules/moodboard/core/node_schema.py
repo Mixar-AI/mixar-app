@@ -60,6 +60,8 @@ _OUTPUT_TYPES = {
     'ANIMATE': 'MESH',
     # Same mesh, new UVs: chains onward like any other mesh result.
     'UV_UNWRAP': 'MESH',
+    # Image -> image: one connected still in, a larger still out.
+    'IMAGE_UPSCALE': 'IMAGE',
 }
 
 _MESH_FEATURE_CAPABILITY = {
@@ -101,7 +103,7 @@ MODEL_3D_SERVICE_KEYS = frozenset({'model_3d', 'image_to_3d', 'hunyuan_rapid'})
 # keeps it — Tripo texturing accepts a texture prompt.
 _PROMPTLESS_ACTION_TYPES = frozenset(
     {'RETOPOLOGY', 'MESH_SEGMENT', 'AUTO_RIG', 'CHARACTER_PARTS', 'ASSEMBLE', 'ANIMATE',
-     'UV_UNWRAP'})
+     'UV_UNWRAP', 'IMAGE_UPSCALE'})
 # PBR texturing accepts a single style/reference image OR exactly four
 # turnaround views, so the node offers up to four optional image sockets.
 _PBR_MAX_IMAGE_REFS = 4
@@ -124,6 +126,8 @@ def services_for_action(action_type: str, services) -> list:
     if action_type == 'MESH_SEGMENT':
         # The mesh node imports segmented part meshes (Part decomposition).
         return [service for service in services if service.get("key") == 'hunyuan_part']
+    if action_type == 'IMAGE_UPSCALE':
+        return [service for service in services if service.get("key") == 'image_upscale']
     if action_type != 'MODEL_3D':
         return [] if action_type == 'ASSEMBLE' else list(services)  # ASSEMBLE is local
     return [
@@ -140,6 +144,8 @@ def _capability_for_action(action_type: str) -> str:
         return "video_gen"
     if action_type == 'VIDEO_UPSCALE':
         return "video_upscale"
+    if action_type == 'IMAGE_UPSCALE':
+        return "image_upscale"
     if action_type == 'WORLD_LABS':
         return "world_labs"
     if action_type == 'CHARACTER_PARTS':

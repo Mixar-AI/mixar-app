@@ -99,7 +99,7 @@ def test_menus_offer_splat_from_an_image_or_image_gen():
 
     assert "if source_type == 'IMAGE' and capability_available(\"world_labs\")" in output_menu
     assert "'WORLD_LABS', n_(\"Generate Splat\")" in output_menu
-    assert "action_node.action_type == 'IMAGE_GEN'" in context_menu
+    assert "action_node.action_type in {'IMAGE_GEN', 'IMAGE_UPSCALE'}" in context_menu
     assert "'WORLD_LABS', n_(\"Generate Splat\")" in context_menu
     assert "selected_stills > 0 and _capability_available(\"world_labs\")" in context_menu
     assert "for item in available_templates():" in node_menus

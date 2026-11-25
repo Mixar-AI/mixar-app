@@ -21,4 +21,5 @@ ACTION_TYPES = (
     ('ASSEMBLE', "Assemble Character", "Attach generated parts to a rigged or plain body, locally"),
     ('ANIMATE', "Animate", "Apply preset animations to the connected rigged character"),
     ('UV_UNWRAP', "Smart UV", "Re-unwrap the connected 3D mesh's UVs"),
+    ('IMAGE_UPSCALE', "Upscale Image", "Upscale the connected image up to 4x"),
 )

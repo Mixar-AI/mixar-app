@@ -38,7 +38,7 @@ from mixar.modules.mcp_bridge.core import lease
 from mixar.modules.space_mixie_chat.constants import SessionState
 from mixar.modules.space_mixie_chat.core.session import SessionManager
 
-FEATURES = ["brush_gen", "imagegen", "lookdev", "video_gen", "video_upscale"]
+FEATURES = ["brush_gen", "image_upscale", "imagegen", "lookdev", "video_gen", "video_upscale"]
 REASON_KEY = "mixar_agent_gen_reason"
 REFUSED = "imagegen generation is not available in this connection; nothing was queued or charged."
 

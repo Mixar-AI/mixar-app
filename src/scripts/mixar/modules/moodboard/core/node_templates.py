@@ -62,7 +62,8 @@ def media_under_drop(scene, template_id, point):
             continue
         if not _media_contains(item, point):
             continue
-        if template_id in {'IMAGE_GEN', 'MODEL_3D', 'WORLD_LABS'} and not is_still_item(item):
+        stills_only = {'IMAGE_GEN', 'MODEL_3D', 'WORLD_LABS', 'IMAGE_UPSCALE'}
+        if template_id in stills_only and not is_still_item(item):
             continue
         if template_id == 'VIDEO_UPSCALE' and is_still_item(item):
             continue

@@ -312,7 +312,7 @@ def test_sidebar_and_node_share_one_enqueue_and_one_validator():
         assert name in operator
     assert "enqueue_generation" not in operator
     assert "run_video_upscale_node" in runner and "run_video_upscale_node" in execution
-    assert "elif node.action_type == 'VIDEO_UPSCALE':" in execution
+    assert "elif node.action_type in {'VIDEO_UPSCALE', 'IMAGE_UPSCALE'}:" in execution
     assert "build_video_upscale_input(videos[0], limits)" in runner
     assert "get_video_upscale_limits" in drawer
     assert "mixie.video_upscale_generate" in drawer

@@ -76,6 +76,8 @@ def capability_for_action(action_type: str) -> str:
         return "video_gen"
     if action_type == 'VIDEO_UPSCALE':
         return "video_upscale"
+    if action_type == 'IMAGE_UPSCALE':
+        return "image_upscale"
     if action_type == 'WORLD_LABS':
         return "world_labs"
     if action_type == 'CHARACTER_PARTS':

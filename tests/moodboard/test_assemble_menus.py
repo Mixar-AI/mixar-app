@@ -120,7 +120,8 @@ def test_both_menus_route_through_the_shared_helpers():
     assert "_draw_character_sheet_entry(layout, action_node.node_id)" in context_menu
     assert "_draw_character_sheet_entry(layout)" in context_menu
     # The IMAGE_GEN continuation sits inside that node's "Continue With" block.
-    continue_with = context_menu.split("if action_node.action_type == 'IMAGE_GEN':")[1]
+    continue_with = context_menu.split(
+        "if action_node.action_type in {'IMAGE_GEN', 'IMAGE_UPSCALE'}:")[1]
     continue_with = continue_with.split("if can_continue and")[0]
     assert "_draw_character_sheet_entry(layout, action_node.node_id)" in continue_with
 

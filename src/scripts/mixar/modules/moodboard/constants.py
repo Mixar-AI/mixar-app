@@ -438,6 +438,7 @@ NODE_TEMPLATES = (
     ('MODEL_3D', n_("Image to 3D"), 'MESH_DATA', 'model_gen'),
     ('VIDEO_GEN', n_("Video Generation"), 'FILE_MOVIE', 'video_gen'),
     ('VIDEO_UPSCALE', n_("Upscale Video"), 'FULLSCREEN_ENTER', 'video_upscale'),
+    ('IMAGE_UPSCALE', n_("Upscale Image"), 'ZOOM_IN', 'image_upscale'),
     ('WORLD_LABS', n_("Generate Splat"), 'WORLD', 'world_labs'),
     ('PBR_GEN', n_("PBR Generation"), 'TEXTURE', 'pbr_generation'),
     ('RETOPOLOGY', n_("Retopology"), 'MOD_REMESH', 'retopology'),

@@ -14,6 +14,7 @@ from mixar.config.logging_config import get_logger
 from mixar.modules.common.analytics.draft_events import note_generation_submitted
 from mixar.modules.common.i18n import n_
 from .generic_jobs import AsyncGLBJob, StreamingVideoJob, SyncImageJob
+from .staged_image_job import StagedImageJob
 from .helpers import create_scene_flag_listener, get_queue_with_listener
 from .job import Job
 
@@ -41,6 +42,8 @@ def enqueue_generation(
     undo_message: str = "",
     base_name: str = "",
     on_images_added: Optional[Callable] = None,
+    source_image: Optional[dict] = None,
+    source_key_field: str = "image_s3_key",
     # Video-only streamed inputs
     image_inputs: Optional[list] = None,
     video_inputs: Optional[list] = None,
@@ -78,6 +81,10 @@ def enqueue_generation(
         ``fn(job, names)`` — image post-add hook, called on the main thread
         before normal job completion. An exception rolls back the added cards
         and fails the job.
+    source_image : dict, optional
+        Image jobs only: ONE source file streamed to the backend before submit
+        (``StagedImageJob``), its key landing in ``payload[source_key_field]``;
+        ``upload_purpose`` picks the backend's staging rules.
     scene_flag : str
         If set and no explicit *listener*, auto-creates a
         ``create_scene_flag_listener`` for this property.
@@ -105,7 +112,17 @@ def enqueue_generation(
             import_options=import_options,
         )
     elif kind == "image":
-        job = SyncImageJob(
+        image_job_class = StagedImageJob if source_image else SyncImageJob
+        staged = (
+            {
+                "source_input": dict(source_image),
+                "upload_purpose": upload_purpose,
+                "source_key_field": source_key_field,
+            }
+            if source_image else {}
+        )
+        job = image_job_class(
+            **staged,
             feature_key=feature_key,
             label=label,
             display_label=display_label,

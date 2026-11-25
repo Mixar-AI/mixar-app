@@ -73,6 +73,11 @@ class MIXIE_MT_moodboard_output_menu(Menu):
                 layout, 'VIDEO_GEN', n_("Generate Video"), 'FILE_MOVIE', source_id, drop
             )
             added = True
+        if source_type == 'IMAGE' and template_available('IMAGE_UPSCALE'):
+            connected_action(
+                layout, 'IMAGE_UPSCALE', n_("Upscale Image"), 'ZOOM_IN', source_id, drop
+            )
+            added = True
         if source_type == 'VIDEO' and capability_available("video_upscale"):
             connected_action(
                 layout, 'VIDEO_UPSCALE', n_("Upscale Video"), 'FULLSCREEN_ENTER',

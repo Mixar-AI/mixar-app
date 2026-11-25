@@ -105,12 +105,13 @@ def _selected_media(scene, action_type: str):
         item for item in scene.mixie_moodboard_images
         if item.selected and getattr(item, "image", None) is not None
     ]
-    if action_type in {'IMAGE_GEN', 'MODEL_3D', 'WORLD_LABS', 'CHARACTER_PARTS'}:
+    if action_type in {'IMAGE_GEN', 'MODEL_3D', 'WORLD_LABS', 'CHARACTER_PARTS', 'IMAGE_UPSCALE'}:
         selected = [item for item in selected if is_still_item(item)]
     if action_type == 'VIDEO_UPSCALE':
         # One movie in: the node has a single video socket.
         selected = [item for item in selected if not is_still_item(item)]
-    if action_type in {'MODEL_3D', 'VIDEO_UPSCALE', 'WORLD_LABS', 'CHARACTER_PARTS'}:
+    if action_type in {'MODEL_3D', 'VIDEO_UPSCALE', 'WORLD_LABS', 'CHARACTER_PARTS',
+                       'IMAGE_UPSCALE'}:
         return selected[:1]
     return selected
 
@@ -411,6 +412,7 @@ _ACCEPTED_SOURCE_TYPES = {
     'MODEL_3D': {'IMAGE'},
     'VIDEO_GEN': {'IMAGE', 'VIDEO'},
     'VIDEO_UPSCALE': {'VIDEO'},
+    'IMAGE_UPSCALE': {'IMAGE'},
     'WORLD_LABS': {'IMAGE'},
     'CHARACTER_PARTS': {'IMAGE'},
     'PBR_GEN': {'MESH'},
@@ -478,6 +480,8 @@ def create_connected_action(
             raise ValueError(rpt_("Connect this from a 3D mesh node"))
         if action_type == 'VIDEO_UPSCALE':
             raise ValueError(rpt_("Upscale Video needs one selected video"))
+        if action_type == 'IMAGE_UPSCALE':
+            raise ValueError(rpt_("Upscale Image needs one selected image"))
         if action_type == 'CHARACTER_PARTS':
             raise ValueError(rpt_("Character Parts needs one selected image with component masks"))
         if action_type == 'WORLD_LABS':
