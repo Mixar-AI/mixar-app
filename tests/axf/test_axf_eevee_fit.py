@@ -75,5 +75,5 @@ def test_node_and_importer_share_the_property_name():
             "node_shader_bsdf_axf_carpaint.cc").read_text(encoding="utf-8")
     assert f'"{C.PROP_EEVEE_FIT}"' in node and f'"{C.PROP_TABLE}"' in node
     glsl = (ROOT / "src/source/blender/gpu/shaders/material/"
-            "gpu_shader_material_axf_carpaint.glsl").read_text(encoding="utf-8")
+            "gpu_shader_material_axf_carpaint.bsl.hh").read_text(encoding="utf-8")
     assert "node_bsdf_axf_carpaint_fit" in glsl and "node_bsdf_axf_carpaint_fit" in node

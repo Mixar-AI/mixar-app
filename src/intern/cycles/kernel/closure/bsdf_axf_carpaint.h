@@ -92,7 +92,7 @@ ccl_device_inline float4 axf_texel(KernelGlobals kg,
   return zero_float4();
 #else
   const float2 co = make_float2((float(x) + 0.5f) / float(w), (float(y) + 0.5f) / float(h));
-  return kernel_image_interp(kg, sd, id, dual2(co));
+  return kernel_image_interp(kg, sd, id, dual2(co), zero_float4());
 #endif
 }
 
@@ -455,7 +455,7 @@ ccl_device int bsdf_axf_carpaint_setup(KernelGlobals kg,
   }
   bsdf->sample_alpha = clamp(alpha, 0.02f, 1.0f);
   bsdf->sample_weight *= average(axf_carpaint_albedo(kg, sd, bsdf, &p));
-  return SD_BSDF | SD_BSDF_HAS_EVAL;
+  return SR_BSDF | SR_BSDF_HAS_EVAL;
 }
 
 ccl_device Spectrum bsdf_axf_carpaint_eval(KernelGlobals kg,

@@ -60,6 +60,29 @@ struct SVMNodeMath {
 static_assert(alignof(SVMNodeMath) <= alignof(uint));
 static_assert(sizeof(SVMNodeMath) % sizeof(uint) == 0);
 
+/* NODE_BOOLEAN_MATH */
+struct SVMNodeBooleanMath {
+  NodeBooleanMathType math_type;
+  SVMInputInt value1;
+  SVMInputInt value2;
+  SVMStackOffset result_offset;
+  uint8_t _pad[3];
+};
+static_assert(alignof(SVMNodeBooleanMath) <= alignof(uint));
+static_assert(sizeof(SVMNodeBooleanMath) % sizeof(uint) == 0);
+
+/* NODE_INTEGER_MATH */
+struct SVMNodeIntegerMath {
+  NodeIntegerMathType math_type;
+  SVMInputInt value1;
+  SVMInputInt value2;
+  SVMInputInt value3;
+  SVMStackOffset result_offset;
+  uint8_t _pad[3];
+};
+static_assert(alignof(SVMNodeIntegerMath) <= alignof(uint));
+static_assert(sizeof(SVMNodeIntegerMath) % sizeof(uint) == 0);
+
 /* NODE_CLAMP */
 struct SVMNodeClamp {
   NodeClampType clamp_type;
@@ -187,6 +210,8 @@ static_assert(sizeof(SVMNodeLightPath) % sizeof(uint) == 0);
 /* NODE_ATTR / NODE_ATTR_DERIVATIVE */
 struct SVMNodeAttr {
   int attr;
+  SVMInputFloat3 missing;
+  SVMInputFloat missing_alpha;
   SVMStackOffset out_offset;
   NodeAttributeOutputType output_type;
   NodeBumpOffset bump_offset;
@@ -195,17 +220,6 @@ struct SVMNodeAttr {
 };
 static_assert(alignof(SVMNodeAttr) <= alignof(uint));
 static_assert(sizeof(SVMNodeAttr) % sizeof(uint) == 0);
-
-/* NODE_VERTEX_COLOR / NODE_VERTEX_COLOR_DERIVATIVE */
-struct SVMNodeVertexColor {
-  uint8_t layer_id;
-  SVMStackOffset color_offset;
-  SVMStackOffset alpha_offset;
-  NodeBumpOffset bump_offset;
-  float bump_filter_width;
-};
-static_assert(alignof(SVMNodeVertexColor) <= alignof(uint));
-static_assert(sizeof(SVMNodeVertexColor) % sizeof(uint) == 0);
 
 /* NODE_TEX_COORD / NODE_TEX_COORD_DERIVATIVE */
 struct SVMNodeTexCoord {
@@ -373,6 +387,16 @@ struct SVMNodeCombineVector {
 };
 static_assert(alignof(SVMNodeCombineVector) <= alignof(uint));
 static_assert(sizeof(SVMNodeCombineVector) % sizeof(uint) == 0);
+
+/* NODE_GET_VECTOR_COMPONENT / NODE_GET_VECTOR_COMPONENT_DERIVATIVE */
+struct SVMNodeGetVectorComponent {
+  SVMInputFloat3 vector;
+  SVMInputInt index;
+  SVMStackOffset out_offset;
+  uint8_t _pad[3];
+};
+static_assert(alignof(SVMNodeGetVectorComponent) <= alignof(uint));
+static_assert(sizeof(SVMNodeGetVectorComponent) % sizeof(uint) == 0);
 
 /* NODE_SEPARATE_COLOR */
 struct SVMNodeSeparateColor {
@@ -730,6 +754,8 @@ static_assert(sizeof(SVMNodeTexGradient) % sizeof(uint) == 0);
 struct SVMNodeTexImage {
   int id;
   uint projection; /* NodeImageProjection */
+  SVMInputFloat3 missing;
+  SVMInputFloat missing_alpha;
   uint8_t flags;
   SVMStackOffset co;
   SVMStackOffset out_offset;
@@ -742,6 +768,8 @@ static_assert(sizeof(SVMNodeTexImage) % sizeof(uint) == 0);
 struct SVMNodeTexImageBox {
   int id;
   float blend;
+  SVMInputFloat3 missing;
+  SVMInputFloat missing_alpha;
   uint8_t flags;
   SVMStackOffset co;
   SVMStackOffset out_offset;
@@ -754,6 +782,8 @@ static_assert(sizeof(SVMNodeTexImageBox) % sizeof(uint) == 0);
 struct SVMNodeTexEnvironment {
   int id;
   NodeEnvironmentProjection projection;
+  SVMInputFloat3 missing;
+  SVMInputFloat missing_alpha;
   uint8_t flags;
   SVMStackOffset co;
   SVMStackOffset out_offset;
@@ -1119,11 +1149,14 @@ static_assert(sizeof(SVMNodeRefractionBsdfData) % sizeof(uint) == 0);
 struct SVMNodeGlassBsdfData {
   SVMInputFloat3 color;
   SVMInputFloat roughness;
+  SVMInputFloat anisotropy;
+  SVMInputFloat rotation;
   SVMInputFloat ior;
   SVMInputFloat thin_film_thickness;
   SVMInputFloat thin_film_ior;
   SVMStackOffset normal_offset;
-  uint8_t _pad[3];
+  SVMStackOffset tangent_offset;
+  uint8_t _pad[2];
 };
 static_assert(alignof(SVMNodeGlassBsdfData) <= alignof(uint));
 static_assert(sizeof(SVMNodeGlassBsdfData) % sizeof(uint) == 0);
@@ -1194,6 +1227,9 @@ struct SVMNodePrincipledBsdfData {
   SVMInputFloat specular_ior_level;
   SVMInputFloat anisotropic;
   SVMInputFloat anisotropic_rotation;
+  /* Transmission. */
+  SVMInputFloat transmission_dispersion_scale;
+  SVMInputFloat transmission_dispersion_abbe_number;
   /* Emission. */
   SVMInputFloat3 emission_color;
   SVMInputFloat emission_strength;

@@ -4,8 +4,8 @@
 
 /**
  * Mixar: lighting of the AxF car paint node in the pipelines that light inside the
- * material shader (forward, and the deferred "hybrid" pass EEVEE uses for materials that
- * need it).
+ * material shader (`use_forward_lighting`: forward, and the deferred "hybrid" pass EEVEE
+ * uses for materials that need Shader to RGB, which the node requests).
  *
  * Direct light: every light that reaches the pixel (same culling, attenuation, light
  * linking and shadows as EEVEE's own light loop) is evaluated with the measured CarPaint2
@@ -19,71 +19,78 @@
  * closures would receive it.
  *
  * The result is returned as radiance and emitted by the node; the clear coat mirror stays
- * an ordinary reflection closure.
+ * an ordinary reflection closure. eevee_nodetree_lib.bsl.hh implements the material
+ * interface's axf_lighting_eval (gpu_shader_material_interface.bsl.hh) on top of this.
  */
 
 #pragma once
 
-#ifdef MAT_AXF_LIGHTING
-
-#  include "draw_view.bsl.hh"
-#  include "eevee_colorspace_lib.bsl.hh"
-#  include "eevee_light_eval.bsl.hh"
-#  include "eevee_lightprobe.bsl.hh"
-#  include "gpu_shader_material_axf_carpaint_lib.glsl"
+#include "eevee_colorspace_lib.bsl.hh"
+#include "eevee_light_data.bsl.hh"
+#include "eevee_light_eval.bsl.hh"
+#include "eevee_light_iter.bsl.hh"
+#include "eevee_lightprobe.bsl.hh"
+#include "eevee_uniform.bsl.hh"
+#include "gpu_shader_codegen_lib.glsl"
+#include "gpu_shader_material_axf_carpaint_lib.bsl.hh"
+#include "gpu_shader_math_spherical_harmonics.bsl.hh"
 
 namespace eevee::axf {
 
+/* What the light loop needs about the shaded point. */
+struct Receiver {
+  float3 P;
+  float3 Ng;
+  float2 texel;
+  uchar light_set;
+  float terminator_normal_offset;
+  float terminator_geometry_offset;
+  int ray_count;
+  int ray_step_count;
+};
+
 /* Radiance leaving the surface toward V from one light (Cycles: eval_cos x light). */
-float3 light_contribution([[resource_table]] LightEvalData &srt,
+float3 light_contribution(LightEvalData &srt,
                           LightData light,
                           const bool is_directional,
                           sampler2D table,
                           sampler2D flakes,
                           bool has_flakes,
                           AxfParams p,
-                          float3 P,
-                          float3 Ng,
+                          Receiver rcv,
                           float3 N,
                           float3 V,
                           float2 flake_uv,
-                          float flake_strength,
-                          float2 texel,
-                          ObjectInfos object_infos)
+                          float flake_strength)
 {
-  [[resource_table]] ShadowRenderData &srd = srt.shadow_data;
-  [[resource_table]] Uniform &uni = srd.uniforms;
-  [[resource_table]] const UtilityTexture &util = srt.utility_tx;
-
-  if (!light::light_linking_affects_receiver(light.light_set_membership,
-                                             uchar(receiver_light_set_get(object_infos))))
-  {
+  if (!light::light_linking_affects_receiver(light.light_set_membership, rcv.light_set)) {
     return float3(0.0f);
   }
-  LightVector lv = light_vector_get(light, is_directional, P);
+  LightVector lv = LightVector::get(light, is_directional, rcv.P);
   float attenuation = light_attenuation_surface(light, is_directional, lv);
   attenuation *= light_attenuation_facing(light, lv.L, lv.dist, N, false);
-  attenuation *= light.power[LIGHT_DIFFUSE];
+  attenuation *= light::power_get(light, LIGHT_DIFFUSE);
   if (attenuation < LIGHT_ATTENUATION_THRESHOLD) {
     return float3(0.0f);
   }
 
   float shadow = 1.0f;
   if (light.tilemap_index != LIGHT_NO_SHADOW) {
-    shadow = shadow_eval(srd,
+    shadow = shadow_eval(srt.shadow_data,
                          light,
                          is_directional,
                          false,
                          false,
-                         texel,
+                         rcv.texel,
                          Thickness::zero(),
-                         P,
-                         Ng,
+                         rcv.P,
+                         rcv.Ng,
                          N,
-                         object_infos.shadow_terminator_normal_offset,
-                         object_infos.shadow_terminator_geometry_offset,
-                         uni.uniform_buf.shadow.ray_count,
-                         uni.uniform_buf.shadow.step_count);
+                         rcv.terminator_normal_offset,
+                         rcv.terminator_geometry_offset,
+                         1.0f,
+                         rcv.ray_count,
+                         rcv.ray_step_count);
   }
   if (shadow * attenuation < 1e-30f) {
     return float3(0.0f);
@@ -91,54 +98,38 @@ float3 light_contribution([[resource_table]] LightEvalData &srt,
 
   /* Irradiance on a plane facing the light: the cosine lobe integrated over the light's
    * shape about the light direction is (projected) solid angle / pi. */
-  LightVertices vertices = light_shape_corners(light, lv);
-  float solid_angle = M_PI * light_ltc(util.utility_tx,
-                                       light,
-                                       lv.L,
-                                       V,
-                                       lv,
-                                       eevee::lut::ltc::identity(),
-                                       vertices);
+  const UtilityTexture &util = srt.utility_tx;
+  LightShape shape = LightShape::get(light, lv);
+  float solid_angle = M_PI *
+                      ltc::evaluate(util.utility_tx, light, shape, lv, LTCData::identity(lv.L, V));
   float3 irradiance = light.color * (solid_angle * attenuation * shadow);
   return axf_eval_cos(table, flakes, has_flakes, p, N, N, flake_uv, flake_strength, V, lv.L) *
          irradiance;
 }
 
-bool lighting_eval(sampler2D table,
-                       sampler2D flakes,
-                       bool has_flakes,
-                       float3 N,
-                       float3 V,
-                       float2 flake_uv,
-                       float flake_strength,
-                       float3 diffuse_albedo,
-                       float3 specular_albedo,
-                       float roughness,
-                       float3 tint,
-                       float base_weight,
-                       float weight,
-                       float3 &radiance)
+/* vPz: linear view depth of P (light culling z-bin). V points from the surface to the eye.
+ * Returns the radiance toward V. */
+float3 lighting_eval(LightEvalIterator &lights,
+                     const Uniform &uni,
+                     const LightprobeRenderData &lightprobes,
+                     Receiver rcv,
+                     float vPz,
+                     sampler2D table,
+                     sampler2D flakes,
+                     bool has_flakes,
+                     float3 N,
+                     float3 V,
+                     float2 flake_uv,
+                     float flake_strength,
+                     float3 diffuse_albedo,
+                     float3 specular_albedo,
+                     float roughness,
+                     float3 tint,
+                     float base_weight,
+                     float weight)
 {
-  [[resource_table]] const draw::View &views = resource_table_get(draw::View);
-  [[resource_table]] LightEvalIterator &lights = resource_table_get(eevee::LightEvalIterator);
-  [[resource_table]] const Uniform &uni = resource_table_get(eevee::Uniform);
-  /* clang-format off */ /* Multi-line macro breaks error line counting. */
-  [[resource_table]] LightprobeRenderData &lightprobes = resource_table_get(eevee::LightprobeRenderData);
-  /* clang-format on */
-  [[resource_table]] draw::Infos &infos = resource_table_get(draw::Infos);
-  [[resource_table]] LightEvalData &srt = lights.inner;
-  [[resource_table]] const LightRenderData &light_data = lights.light_data;
-
-  auto &interp_flat = interface_get(eevee_geom_iface_info, interp_flat);
-  draw::ID id{interp_flat.resource_id_raw};
-  ObjectInfos object_infos = infos.get(id.resource_id<1>());
-
-  const ViewMatrices view = views.get(0);
-  const float2 texel = gl_FragCoord.xy;
-  const float3 P = g_data.P;
-  const float3 Ng = g_data.Ng;
-  const float vPz = dot(view.forward(), P) - dot(view.forward(), view.position());
-  /* The node's V points from the surface to the eye. */
+  LightEvalData &srt = lights.inner;
+  const LightRenderData &light_data = lights.light_data;
   AxfParams p = axf_params_load(table);
 
   float3 direct = float3(0.0f);
@@ -148,23 +139,10 @@ bool lighting_eval(sampler2D table,
     const LightCullingData &culling = light_data.light_cull_buf;
     for (uint index = culling.local_lights_len; index < culling.items_count; index++) {
       LightData light = light_data.light_buf[index];
-      direct += light_contribution(srt,
-                                        light,
-                                        true,
-                                        table,
-                                        flakes,
-                                        has_flakes,
-                                        p,
-                                        P,
-                                        Ng,
-                                        N,
-                                        V,
-                                        flake_uv,
-                                        flake_strength,
-                                        texel,
-                                        object_infos);
+      direct += light_contribution(
+          srt, light, true, table, flakes, has_flakes, p, rcv, N, V, flake_uv, flake_strength);
     }
-    uint2 tile_co = uint2(texel / culling.tile_size);
+    uint2 tile_co = uint2(rcv.texel / culling.tile_size);
     uint tile_word_offset = (tile_co.x + tile_co.y * culling.tile_x_len) * culling.tile_word_len;
     int zbin_index = light::culling_z_to_zbin(culling.zbin_scale, culling.zbin_bias, vPz);
     zbin_index = clamp(zbin_index, 0, CULLING_ZBIN_COUNT - 1);
@@ -181,82 +159,33 @@ bool lighting_eval(sampler2D table,
         word &= ~1u << uint(bit_index);
         uint index = word_idx * 32u + uint(bit_index);
         LightData light = light_data.light_buf[index];
-        direct += light_contribution(srt,
-                                          light,
-                                          false,
-                                          table,
-                                          flakes,
-                                          has_flakes,
-                                          p,
-                                          P,
-                                          Ng,
-                                          N,
-                                          V,
-                                          flake_uv,
-                                          flake_strength,
-                                          texel,
-                                          object_infos);
+        direct += light_contribution(
+            srt, light, false, table, flakes, has_flakes, p, rcv, N, V, flake_uv, flake_strength);
       }
     }
   }
   direct *= tint * weight;
 
   /* Indirect light on the per-view fit, as EEVEE lights its own closures from probes. */
-  LightProbeSample samp = lightprobes.load(texel, P, Ng, V);
+  LightProbeSample samp = lightprobes.load(rcv.texel, rcv.P, rcv.Ng, V);
   samp.volume_irradiance = spherical_harmonics::clamp_energy(
       samp.volume_irradiance, uni.uniform_buf.clamp.surface_indirect);
   ClosureUndetermined cl_diffuse = closure_new(CLOSURE_BSDF_DIFFUSE_ID);
   cl_diffuse.N = N;
   cl_diffuse.color = float3(1.0f);
-  cl_diffuse.weight = 1.0f;
   ClosureUndetermined cl_reflect = closure_new(CLOSURE_BSDF_MICROFACET_GGX_REFLECTION_ID);
   cl_reflect.N = N;
   cl_reflect.color = float3(1.0f);
-  cl_reflect.weight = 1.0f;
   cl_reflect.data = float4(roughness, 0.0f, 0.0f, 0.0f);
   float3 indirect =
-      diffuse_albedo * lightprobes.eval(samp, cl_diffuse, P, V, Thickness::zero()) +
-      specular_albedo * lightprobes.eval(samp, cl_reflect, P, V, Thickness::zero());
+      diffuse_albedo * lightprobes.eval(samp, cl_diffuse, rcv.P, V, Thickness::zero()) +
+      specular_albedo * lightprobes.eval(samp, cl_reflect, rcv.P, V, Thickness::zero());
   indirect *= max(tint, float3(0.0f)) * base_weight;
 
   direct = colorspace::brightness_clamp_max(direct, uni.uniform_buf.clamp.surface_direct);
   indirect = colorspace::brightness_clamp_max(indirect, uni.uniform_buf.clamp.surface_indirect);
-  radiance = max(direct, float3(0.0f)) * uni.uniform_buf.clamp.direct_scale +
-             indirect * uni.uniform_buf.clamp.indirect_scale;
-  return true;
+  return max(direct, float3(0.0f)) * uni.uniform_buf.clamp.direct_scale +
+         indirect * uni.uniform_buf.clamp.indirect_scale;
 }
 
 }  // namespace eevee::axf
-
-bool axf_lighting_eval(sampler2D table,
-                       sampler2D flakes,
-                       bool has_flakes,
-                       float3 N,
-                       float3 V,
-                       float2 flake_uv,
-                       float flake_strength,
-                       float3 diffuse_albedo,
-                       float3 specular_albedo,
-                       float roughness,
-                       float3 tint,
-                       float base_weight,
-                       float weight,
-                       float3 &radiance)
-{
-  return eevee::axf::lighting_eval(table,
-                                   flakes,
-                                   has_flakes,
-                                   N,
-                                   V,
-                                   flake_uv,
-                                   flake_strength,
-                                   diffuse_albedo,
-                                   specular_albedo,
-                                   roughness,
-                                   tint,
-                                   base_weight,
-                                   weight,
-                                   radiance);
-}
-
-#endif /* MAT_AXF_LIGHTING */

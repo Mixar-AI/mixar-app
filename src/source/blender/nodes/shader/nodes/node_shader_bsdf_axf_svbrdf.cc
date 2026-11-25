@@ -73,12 +73,13 @@ static int node_shader_gpu_bsdf_axf_svbrdf(GPUMaterial *mat,
                                            GPUNodeStack *out)
 {
   if (!in[1].link) {
-    GPU_link(mat, "world_normals_get", &in[1].link);
+    GPU_link(mat, "world_normals_get", GPU_shading_data(), &in[1].link);
   }
   GPU_material_flag_set(mat,
                         GPU_MATFLAG_DIFFUSE | GPU_MATFLAG_GLOSSY |
                             GPU_MATFLAG_REFLECTION_MAYBE_COLORED);
-  return GPU_stack_link(mat, node, "node_bsdf_axf_svbrdf", in, out);
+  return GPU_stack_link(
+      mat, node, "node_bsdf_axf_svbrdf", in, out, GPU_kernel_globals(), GPU_shading_data());
 }
 
 }  // namespace nodes::node_shader_bsdf_axf_svbrdf_cc

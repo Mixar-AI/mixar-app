@@ -113,7 +113,7 @@ static int node_shader_gpu_bsdf_axf_carpaint(GPUMaterial *mat,
                                              GPUNodeStack *out)
 {
   if (!in[2].link) {
-    GPU_link(mat, "world_normals_get", &in[2].link);
+    GPU_link(mat, "world_normals_get", GPU_shading_data(), &in[2].link);
   }
   GPU_material_flag_set(mat,
                         GPU_MATFLAG_DIFFUSE | GPU_MATFLAG_GLOSSY | GPU_MATFLAG_COAT |
@@ -124,7 +124,8 @@ static int node_shader_gpu_bsdf_axf_carpaint(GPUMaterial *mat,
   Image *fit = node_image_prop(node, "axf_eevee_fit");
   Image *table = node_image_prop(node, "axf_table");
   if (fit == nullptr || table == nullptr) {
-    return GPU_stack_link(mat, node, "node_bsdf_axf_carpaint", in, out);
+    return GPU_stack_link(
+        mat, node, "node_bsdf_axf_carpaint", in, out, GPU_kernel_globals(), GPU_shading_data());
   }
   Image *flakes = node_image_prop(node, "axf_flakes");
   /* Light inside the material shader (EEVEE's forward / deferred hybrid pass), where the
@@ -155,7 +156,9 @@ static int node_shader_gpu_bsdf_axf_carpaint(GPUMaterial *mat,
                         fit_link,
                         table_link,
                         flakes_link,
-                        GPU_constant(&has_flakes));
+                        GPU_constant(&has_flakes),
+                        GPU_kernel_globals(),
+                        GPU_shading_data());
 }
 
 }  // namespace nodes::node_shader_bsdf_axf_carpaint_cc

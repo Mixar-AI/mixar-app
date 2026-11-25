@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2024 Blender Authors
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+set(INC_GLSL
+  .
+  ..
+
+  # For variadic macros
+  ../../../../blenlib
+
+  ../../../intern
+  ../../../intern/shaders
+
+  ../../../../gpu
+  ../../../../gpu/intern
+  ../../../../gpu/shaders
+  ../../../../gpu/shaders/common
+  ../../../../gpu/shaders/compat
+  ../../../../gpu/shaders/infos
+  # Mixar: the AxF car paint BRDF library (eevee_axf_lighting_lib.bsl.hh).
+  ../../../../gpu/shaders/material
+
+  # For grease pencil.
+  ../../gpencil
+)
+
+set(SRC_BSL
+  bsl_shader_linting.cc
+)
+
+# Compile shaders with shader code.
+if(WITH_GPU_SHADER_CPP_COMPILATION)
+  # TODO Remove
+  add_definitions(-DUSE_GPU_SHADER_CREATE_INFO)
+
+  compile_sources_as_cpp(eevee_cpp_shaders_bsl  "${SRC_BSL}" "")
+  # Only enable to make sure they compile on their own.
+  # Otherwise it creates a warning about `pragma once`.
+  # compile_sources_as_cpp(eevee_cpp_shaders_lib "${SRC_GLSL_LIB}" "GPU_LIBRARY_SHADER")
+endif()

@@ -70,14 +70,22 @@ ccl_device_inline float bsdf_get_roughness_pass_squared(const ccl_private Shader
  *
  * To achieve that, the sampled roughness is computed as a MIS weighted
  * average. This makes it so directions with high contribution from sharp
- * BSDFs have a lower roughness, as they will have a high MIS weight. */
-ccl_device_forceinline float bsdf_widen_dD(const float prev_dD, const float avg_roughness_squared)
+ * BSDFs have a lower roughness, as they will have a high MIS weight.
+ *
+ * The amount of widening is scaled by Filter Glossy, which is the setting
+ * to control how much caustics are blurred out. For accurate caustics
+ * image texture lookups and bump ray differentials must be small enough
+ * to capture detail at secondary bounces. */
+ccl_device_forceinline float bsdf_widen_dD(const KernelGlobals kg,
+                                           const float prev_dD,
+                                           const float avg_roughness_squared)
 {
   if (!(avg_roughness_squared > 0.0f)) {
     return prev_dD;
   }
 
-  return max(prev_dD, sqrtf(avg_roughness_squared));
+  const float scale = kernel_data.integrator.differential_widen_scale;
+  return max(prev_dD, scale * sqrtf(avg_roughness_squared));
 }
 
 /* An additional term to smooth illumination on grazing angles when using bump mapping
@@ -125,7 +133,7 @@ ccl_device_inline float bump_shadowing_term(const ccl_private ShaderData *sd,
   }
 
   /* When bump map correction is not used do skip the smoothing. */
-  if ((sd->flag & SD_USE_BUMP_MAP_CORRECTION) == 0) {
+  if ((sd->shader_flag & SD_USE_BUMP_MAP_CORRECTION) == 0) {
     return 1.0f;
   }
 
@@ -568,12 +576,11 @@ ccl_device
 #else
 ccl_device_inline
 #endif
-    Spectrum
-    bsdf_eval(KernelGlobals kg,
-              ccl_private ShaderData *sd,
-              const ccl_private ShaderClosure *sc,
-              const float3 wo,
-              ccl_private float *pdf)
+    Spectrum bsdf_eval(KernelGlobals kg,
+                       ccl_private ShaderData *sd,
+                       const ccl_private ShaderClosure *sc,
+                       const float3 wo,
+                       ccl_private float *pdf)
 {
   Spectrum eval = zero_spectrum();
   *pdf = 0.f;
@@ -724,7 +731,7 @@ ccl_device_inline Spectrum bsdf_albedo(KernelGlobals kg,
                                        const bool reflection,
                                        const bool transmission)
 {
-  Spectrum albedo = sc->weight;
+  Spectrum albedo = one_spectrum();
   /* Some closures include additional components such as Fresnel terms that cause their albedo to
    * be below 1. The point of this function is to return a best-effort estimation of their albedo,
    * meaning the amount of reflected/refracted light that would be expected when illuminated by a
@@ -736,7 +743,7 @@ ccl_device_inline Spectrum bsdf_albedo(KernelGlobals kg,
    * extra overhead though. */
 #if defined(__SVM__) || defined(__OSL__)
   if (CLOSURE_IS_BSDF_MICROFACET(sc->type)) {
-    albedo *= bsdf_microfacet_estimate_albedo(
+    albedo = bsdf_microfacet_estimate_albedo(
         kg, sd->wi, (const ccl_private MicrofacetBsdf *)sc, reflection, transmission);
   }
   else if (sc->type == CLOSURE_BSDF_AXF_CARPAINT_ID) {
@@ -754,14 +761,34 @@ ccl_device_inline Spectrum bsdf_albedo(KernelGlobals kg,
   else if (sc->type == CLOSURE_BSDF_HAIR_CHIANG_ID) {
     /* TODO(lukas): Principled Hair could also be split into a glossy and a transmission component,
      * similar to Glass BSDFs. */
-    albedo *= bsdf_hair_chiang_albedo(sd, sc);
+    albedo = bsdf_hair_chiang_albedo(sd, sc);
   }
   else if (sc->type == CLOSURE_BSDF_HAIR_HUANG_ID) {
-    albedo *= bsdf_hair_huang_albedo(sd, sc);
+    albedo = bsdf_hair_huang_albedo(sd, sc);
   }
 #  endif
 #endif
   return albedo;
+}
+
+ccl_device_inline Spectrum closure_albedo(KernelGlobals kg,
+                                          const ccl_private ShaderData *sd,
+                                          const ccl_private ShaderClosure *sc,
+                                          const bool reflection,
+                                          const bool transmission)
+{
+  return sc->weight * bsdf_albedo(kg, sd, sc, reflection, transmission);
+}
+
+/* Compute albedo used for layering this BSDF on top of another. The albedo is usually the
+ * reflection albedo. */
+ccl_device_inline Spectrum closure_layer_albedo(KernelGlobals kg,
+                                                const ccl_private ShaderData *sd,
+                                                const ccl_private ShaderClosure *sc)
+{
+  /* Use `reduce_max()` to keep compatibility, need to check OSL and OpenPBR spec if we should
+   * remove tint for some closures. */
+  return sc->weight * reduce_max(bsdf_albedo(kg, sd, sc, true, false));
 }
 
 CCL_NAMESPACE_END

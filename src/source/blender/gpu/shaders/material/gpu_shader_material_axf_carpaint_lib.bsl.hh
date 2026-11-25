@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "gpu_shader_math_constants_lib.glsl"
+#include "gpu_shader_math_constants.bsl.hh"
 
 #define AXF_PARAM_HEADER 7
 #define AXF_2_PI 0.636619772367581343076f /* 2/pi */

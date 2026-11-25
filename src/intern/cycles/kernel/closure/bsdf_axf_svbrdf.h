@@ -212,7 +212,7 @@ ccl_device int bsdf_axf_svbrdf_setup(ccl_private AxfSvbrdfBsdf *bsdf)
     bsdf->p0 = 1.0f;
   }
   bsdf->sample_weight *= average(axf_svbrdf_albedo(bsdf));
-  return SD_BSDF | SD_BSDF_HAS_EVAL;
+  return SR_BSDF | SR_BSDF_HAS_EVAL;
 }
 
 ccl_device Spectrum bsdf_axf_svbrdf_eval(const ccl_private ShaderClosure *sc,
