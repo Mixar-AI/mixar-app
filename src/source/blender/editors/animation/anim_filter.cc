@@ -62,10 +62,10 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_alloca.h"
-#include "BLI_listbase.h"
-#include "BLI_string.h"
-#include "BLI_utildefines.h"
+#include "BLI_alloca.hh"
+#include "BLI_listbase.hh"
+#include "BLI_string.hh"
+#include "BLI_utildefines.hh"
 
 #include "BKE_action.hh"
 #include "BKE_anim_data.hh"
@@ -118,7 +118,7 @@ bAction *ANIM_active_action_from_area(const Main &bmain,
     return nullptr;
   }
 
-  const SpaceAction *saction = static_cast<const SpaceAction *>(area->spacedata.first);
+  const SpaceAction *saction = area->spacedata.first_as<SpaceAction>();
   switch (eAnimEdit_Context(saction->mode)) {
     case SACTCONT_ACTION: {
       bAction *active_action = ob->adt ? ob->adt->action : nullptr;
@@ -195,7 +195,7 @@ static bool actedit_get_context(bAnimContext *ac, SpaceAction *saction)
       ac->datatype = ANIMCONT_ACTION;
       ac->data = ac->active_action;
 
-      if (saction->flag & SACTION_POSEMARKERS_SHOW) {
+      if (ac->active_action && (saction->flag & SACTION_POSEMARKERS_SHOW)) {
         ac->markers = &ac->active_action->markers;
       }
 
@@ -205,7 +205,7 @@ static bool actedit_get_context(bAnimContext *ac, SpaceAction *saction)
       ac->datatype = ANIMCONT_SHAPEKEY;
       ac->data = actedit_get_shapekeys(ac);
 
-      if (saction->flag & SACTION_POSEMARKERS_SHOW) {
+      if (ac->active_action && (saction->flag & SACTION_POSEMARKERS_SHOW)) {
         ac->markers = &ac->active_action->markers;
       }
 
@@ -219,11 +219,11 @@ static bool actedit_get_context(bAnimContext *ac, SpaceAction *saction)
       ac->data = &saction->ads;
       return true;
 
-    case SACTCONT_CACHEFILE: /* Cache File */ /* XXX review how this mode is handled... */
+    case SACTCONT_CACHEFILE: /* Cache File */
       /* update scene-pointer (no need to check for pinning yet, as not implemented) */
       saction->ads.source = reinterpret_cast<ID *>(ac->scene);
 
-      ac->datatype = ANIMCONT_CHANNEL;
+      ac->datatype = ANIMCONT_CACHEFILE;
       ac->data = &saction->ads;
       return true;
 
@@ -408,6 +408,7 @@ bool ANIM_animdata_context_getdata(bAnimContext *ac)
 
       case SPACE_BAKING:
       case SPACE_TEXTURE_SETS:
+      case SPACE_PROJECT:
         break;
     }
   }
@@ -511,10 +512,10 @@ bool ANIM_animdata_can_have_greasepencil(const eAnimCont_Types type)
 #define ANIMDATA_HAS_ACTION(id) ((id)->adt && (id)->adt->action)
 
 /* quick macro to test if AnimData is usable for drivers */
-#define ANIMDATA_HAS_DRIVERS(id) ((id)->adt && (id)->adt->drivers.first)
+#define ANIMDATA_HAS_DRIVERS(id) ((id)->adt && (id)->adt->drivers.first_)
 
 /* quick macro to test if AnimData is usable for NLA */
-#define ANIMDATA_HAS_NLA(id) ((id)->adt && (id)->adt->nla_tracks.first)
+#define ANIMDATA_HAS_NLA(id) ((id)->adt && (id)->adt->nla_tracks.first_)
 
 /**
  * Quick macro to test for all three above usability tests, performing the appropriate provided
@@ -558,7 +559,8 @@ bool ANIM_animdata_can_have_greasepencil(const eAnimCont_Types type)
   { \
     if ((id)->adt) { \
       if (!(filter_mode & ANIMFILTER_CURVE_VISIBLE) || \
-          !((id)->adt->flag & ADT_CURVES_NOT_VISIBLE)) { \
+          !((id)->adt->flag & ADT_CURVES_NOT_VISIBLE)) \
+      { \
         if (filter_mode & ANIMFILTER_ANIMDATA) { \
           adtOk \
         } \
@@ -1035,8 +1037,8 @@ static bool skip_fcurve_selected_data(bAnimContext *ac,
     char bone_name[sizeof(pchan->name)];
 
     /* Only consider if F-Curve involves `pose.bones`. */
-    if (fcu->rna_path &&
-        BLI_str_quoted_substr(fcu->rna_path, "pose.bones[", bone_name, sizeof(bone_name)))
+    if (BLI_str_quoted_substr(
+            fcu->rna_path().c_str(), "pose.bones[", bone_name, sizeof(bone_name)))
     {
       /* Get bone-name, and check if this bone is selected. */
       pchan = BKE_pose_channel_find_name(ob->pose, bone_name);
@@ -1069,8 +1071,8 @@ static bool skip_fcurve_selected_data(bAnimContext *ac,
     char strip_name[sizeof(strip->name)];
 
     /* Only consider if F-Curve involves `sequence_editor.strips`. */
-    if (fcu->rna_path &&
-        BLI_str_quoted_substr(fcu->rna_path, "strips_all[", strip_name, sizeof(strip_name)))
+    if (BLI_str_quoted_substr(
+            fcu->rna_path().c_str(), "strips_all[", strip_name, sizeof(strip_name)))
     {
       /* Get strip name, and check if this strip is selected. */
       Editing *ed = seq::editing_get(scene);
@@ -1112,16 +1114,14 @@ static bool skip_fcurve_selected_data(bAnimContext *ac,
     char node_name[sizeof(node->name)];
 
     /* Check for selected nodes. */
-    if (fcu->rna_path &&
-        BLI_str_quoted_substr(fcu->rna_path, "nodes[", node_name, sizeof(node_name)))
-    {
+    if (BLI_str_quoted_substr(fcu->rna_path().c_str(), "nodes[", node_name, sizeof(node_name))) {
       /* Get strip name, and check if this strip is selected. */
       node = bke::node_find_node_by_name(*ntree, node_name);
 
       /* Can only add this F-Curve if it is selected. */
       if (node) {
         if (ac->filters.flag & ADS_FILTER_ONLYSEL) {
-          if ((node->flag & NODE_SELECT) == 0) {
+          if (!node->is_selected()) {
             return true;
           }
         }
@@ -1357,7 +1357,7 @@ static size_t animfilter_fcurves(bAnimContext *ac,
        (fcu = animfilter_fcurve_next(ac, fcu, fcurve_type, filter_mode, owner, owner_id));
        fcu = fcu->next)
   {
-    if (UNLIKELY(fcurve_type == ANIMTYPE_NLACURVE)) {
+    if (fcurve_type == ANIMTYPE_NLACURVE) [[unlikely]] {
       /* NLA Control Curve - Basically the same as normal F-Curves,
        * except we need to set some stuff differently */
       ANIMCHANNEL_NEW_CHANNEL_FULL(ac->bmain, fcu, ANIMTYPE_NLACURVE, owner_id, fcurve_owner_id, {
@@ -1796,11 +1796,11 @@ static size_t animfilter_nla(bAnimContext *ac,
     }
 
     /* first track to include will be the last one if we're filtering by channels */
-    first = static_cast<NlaTrack *>(adt->nla_tracks.last);
+    first = adt->nla_tracks.last();
   }
   else {
     /* first track to include will the first one (as per normal) */
-    first = static_cast<NlaTrack *>(adt->nla_tracks.first);
+    first = adt->nla_tracks.first();
   }
 
   /* loop over NLA Tracks -
@@ -1880,7 +1880,7 @@ static size_t animfilter_nla_controls(bAnimContext *ac,
          * is the same as owner of animation data. */
         tmp_items += animfilter_fcurves(ac,
                                         &tmp_data,
-                                        static_cast<FCurve *>(strip.fcurves.first),
+                                        strip.fcurves.first(),
                                         ANIMTYPE_NLACURVE,
                                         filter_mode,
                                         &strip,
@@ -1941,14 +1941,8 @@ static size_t animfilter_block_data(bAnimContext *ac,
           items += animfilter_nla(ac, anim_data, adt, filter_mode, id);
         },
         { /* Drivers */
-          items += animfilter_fcurves(ac,
-                                      anim_data,
-                                      static_cast<FCurve *>(adt->drivers.first),
-                                      ANIMTYPE_FCURVE,
-                                      filter_mode,
-                                      nullptr,
-                                      id,
-                                      id);
+          items += animfilter_fcurves(
+              ac, anim_data, adt->drivers.first(), ANIMTYPE_FCURVE, filter_mode, nullptr, id, id);
         },
         { /* NLA Control Keyframes */
           items += animfilter_nla_controls(ac, anim_data, adt, filter_mode, id);
@@ -1995,7 +1989,7 @@ static size_t animdata_filter_shapekey(bAnimContext *ac,
       /* loop through the channels adding ShapeKeys as appropriate */
       for (KeyBlock &kb : key->block) {
         /* skip the first one, since that's the non-animatable basis */
-        if (&kb == key->block.first) {
+        if (&kb == key->block.first_) {
           continue;
         }
 
@@ -2028,8 +2022,8 @@ static size_t animdata_filter_shapekey(bAnimContext *ac,
 
       Vector<FCurve *> key_fcurves;
       for (FCurve *fcurve : fcurves_for_action_slot(action, key->adt->slot_handle)) {
-        if (STREQ(fcurve->rna_path, "eval_time") ||
-            BLI_str_endswith(fcurve->rna_path, ".interpolation"))
+        if (fcurve->rna_path() == "eval_time" ||
+            BLI_str_endswith(fcurve->rna_path().c_str(), ".interpolation"))
         {
           key_fcurves.append(fcurve);
         }
@@ -2545,7 +2539,7 @@ static size_t animdata_filter_ds_nodetree(bAnimContext *ac,
   for (bNode *node : ntree->all_nodes()) {
     if (node->is_group()) {
       if (node->id) {
-        if ((ac->filters.flag & ADS_FILTER_ONLYSEL) && (node->flag & NODE_SELECT) == 0) {
+        if ((ac->filters.flag & ADS_FILTER_ONLYSEL) && !node->is_selected()) {
           continue;
         }
         /* Recurse into the node group */
@@ -2837,6 +2831,14 @@ static void animfilter_modifier_idpoin_cb(void *afm_ptr,
         afm->items += animdata_filter_ds_nodetree(
             afm->ac, &afm->tmp_data, owner_id, node_tree, afm->filter_mode);
       }
+      break;
+    }
+    case ID_CF: {
+      CacheFile *cache_file = id_cast<CacheFile *>(id);
+      BLI_assert(afm->ac->ads == afm->ads);
+      afm->items += animdata_filter_ds_cachefile(
+          afm->ac, &afm->tmp_data, cache_file, afm->filter_mode);
+      break;
     }
 
     /* TODO: images? */
@@ -3279,7 +3281,7 @@ static size_t animdata_filter_dopesheet_ob(bAnimContext *ac,
     }
 
     /* modifiers */
-    if ((ob->modifiers.first) && !(ads_filterflag & ADS_FILTER_NOMODIFIERS)) {
+    if ((ob->modifiers.first_) && !(ads_filterflag & ADS_FILTER_NOMODIFIERS)) {
       tmp_items += animdata_filter_ds_modifiers(ac, &tmp_data, ob, filter_mode);
     }
 
@@ -3294,7 +3296,7 @@ static size_t animdata_filter_dopesheet_ob(bAnimContext *ac,
     }
 
     /* particles */
-    if ((ob->particlesystem.first) && !(ads_filterflag & ADS_FILTER_NOPART)) {
+    if ((ob->particlesystem.first_) && !(ads_filterflag & ADS_FILTER_NOPART)) {
       tmp_items += animdata_filter_ds_particles(ac, &tmp_data, ob, filter_mode);
     }
 
@@ -3449,7 +3451,6 @@ static size_t animdata_filter_dopesheet_scene(bAnimContext *ac,
 
   /* filter data contained under object first */
   BEGIN_ANIMFILTER_SUBCHANNELS (EXPANDED_SCEC(sce)) {
-    bNodeTree *ntree = sce->compositing_node_group;
     World *wo = sce->world;
     Editing *ed = sce->ed;
 
@@ -3464,9 +3465,18 @@ static size_t animdata_filter_dopesheet_scene(bAnimContext *ac,
     }
 
     /* nodetree */
-    if ((ntree) && !(ac->filters.flag & ADS_FILTER_NONTREE)) {
-      tmp_items += animdata_filter_ds_nodetree(
-          ac, &tmp_data, reinterpret_cast<ID *>(sce), ntree, filter_mode);
+    if (!(ac->filters.flag & ADS_FILTER_NONTREE)) {
+      VectorSet<bNodeTree *> node_trees;
+      for (SceneCompositorEffect &effect : sce->compositor_effects) {
+        if (!effect.node_group || ID_MISSING(effect.node_group)) {
+          continue;
+        }
+        node_trees.add(effect.node_group);
+      }
+      for (bNodeTree *node_tree : node_trees) {
+        tmp_items += animdata_filter_ds_nodetree(
+            ac, &tmp_data, reinterpret_cast<ID *>(sce), node_tree, filter_mode);
+      }
     }
 
     /* VSE strip node trees. */
@@ -3769,7 +3779,7 @@ static size_t animdata_filter_dopesheet(bAnimContext *ac,
   BKE_view_layer_synced_ensure(*ac->bmain, scene, view_layer);
   ListBaseT<Base> *object_bases = BKE_view_layer_object_bases_get(view_layer);
   if ((filter_mode & ANIMFILTER_LIST_CHANNELS) && !(ads->flag & ADS_FLAG_NO_DB_SORT) &&
-      (object_bases->first != object_bases->last))
+      (object_bases->first_ != object_bases->last()))
   {
     /* Filter list of bases (i.e. objects), sort them, then add their contents normally... */
     /* TODO: Cache the old sorted order - if the set of bases hasn't changed, don't re-sort... */
@@ -3874,6 +3884,9 @@ static size_t animdata_filter_animchan(bAnimContext *ac,
   /* data to filter depends on channel type */
   /* NOTE: only common channel-types have been handled for now. More can be added as necessary */
   switch (channel->type) {
+    case ANIMTYPE_NONE:
+      return 0;
+
     case ANIMTYPE_SUMMARY:
       items += animdata_filter_dopesheet(ac, anim_data, filter_mode);
       break;
@@ -3975,9 +3988,9 @@ size_t ANIM_animdata_filter(bAnimContext *ac,
 
       /* specially check for AnimData filter, see #36687. */
       /* TODO: see how this interacts with the new layered Actions. */
-      if (UNLIKELY(filter_mode & ANIMFILTER_ANIMDATA)) {
+      if (filter_mode & ANIMFILTER_ANIMDATA) [[unlikely]] {
         /* all channels here are within the same AnimData block, hence this special case */
-        if (LIKELY(obact->adt)) {
+        if (obact->adt) [[likely]] {
           ANIMCHANNEL_NEW_CHANNEL(
               ac->bmain, obact->adt, ANIMTYPE_ANIMDATA, reinterpret_cast<ID *>(obact), nullptr);
         }
@@ -4004,9 +4017,9 @@ size_t ANIM_animdata_filter(bAnimContext *ac,
       Key *key = static_cast<Key *>(data);
 
       /* specially check for AnimData filter, see #36687. */
-      if (UNLIKELY(filter_mode & ANIMFILTER_ANIMDATA)) {
+      if (filter_mode & ANIMFILTER_ANIMDATA) [[unlikely]] {
         /* all channels here are within the same AnimData block, hence this special case */
-        if (LIKELY(key->adt)) {
+        if (key->adt) [[likely]] {
           ANIMCHANNEL_NEW_CHANNEL(
               ac->bmain, key->adt, ANIMTYPE_ANIMDATA, reinterpret_cast<ID *>(key), nullptr);
         }
@@ -4032,6 +4045,14 @@ size_t ANIM_animdata_filter(bAnimContext *ac,
     case ANIMCONT_MASK: {
       if (animdata_filter_dopesheet_summary(ac, anim_data, filter_mode, &items)) {
         items = animdata_filter_mask(ac, anim_data, data, filter_mode);
+      }
+      break;
+    }
+    case ANIMCONT_CACHEFILE: {
+      if (animdata_filter_dopesheet_summary(ac, anim_data, filter_mode, &items)) {
+        for (CacheFile &cache_file : ac->bmain->cachefiles) {
+          items += animdata_filter_ds_cachefile(ac, anim_data, &cache_file, filter_mode);
+        }
       }
       break;
     }

@@ -465,8 +465,8 @@ msgstr "'{name}' hautatu da Moodboard-ean"
 msgid "Select in Scene"
 msgstr "Hautatu eszenan"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Hautatu splat-mundu honen proxy-heldulekua 3D bistan"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Bilduma"
@@ -474,8 +474,11 @@ msgstr "Bilduma"
 msgid "That splat world is no longer in this file"
 msgstr "Splat-mundu hori jada ez dago fitxategi honetan"
 
-msgid "This splat world has no proxy handle"
-msgstr "Splat-mundu honek ez du proxy-heldulekurik"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' hautatuta"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Onartzen ez den splat fitxategi mota '{ext}' (.spz edo .ply espero da)"
 msgid "File not found: {path}"
 msgstr "Fitxategia ez da aurkitu: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Ez da objekturik inportatu {name} fitxategitik"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Ezin izan da irudia irakurri: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Mundu-sorkuntzaren emaitzari splat (SPZ) URLa falta zaio"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Mundu-sorkuntzaren emaitzari talka-sarearen (GLB) URLa falta zaio"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Ezin izan da mundua deskargatu edo bihurtu: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Mundua inportatu da, baina ez du objekturik sortu"
@@ -11095,14 +11107,32 @@ msgstr "Lurreratu jatorrian"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Mugitu splat-a zorua Z=0-n egon dadin eta oinatzaren zentroa jatorrian (sortutako munduen lurreratze bera)"
 
+msgid "Source"
+msgstr "Iturburua"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Estandarra"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Ez da splat-fitxategirik hautatu"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} splat inportatu dira: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Splat gaussiarra (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Gehitu testu-koadro bat moodboard-era ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "Sartu hezur-eragin guztiak"
 
 msgid "Lighting Mode"
 msgstr "Argiztapen modua"
-
-msgid "Standard"
-msgstr "Estandarra"
 
 msgid "Physically-based glTF lighting units"
 msgstr "glTF argiztapen-unitate fisikoak"
@@ -18926,9 +18953,6 @@ msgstr "Nahasketa"
 
 msgid "No masks"
 msgstr "Ez dago maskararik"
-
-msgid "Source"
-msgstr "Iturburua"
 
 msgid "No node group loaded"
 msgstr "Ez da nodo-talderik kargatu"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Txartelaren marrazketak eskualde aktiboaren marrazketa-callbacka behar du"
 
@@ -29904,6 +29925,9 @@ msgstr "UI elementu biribilduen izkinen erradioa"
 msgid "Mixie Chat"
 msgstr "Mixie txata"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Jaregite-bideek kate ez-hutsak izan behar dute"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Jaregite-bideek JSON matrize ez-hutsa izan behar dute"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Eremu globalak"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Leiho-mailako eremu globalak (goiko barra, egoera-barra). Mixar hedapena — agerian, sarrera-gidariak goiko barra birmarra dezan."
 
 msgid "QA UI Dump"
 msgstr "QA interfazearen iraulketa"

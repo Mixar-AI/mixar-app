@@ -19,12 +19,12 @@
 #include "BKE_main_invariants.hh"
 #include "BKE_packedFile.hh"
 
-#include "BLI_listbase.h"
+#include "BLI_listbase.hh"
 #include "BLI_string_search.hh"
-#include "BLI_string_utf8.h"
+#include "BLI_string_utf8.hh"
 /* Mixar: STREQ used in template_ID_tabs to hide the Zen Mode workspace
  * from the topbar tab strip. */
-#include "BLI_utildefines.h"
+#include "BLI_utildefines.hh"
 
 #include "BLT_translation.hh"
 
@@ -150,7 +150,7 @@ static bool id_search_add(const bContext *C, TemplateID *template_ui, SearchItem
                        name_ui,
                        id,
                        iconid,
-                       has_sep_char ? int(BUT_HAS_SEP_CHAR) : 0,
+                       has_sep_char ? int64_t(BUT_HAS_SEP_CHAR) : 0,
                        name_prefix_offset))
   {
     return false;
@@ -365,9 +365,7 @@ static void template_id_liboverride_hierarchy_collection_root_find_recursive(
       *r_collection_parent_best = collection;
     }
   }
-  for (CollectionParent *iter =
-           static_cast<CollectionParent *>(collection->runtime->parents.first);
-       iter != nullptr;
+  for (CollectionParent *iter = collection->runtime->parents.first(); iter != nullptr;
        iter = iter->next)
   {
     if (iter->collection->id.lib != collection->id.lib && ID_IS_LINKED(iter->collection)) {
@@ -386,9 +384,7 @@ static void template_id_liboverride_hierarchy_collections_tag_recursive(
   /* Tag all local parents of the root collection, so that usages of the root collection and other
    * linked ones can be replaced by the local overrides in those parents too. */
   if (do_parents) {
-    for (CollectionParent *iter =
-             static_cast<CollectionParent *>(root_collection->runtime->parents.first);
-         iter != nullptr;
+    for (CollectionParent *iter = root_collection->runtime->parents.first(); iter != nullptr;
          iter = iter->next)
     {
       if (ID_IS_LINKED(iter->collection)) {
@@ -398,8 +394,7 @@ static void template_id_liboverride_hierarchy_collections_tag_recursive(
     }
   }
 
-  for (CollectionChild *iter = static_cast<CollectionChild *>(root_collection->children.first);
-       iter != nullptr;
+  for (CollectionChild *iter = root_collection->children.first(); iter != nullptr;
        iter = iter->next)
   {
     if (ID_IS_LINKED(iter->collection) && iter->collection->id.lib != target_id->lib) {
@@ -702,12 +697,12 @@ ID *template_id_liboverride_hierarchy_make(
 
 static void template_id_liboverride_hierarchy_make(bContext *C,
                                                    Main *bmain,
-                                                   TemplateID *template_ui,
+                                                   PropertyPointerRNA &pprop,
                                                    PointerRNA *idptr,
                                                    const char **r_undo_push_label)
 {
   ID *id = static_cast<ID *>(idptr->data);
-  ID *owner_id = template_ui->ptr.owner_id;
+  ID *owner_id = pprop.ptr.owner_id;
 
   ID *id_override = template_id_liboverride_hierarchy_make(
       C, bmain, owner_id, id, r_undo_push_label);
@@ -729,16 +724,16 @@ static void template_id_liboverride_hierarchy_make(bContext *C,
   }
 }
 
-static void template_ui_delete(bContext &C, TemplateID &template_ui)
+static void template_ui_delete(bContext &C, PropertyPointerRNA &pprop)
 {
-  PointerRNA idptr = RNA_property_pointer_get(&template_ui.ptr, template_ui.prop);
+  PointerRNA idptr = RNA_property_pointer_get(&pprop.ptr, pprop.prop);
   ID *id = static_cast<ID *>(idptr.data);
 
   const char *undo_push_label;
 
   idptr = {};
-  RNA_property_pointer_set(&template_ui.ptr, template_ui.prop, idptr, nullptr);
-  RNA_property_update(&C, &template_ui.ptr, template_ui.prop);
+  RNA_property_pointer_set(&pprop.ptr, pprop.prop, idptr, nullptr);
+  RNA_property_update(&C, &pprop.ptr, pprop.prop);
 
   if (id && CTX_wm_window(&C)->runtime->eventstate->modifier & KM_SHIFT) {
     /* only way to force-remove data (on save) */
@@ -754,9 +749,9 @@ static void template_ui_delete(bContext &C, TemplateID &template_ui)
   WM_event_add_notifier(&C, NC_SPACE | ND_SPACE_OUTLINER, nullptr);
 }
 
-static void template_ui_make_local(bContext &C, TemplateID &template_ui)
+static void template_ui_make_local(bContext &C, PropertyPointerRNA &pprop)
 {
-  PointerRNA idptr = RNA_property_pointer_get(&template_ui.ptr, template_ui.prop);
+  PointerRNA idptr = RNA_property_pointer_get(&pprop.ptr, pprop.prop);
   ID *id = static_cast<ID *>(idptr.data);
 
   const char *undo_push_label = nullptr;
@@ -766,28 +761,28 @@ static void template_ui_make_local(bContext &C, TemplateID &template_ui)
   }
   Main *bmain = CTX_data_main(&C);
   if (CTX_wm_window(&C)->runtime->eventstate->modifier & KM_SHIFT) {
-    template_id_liboverride_hierarchy_make(&C, bmain, &template_ui, &idptr, &undo_push_label);
+    template_id_liboverride_hierarchy_make(&C, bmain, pprop, &idptr, &undo_push_label);
   }
   else {
     if (BKE_lib_id_make_local(bmain, id, LIB_ID_MAKELOCAL_ASSET_DATA_CLEAR)) {
       BKE_id_newptr_and_tag_clear(id);
 
       /* Reassign to get proper updates/notifiers. */
-      idptr = RNA_property_pointer_get(&template_ui.ptr, template_ui.prop);
+      idptr = RNA_property_pointer_get(&pprop.ptr, pprop.prop);
       undo_push_label = CTX_N_(BLT_I18NCONTEXT_OPERATOR_DEFAULT, "Make Local");
     }
   }
   if (undo_push_label) {
-    RNA_property_pointer_set(&template_ui.ptr, template_ui.prop, idptr, nullptr);
-    RNA_property_update(&C, &template_ui.ptr, template_ui.prop);
+    RNA_property_pointer_set(&pprop.ptr, pprop.prop, idptr, nullptr);
+    RNA_property_update(&C, &pprop.ptr, pprop.prop);
     ED_undo_push(&C, undo_push_label);
     WM_event_add_notifier(&C, NC_SPACE | ND_SPACE_OUTLINER, nullptr);
   }
 }
 
-static void template_ui_override(bContext &C, TemplateID &template_ui)
+static void template_ui_override(bContext &C, PropertyPointerRNA &pprop)
 {
-  PointerRNA idptr = RNA_property_pointer_get(&template_ui.ptr, template_ui.prop);
+  PointerRNA idptr = RNA_property_pointer_get(&pprop.ptr, pprop.prop);
   ID *id = static_cast<ID *>(idptr.data);
 
   const char *undo_push_label = nullptr;
@@ -797,14 +792,14 @@ static void template_ui_override(bContext &C, TemplateID &template_ui)
   }
   Main *bmain = CTX_data_main(&C);
   if (CTX_wm_window(&C)->runtime->eventstate->modifier & KM_SHIFT) {
-    template_id_liboverride_hierarchy_make(&C, bmain, &template_ui, &idptr, &undo_push_label);
+    template_id_liboverride_hierarchy_make(&C, bmain, pprop, &idptr, &undo_push_label);
   }
   else {
     BKE_lib_override_library_make_local(bmain, id);
     /* Reassign to get proper updates/notifiers. */
-    idptr = RNA_property_pointer_get(&template_ui.ptr, template_ui.prop);
-    RNA_property_pointer_set(&template_ui.ptr, template_ui.prop, idptr, nullptr);
-    RNA_property_update(&C, &template_ui.ptr, template_ui.prop);
+    idptr = RNA_property_pointer_get(&pprop.ptr, pprop.prop);
+    RNA_property_pointer_set(&pprop.ptr, pprop.prop, idptr, nullptr);
+    RNA_property_update(&C, &pprop.ptr, pprop.prop);
 
     undo_push_label = CTX_N_(BLT_I18NCONTEXT_OPERATOR_DEFAULT, "Make Local");
   }
@@ -814,16 +809,15 @@ static void template_ui_override(bContext &C, TemplateID &template_ui)
   }
 }
 
-static void template_ui_alone(bContext &C, TemplateID &template_ui)
+static void template_ui_alone(bContext &C, PropertyPointerRNA &pprop)
 {
-  PointerRNA idptr = RNA_property_pointer_get(&template_ui.ptr, template_ui.prop);
+  PointerRNA idptr = RNA_property_pointer_get(&pprop.ptr, pprop.prop);
   ID *id = static_cast<ID *>(idptr.data);
 
   if (!id) {
     return;
   }
-  const bool do_scene_obj = ((GS(id->name) == ID_OB) &&
-                             (template_ui.ptr.type == RNA_LayerObjects));
+  const bool do_scene_obj = ((GS(id->name) == ID_OB) && (pprop.ptr.type == RNA_LayerObjects));
 
   /* make copy */
   if (do_scene_obj) {
@@ -835,7 +829,7 @@ static void template_ui_alone(bContext &C, TemplateID &template_ui)
   }
   else {
     Main *bmain = CTX_data_main(&C);
-    id_single_user(&C, id, &template_ui.ptr, template_ui.prop);
+    id_single_user(&C, id, &pprop.ptr, pprop.prop);
     WM_event_add_notifier(&C, NC_SPACE | ND_SPACE_OUTLINER, nullptr);
     DEG_relations_tag_update(bmain);
   }
@@ -1075,17 +1069,23 @@ static void template_ID(const bContext *C,
   PointerRNA idptr = RNA_property_pointer_get(&template_ui.ptr, template_ui.prop);
   ID *id = static_cast<ID *>(idptr.data);
   ID *idfrom = template_ui.ptr.owner_id;
+
+  const PropertyPointerRNA pprop = {.ptr = template_ui.ptr, .prop = template_ui.prop};
   // lb = template_ui->idlb;
 
   /* Allow operators to take the ID from context. */
   layout.context_ptr_set("id", &idptr);
   layout.context_ptr_set("template_id_ptr", &template_ui.ptr);
-  layout.context_string_set("template_id_prop", RNA_property_identifier(template_ui.prop));
+  std::string prop_identifier = RNA_property_identifier(template_ui.prop);
+  if (RNA_property_is_idprop(template_ui.prop)) {
+    prop_identifier = RNA_path_name_to_infix(prop_identifier);
+  }
+  layout.context_string_set("template_id_prop", prop_identifier);
 
   Block *block = layout.block();
   block_align_begin(block);
 
-  if (idptr.type) {
+  if (idptr.has_type()) {
     type = idptr.type;
   }
 
@@ -1222,9 +1222,8 @@ static void template_ID(const bContext *C,
                             "object instead, or make the object data local."));
         }
         else {
-          button_func_set(but, [template_ui = template_ui](bContext &C) mutable {
-            template_ui_make_local(C, template_ui);
-          });
+          button_func_set(
+              but, [pprop = pprop](bContext &C) mutable { template_ui_make_local(C, pprop); });
         }
       }
       else if (ID_IS_OVERRIDE_LIBRARY(id)) {
@@ -1241,9 +1240,8 @@ static void template_ID(const bContext *C,
             0,
             TIP_("Library override of linked data-block, click to make fully local, "
                  "Shift + Click to clear the library override and toggle if it can be edited"));
-        button_func_set(but, [template_ui = template_ui](bContext &C) mutable {
-          template_ui_override(C, template_ui);
-        });
+        button_func_set(but,
+                        [pprop = pprop](bContext &C) mutable { template_ui_override(C, pprop); });
       }
     }
 
@@ -1266,9 +1264,7 @@ static void template_ID(const bContext *C,
           0,
           TIP_("Display number of users of this data (click to make a single-user copy)"));
       but->flag |= BUT_UNDO;
-      button_func_set(but, [template_ui = template_ui](bContext &C) mutable {
-        template_ui_alone(C, template_ui);
-      });
+      button_func_set(but, [pprop = pprop](bContext &C) mutable { template_ui_alone(C, pprop); });
 
       if (!BKE_id_copy_is_allowed(id) || (idfrom && !ID_IS_EDITABLE(idfrom)) || (!editable) ||
           /* object in editmode - don't change data */
@@ -1419,9 +1415,8 @@ static void template_ID(const bContext *C,
             0,
             TIP_("Unlink data-block "
                  "(Shift + Click to set users to zero, data will then not be saved)"));
-        button_func_set(but, [template_ui = template_ui](bContext &C) mutable {
-          template_ui_delete(C, template_ui);
-        });
+        button_func_set(but,
+                        [pprop = pprop](bContext &C) mutable { template_ui_delete(C, pprop); });
 
         if (RNA_property_flag(template_ui.prop) & PROP_NEVER_NULL) {
           button_flag_enable(but, BUT_DISABLED);
@@ -1539,7 +1534,7 @@ static void template_ID_tabs(const bContext *C,
     const bool editable = RNA_property_editable(&template_id.ptr, template_id.prop);
     Button *but;
 
-    if (active_ptr.type) {
+    if (active_ptr.has_type()) {
       type = active_ptr.type;
     }
 

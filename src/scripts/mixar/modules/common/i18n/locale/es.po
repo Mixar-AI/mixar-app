@@ -465,8 +465,8 @@ msgstr "Se seleccionó '{name}' en el moodboard"
 msgid "Select in Scene"
 msgstr "Seleccionar en la escena"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Selecciona el controlador proxy de este mundo de splats en la vista"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Colección"
@@ -474,8 +474,11 @@ msgstr "Colección"
 msgid "That splat world is no longer in this file"
 msgstr "Ese mundo de splats ya no está en este archivo"
 
-msgid "This splat world has no proxy handle"
-msgstr "Este mundo de splats no tiene controlador proxy"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Se seleccionó '{name}'"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Tipo de archivo de splat no compatible '{ext}' (se esperaba .spz o .ply)
 msgid "File not found: {path}"
 msgstr "No se encontró el archivo: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "No se importó ningún objeto de {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "No se pudo leer la imagen: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Al resultado de la generación del mundo le falta la URL del splat (SPZ)
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Al resultado de la generación del mundo le falta la URL del colisionador (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "No se pudo descargar/convertir el mundo: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "El mundo se importó pero no produjo objetos"
@@ -11095,14 +11107,32 @@ msgstr "Asentar en el origen"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Mueve el splat para que su suelo quede en Z=0 con el centro de su huella en el origen (igual que los mundos generados)"
 
+msgid "Source"
+msgstr "Origen"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Estándar"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Ningún archivo de splat seleccionado"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Se importaron {count} splat(s): {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Splat gaussiano (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12672,9 +12702,6 @@ msgstr "Influencias de todos los huesos"
 
 msgid "Lighting Mode"
 msgstr "Modo de iluminación"
-
-msgid "Standard"
-msgstr "Estándar"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Unidades de iluminación glTF basadas en la física"
@@ -18926,9 +18953,6 @@ msgstr "Fundido"
 
 msgid "No masks"
 msgstr "Sin máscaras"
-
-msgid "Source"
-msgstr "Origen"
 
 msgid "No node group loaded"
 msgstr "No hay ningún grupo de nodos cargado"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "El dibujo de tarjetas requiere la función de dibujo de la región activa"
 
@@ -29904,6 +29925,9 @@ msgstr "Radio de las esquinas de los elementos redondeados de la interfaz"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Las rutas soltadas deben ser cadenas no vacías"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Las rutas soltadas deben ser un array JSON no vacío"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Áreas globales"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Áreas globales de la ventana (barra superior, barra de estado). Extensión de Mixar, expuesta para que la introducción pueda acceder a la barra superior para redibujarla."
 
 msgid "QA UI Dump"
 msgstr "Volcado de interfaz de QA"

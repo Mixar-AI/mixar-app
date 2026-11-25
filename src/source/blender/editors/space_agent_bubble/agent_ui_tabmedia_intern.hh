@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 #include <string>
 #include "RNA_access.hh"
 

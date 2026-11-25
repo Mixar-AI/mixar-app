@@ -13,10 +13,11 @@
 #include <cmath>
 #include <numeric>
 
-#include "BLI_math_base.h"
-#include "BLI_rect.h"
-#include "BLI_string.h"
+#include "BLI_math_base_c.hh"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
 
+#include "BKE_camera.h"
 #include "BKE_context.hh"
 
 #include "BLT_translation.hh"
@@ -47,13 +48,15 @@ bool camera_border_get(const bContext *C, const ARegion *region, rctf *r_border)
   if (!v3d || !v3d->camera || !rv3d || rv3d->persp != RV3D_CAMOB) {
     return false;
   }
-  ED_view3d_calc_camera_border(CTX_data_scene(C),
-                               CTX_data_ensure_evaluated_depsgraph(C),
-                               region,
-                               v3d,
-                               rv3d,
-                               false,
-                               r_border);
+  *r_border = BKE_camera_view_border(CTX_data_scene(C),
+                                     CTX_data_ensure_evaluated_depsgraph(C),
+                                     v3d,
+                                     rv3d,
+                                     region->winx,
+                                     region->winy,
+                                     false,
+                                     false,
+                                     false);
   r_border->xmin = std::clamp(r_border->xmin, 0.0f, float(region->winx));
   r_border->xmax = std::clamp(r_border->xmax, 0.0f, float(region->winx));
   r_border->ymin = std::clamp(r_border->ymin, 0.0f, float(region->winy));

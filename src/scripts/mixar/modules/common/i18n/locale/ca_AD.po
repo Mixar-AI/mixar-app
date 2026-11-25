@@ -465,8 +465,8 @@ msgstr "S'ha seleccionat '{name}' al moodboard"
 msgid "Select in Scene"
 msgstr "Seleccionar a l'escena"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Selecciona la nansa intermediària d'aquest món de splats al mirador"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Col·lecció"
@@ -474,8 +474,11 @@ msgstr "Col·lecció"
 msgid "That splat world is no longer in this file"
 msgstr "Aquest món de splats ja no és en aquest document"
 
-msgid "This splat world has no proxy handle"
-msgstr "Aquest món de splats no té cap nansa intermediària"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "S'ha seleccionat '{name}'"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Tipus de fitxer de splat no compatible «{ext}» (s'esperava .spz o .ply
 msgid "File not found: {path}"
 msgstr "No s'ha trobat el fitxer: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "No s'ha importat cap objecte de {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "No s'ha pogut llegir la imatge: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Al resultat de la generació del món falta l'URL del splat (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Al resultat de la generació del món falta l'URL del col·lisionador (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "No s'ha pogut baixar o convertir el món: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "S'ha importat el món, però no ha produït cap objecte"
@@ -11095,14 +11107,32 @@ msgstr "Terra a l'origen"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Mou el splat perquè el terra quedi a Z=0 amb el centre de la petjada a l'origen (el mateix assentament que els mons generats)"
 
+msgid "Source"
+msgstr "Font"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Estàndard"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "No s'ha seleccionat cap fitxer de splat"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Splats gaussians importats ({names}): {count}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Splat gaussià (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Afegeix un quadre de text al Moodboard ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "Incloure totes les influències òssies"
 
 msgid "Lighting Mode"
 msgstr "Mode il·luminació"
-
-msgid "Standard"
-msgstr "Estàndard"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Unitats d'il·luminació glTF basades en la física"
@@ -18926,9 +18953,6 @@ msgstr "Fusió"
 
 msgid "No masks"
 msgstr "Sense màscares"
-
-msgid "Source"
-msgstr "Font"
 
 msgid "No node group loaded"
 msgstr "No s'ha carregat cap grup de nodes"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "El dibuix de la targeta requereix el callback de dibuix de la regió activa"
 
@@ -29904,6 +29925,9 @@ msgstr "Radi de les cantonades dels elements arrodonits de la interfície"
 msgid "Mixie Chat"
 msgstr "Xat de Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Els camins deixats anar han de ser cadenes no buides"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Els camins deixats anar han de ser una matriu JSON no buida"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Àrees globals"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Àrees globals de la finestra (barra superior, barra d'estat). Extensió de Mixar — exposada perquè l'acollida pugui adreçar la barra superior per redibuixar."
 
 msgid "QA UI Dump"
 msgstr "Bolcat de la interfície de QA"

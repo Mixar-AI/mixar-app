@@ -23,10 +23,10 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_listbase.h"
-#include "BLI_string.h"
-#include "BLI_string_utf8.h"
-#include "BLI_utildefines.h"
+#include "BLI_listbase.hh"
+#include "BLI_string.hh"
+#include "BLI_string_utf8.hh"
+#include "BLI_utildefines.hh"
 
 #include "DNA_ID.h"
 #include "DNA_brush_types.h"
@@ -335,6 +335,11 @@ bool WM_toolsystem_activate_brush_and_tool(bContext *C, Paint *paint, Brush *bru
     return false;
   }
 
+  if (active_tool == nullptr || active_tool->runtime == nullptr) {
+    BLI_assert(G.background);
+    return false;
+  }
+
   if (active_tool->runtime->brush_type == -1) {
     /* Only update the main brush binding to reference the newly active brush. */
     toolsystem_main_brush_binding_update_from_active(paint);
@@ -362,7 +367,7 @@ static void toolsystem_brush_activate_from_toolref_for_object_particle(const Mai
     return;
   }
 
-  const wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  const wmWindowManager *wm = bmain->wm.first();
   for (wmWindow &win : wm->windows) {
     if (workspace == WM_window_get_active_workspace(&win)) {
       Scene *scene = WM_window_get_active_scene(&win);
@@ -387,13 +392,13 @@ std::optional<AssetWeakReference> WM_toolsystem_last_brush_asset_from_brush_type
     if (brush_ref && brush_ref->brush_asset_reference) {
       return *brush_ref->brush_asset_reference;
     }
-    return BKE_paint_brush_type_default_reference(paint->runtime->paint_mode, brush_type);
+    return BKE_paint_brush_type_default_reference(paint->runtime->asset_category, brush_type);
   }
 
   if (paint->tool_brush_bindings.main_brush_asset_reference) {
     return *paint->tool_brush_bindings.main_brush_asset_reference;
   }
-  return BKE_paint_brush_type_default_reference(paint->runtime->paint_mode, std::nullopt);
+  return BKE_paint_brush_type_default_reference(paint->runtime->asset_category, std::nullopt);
 }
 
 static void toolsystem_brush_activate_from_toolref_for_object_paint(Main *bmain,
@@ -405,7 +410,7 @@ static void toolsystem_brush_activate_from_toolref_for_object_paint(Main *bmain,
   const PaintMode paint_mode = BKE_paintmode_get_from_tool(tref);
   BLI_assert(paint_mode != PaintMode::Invalid);
 
-  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  wmWindowManager *wm = bmain->wm.first();
   for (wmWindow &win : wm->windows) {
     if (workspace != WM_window_get_active_workspace(&win)) {
       continue;
@@ -490,7 +495,7 @@ static void toolsystem_brush_clear_paint_reference(Main *bmain,
 {
   const PaintMode paint_mode = BKE_paintmode_get_from_tool(tref);
 
-  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  wmWindowManager *wm = bmain->wm.first();
   for (wmWindow &win : wm->windows) {
     if (workspace != WM_window_get_active_workspace(&win)) {
       continue;
@@ -618,9 +623,13 @@ void WM_toolsystem_ref_set_from_runtime(bContext *C,
                                         const char *idname)
 {
   Main *bmain = CTX_data_main(C);
+  wmWindow *win = CTX_wm_window(C);
 
   if (tref->runtime) {
     toolsystem_unlink_ref(C, workspace, tref);
+  }
+  if (win) {
+    WM_tooltip_clear(C, win);
   }
 
   STRNCPY_UTF8(tref->idname, idname);
@@ -683,7 +692,7 @@ void WM_toolsystem_ref_sync_from_context(Main *bmain, WorkSpace *workspace, bToo
   if ((tref_rt == nullptr) || (tref_rt->data_block[0] == '\0')) {
     return;
   }
-  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  wmWindowManager *wm = bmain->wm.first();
   for (wmWindow &win : wm->windows) {
     if (workspace != WM_window_get_active_workspace(&win)) {
       continue;
@@ -763,7 +772,7 @@ int WM_toolsystem_mode_from_spacetype(
       break;
     }
     case SPACE_IMAGE: {
-      SpaceImage *sima = static_cast<SpaceImage *>(area->spacedata.first);
+      SpaceImage *sima = area->spacedata.first_as<SpaceImage>();
       mode = sima->mode;
       break;
     }
@@ -772,7 +781,7 @@ int WM_toolsystem_mode_from_spacetype(
       break;
     }
     case SPACE_SEQ: {
-      SpaceSeq *sseq = static_cast<SpaceSeq *>(area->spacedata.first);
+      SpaceSeq *sseq = area->spacedata.first_as<SpaceSeq>();
       mode = sseq->view;
       break;
     }
@@ -810,7 +819,7 @@ void WM_toolsystem_refresh_active(bContext *C)
     bool is_set;
   } context_prev = {nullptr};
 
-  for (wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first); wm;
+  for (wmWindowManager *wm = bmain->wm.first(); wm;
        wm = static_cast<wmWindowManager *>(wm->id.next))
   {
     for (wmWindow &win : wm->windows) {
@@ -917,7 +926,7 @@ void WM_toolsystem_refresh_screen_window(const Main &bmain, wmWindow *win)
 void WM_toolsystem_refresh_screen_all(Main *bmain)
 {
   /* Update all ScrArea's tools. */
-  for (wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first); wm;
+  for (wmWindowManager *wm = bmain->wm.first(); wm;
        wm = static_cast<wmWindowManager *>(wm->id.next))
   {
     for (wmWindow &win : wm->windows) {
@@ -931,7 +940,7 @@ static void toolsystem_refresh_screen_from_active_tool(Main *bmain,
                                                        bToolRef *tref)
 {
   /* Update all ScrArea's tools. */
-  for (wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first); wm;
+  for (wmWindowManager *wm = bmain->wm.first(); wm;
        wm = static_cast<wmWindowManager *>(wm->id.next))
   {
     for (wmWindow &win : wm->windows) {
@@ -1201,7 +1210,7 @@ void WM_toolsystem_update_from_context_view3d(bContext *C)
 
   /* Multi window support. */
   Main *bmain = CTX_data_main(C);
-  wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
+  wmWindowManager *wm = bmain->wm.first();
   if (!wm->windows.is_single()) {
     wmWindow *win_prev = CTX_wm_window(C);
     ScrArea *area_prev = CTX_wm_area(C);
@@ -1255,8 +1264,7 @@ void WM_toolsystem_do_msg_notify_tag_refresh(bContext *C,
 {
   ScrArea *area = static_cast<ScrArea *>(msg_val->user_data);
   Main *bmain = CTX_data_main(C);
-  wmWindow *win = static_cast<wmWindow *>(
-      (static_cast<wmWindowManager *>(bmain->wm.first))->windows.first);
+  wmWindow *win = bmain->wm.first()->windows.first();
   if (win->next != nullptr) {
     do {
       bScreen *screen = WM_window_get_active_screen(win);
@@ -1332,7 +1340,7 @@ void WM_toolsystem_ref_properties_init_for_keymap(bToolRef *tref,
                                                   wmOperatorType *ot)
 {
   *dst_ptr = *src_ptr;
-  if (dst_ptr->data) {
+  if (*dst_ptr) {
     dst_ptr->data = IDP_CopyProperty(static_cast<const IDProperty *>(dst_ptr->data));
   }
   else {

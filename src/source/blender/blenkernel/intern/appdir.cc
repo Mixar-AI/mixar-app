@@ -13,14 +13,14 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "BLI_fileops.h"
-#include "BLI_fileops_types.h"
-#include "BLI_listbase.h"
+#include "BLI_fileops.hh"
+#include "BLI_fileops_types.hh"
+#include "BLI_listbase.hh"
 #include "BLI_path_utils.hh"
-#include "BLI_string.h"
+#include "BLI_string.hh"
 #include "BLI_string_utils.hh"
-#include "BLI_tempfile.h"
-#include "BLI_utildefines.h"
+#include "BLI_tempfile.hh"
+#include "BLI_utildefines.hh"
 #include "BLI_vector.hh"
 
 #include "BKE_appdir.hh" /* own include */
@@ -33,7 +33,7 @@
 #include "CLG_log.h"
 
 #ifdef WIN32
-#  include "BLI_string_utf8.h"
+#  include "BLI_string_utf8.hh"
 #  include "utf_winfunc.hh"
 #  include "utfconv.hh"
 #  include <io.h>
@@ -41,7 +41,7 @@
 #    undef _WIN32_IE
 #  endif
 #  define _WIN32_IE 0x0501
-#  include "BLI_winstuff.h"
+#  include "BLI_winstuff.hh"
 #  include <shlobj.h>
 #  include <windows.h>
 #else /* non windows */
@@ -1273,7 +1273,7 @@ void BKE_tempdir_init(const char *userdir)
     }
   }
 
-  if (UNLIKELY(g_app.temp_dirname_session_can_be_deleted == false)) {
+  if (g_app.temp_dirname_session_can_be_deleted == false) [[unlikely]] {
     /* This should practically never happen as either the preferences or the systems
      * default temporary directory should be usable, if not, use the base directory and warn. */
     STRNCPY(g_app.temp_dirname_session, g_app.temp_dirname_base);

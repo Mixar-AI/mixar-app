@@ -18,8 +18,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "BLI_math_color.h"
-#include "BLI_rect.h"
+#include "BLI_math_color_c.hh"
+#include "BLI_rect.hh"
 
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"

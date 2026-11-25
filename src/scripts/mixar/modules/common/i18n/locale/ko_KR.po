@@ -465,8 +465,8 @@ msgstr "무드보드에서 '{name}'을(를) 선택했습니다"
 msgid "Select in Scene"
 msgstr "씬에서 선택"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "뷰포트에서 이 스플랫 월드의 프록시 핸들을 선택합니다"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "컬렉션"
@@ -474,8 +474,11 @@ msgstr "컬렉션"
 msgid "That splat world is no longer in this file"
 msgstr "해당 스플랫 월드가 더 이상 이 파일에 없습니다"
 
-msgid "This splat world has no proxy handle"
-msgstr "이 스플랫 월드에는 프록시 핸들이 없습니다"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}'을(를) 선택했습니다"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "지원되지 않는 스플랫 파일 유형 '{ext}' (.spz 또는 .ply �
 msgid "File not found: {path}"
 msgstr "파일을 찾을 수 없습니다: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}에서 가져온 오브젝트가 없습니다"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "이미지를 읽지 못했습니다: {error}"
@@ -7043,8 +7055,8 @@ msgstr "월드 생성 결과에 스플랫(SPZ) URL이 없습니다"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "월드 생성 결과에 콜라이더(GLB) URL이 없습니다"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "월드를 다운로드/변환하지 못했습니다: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "월드를 가져왔지만 오브젝트가 생성되지 않았습니다"
@@ -11095,14 +11107,32 @@ msgstr "원점에 접지"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "바닥이 Z=0에 놓이고 바닥 면적의 중심이 원점에 오도록 스플랫을 이동합니다 (생성된 월드와 동일한 접지 방식)"
 
+msgid "Source"
+msgstr "소스"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "표준"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "선택된 스플랫 파일이 없습니다"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "스플랫 {count}개를 가져왔습니다: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "가우시안 스플랫 (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12672,9 +12702,6 @@ msgstr "모든 뼈대 영향을 포함"
 
 msgid "Lighting Mode"
 msgstr "조명 모드"
-
-msgid "Standard"
-msgstr "표준"
 
 msgid "Physically-based glTF lighting units"
 msgstr "물리 기반 glTF 조명 단위"
@@ -18926,9 +18953,6 @@ msgstr "블렌딩"
 
 msgid "No masks"
 msgstr "마스크 없음"
-
-msgid "Source"
-msgstr "소스"
 
 msgid "No node group loaded"
 msgstr "로드된 노드 그룹 없음"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "카드 그리기에는 활성 영역의 그리기 콜백이 필요합니다"
 
@@ -29904,6 +29925,9 @@ msgstr "둥근 UI 요소의 모서리 반경"
 msgid "Mixie Chat"
 msgstr "Mixie 채팅"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "드롭 경로는 비어 있지 않은 문자열이어야 합니다"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "드롭 경로는 비어 있지 않은 JSON 배열이어야 합니다"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "전역 영역"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "창 전역 영역(상단 바, 상태 표시줄)입니다. Mixar 확장 기능으로, 온보딩에서 다시 그리기를 위해 상단 바에 접근할 수 있도록 노출됩니다."
 
 msgid "QA UI Dump"
 msgstr "QA UI 덤프"

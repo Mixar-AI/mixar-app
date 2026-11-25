@@ -465,8 +465,8 @@ msgstr "Мудборддо '{name}' тандалды"
 msgid "Select in Scene"
 msgstr "Сахнада тандоо"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Бул сплат дүйнөсүнүн орток туткасын көрүү терезесинде тандайт"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Топтом"
@@ -474,8 +474,11 @@ msgstr "Топтом"
 msgid "That splat world is no longer in this file"
 msgstr "Ал сплат дүйнөсү бул файлда эми жок"
 
-msgid "This splat world has no proxy handle"
-msgstr "Бул сплат дүйнөсүнүн орток туткасы жок"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' тандалды"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Колдоого алынбаган сплат файл түрү '{ext}'
 msgid "File not found: {path}"
 msgstr "Файл табылган жок: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name} ичинен объект импорттолгон жок"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Сүрөттү окуу ишке ашкан жок: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Дүйнө генерациясынын натыйжасында спл�
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Дүйнө генерациясынын натыйжасында коллайдер (GLB) URL'и жетишпейт"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Дүйнөнү түшүрүү/айландыруу ишке ашкан жок: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Дүйнө импорттолду, бирок объект берген жок"
@@ -11095,14 +11107,32 @@ msgstr "Координата башына түшүрүү"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Сплаттын полу Z=0 деңгээлинде, изинин борбору координата башында тургандай жылдырат (генерацияланган дүйнөлөр менен бирдей түшүрүү)"
 
+msgid "Source"
+msgstr "Булак"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Стандарттык"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Сплат файлы тандалган жок"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} сплат импорттолду: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Гаусс сплаты (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Мудбордко текст кутучасын кошот ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "Бардык сөөк таасирлерин кошуу"
 
 msgid "Lighting Mode"
 msgstr "Жарык режими"
-
-msgid "Standard"
-msgstr "Стандарттык"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Физикалык негиздеги glTF жарык бирдиктери"
@@ -18926,9 +18953,6 @@ msgstr "Аралаштыруу"
 
 msgid "No masks"
 msgstr "Маскалар жок"
-
-msgid "Source"
-msgstr "Булак"
 
 msgid "No node group loaded"
 msgstr "Түйүн тобу жүктөлгөн жок"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Карта тартуу активдүү аймактын тартуу кайра чакыруусун талап кылат."
 
@@ -29904,6 +29925,9 @@ msgstr "Тегеректелген интерфейс элементтерини
 msgid "Mixie Chat"
 msgstr "Mixie маеги"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Таштоо жолдору бош эмес саптар болушу к
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Таштоо жолдору бош эмес JSON массиви болушу керек."
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Глобалдуу аймактар"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Терезенин глобалдуу аймактары (үстүнкү тилке, абал тилкеси). Mixar кеңейтүүсү — баштапкы таанышуу үстүнкү тилкени кайра тартуу үчүн кайрыла алсын деп ачылган."
 
 msgid "QA UI Dump"
 msgstr "QA интерфейс таштоосу"

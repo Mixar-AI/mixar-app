@@ -465,8 +465,8 @@ msgstr "மூட்போர்டில் '{name}' தேர்ந்தெ�
 msgid "Select in Scene"
 msgstr "காட்சியில் தேர்ந்தெடு"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "வியூபோர்ட்டில் இந்த ஸ்பிளாட் உலகின் பதிலி கைப்பிடியைத் தேர்ந்தெடுக்கிறது"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "சேகரிப்பு"
@@ -474,8 +474,11 @@ msgstr "சேகரிப்பு"
 msgid "That splat world is no longer in this file"
 msgstr "அந்த ஸ்பிளாட் உலகம் இனி இந்தக் கோப்பில் இல்லை"
 
-msgid "This splat world has no proxy handle"
-msgstr "இந்த ஸ்பிளாட் உலகத்துக்குப் பதிலி கைப்பிடி இல்லை"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' தேர்ந்தெடுக்கப்பட்டது"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "ஆதரிக்கப்படாத ஸ்பிளாட் கோ�
 msgid "File not found: {path}"
 msgstr "கோப்பு இல்லை: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-இலிருந்து பொருள்கள் இறக்குமதி செய்யப்படவில்லை"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "படத்தைப் படிக்க முடியவில்லை: {error}"
@@ -7043,8 +7055,8 @@ msgstr "உலக உருவாக்க முடிவில் ஸ்பி
 msgid "World generation result missing collider (GLB) URL"
 msgstr "உலக உருவாக்க முடிவில் மோதல் வடிவ (GLB) URL இல்லை"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "உலகத்தைப் பதிவிறக்க/மாற்ற முடியவில்லை: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "உலகம் இறக்குமதி செய்யப்பட்டது ஆனால் பொருள்கள் எதுவும் வரவில்லை"
@@ -11095,14 +11107,32 @@ msgstr "தொடக்கத்தில் தரை"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "தளம் Z=0இல் அமரவும் அடிச்சுவட்டு நடு தொடக்கத்தில் இருக்கவும் ஸ்பிளாட்டை நகர்த்தும் (உருவாக்கிய உலகங்களின் அதே தரையமைப்பு)"
 
+msgid "Source"
+msgstr "சான்று"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "தரநிலை"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "ஸ்பிளாட் கோப்பு எதுவும் தேர்ந்தெடுக்கப்படவில்லை"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} ஸ்பிளாட் இறக்குமதி செய்யப்பட்டது: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "காசியன் ஸ்பிளாட் (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "மூட்போர்டில் உரைப் பெட்டியைச் சேர்க்கும் ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "அனைத்து எலும்பு தாக்கங்கள�
 
 msgid "Lighting Mode"
 msgstr "லைட்டிங் பயன்முறை"
-
-msgid "Standard"
-msgstr "தரநிலை"
 
 msgid "Physically-based glTF lighting units"
 msgstr "இயற்பியல் அடிப்படையிலான glTF லைட்டிங் அலகுகள்"
@@ -18926,9 +18953,6 @@ msgstr "கலத்தல்"
 
 msgid "No masks"
 msgstr "முகமூடிகள் இல்லை"
-
-msgid "Source"
-msgstr "சான்று"
 
 msgid "No node group loaded"
 msgstr "முனைக் குழு ஏற்றப்படவில்லை"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "அட்டை வரைவுக்குச் செயலில் உள்ள பகுதியின் வரைவு அழைப்பு தேவை"
 
@@ -29904,6 +29925,9 @@ msgstr "வட்டமான இடைமுக உறுப்புகளு�
 msgid "Mixie Chat"
 msgstr "Mixie அரட்டை"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "இழுத்து விடும் பாதைகள் கால
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "இழுத்து விடும் பாதைகள் காலியற்ற JSON வரிசையாக இருக்க வேண்டும்"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "உலகளாவிய பகுதிகள்"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "சாளர-உலகளாவிய பகுதிகள் (மேல்பட்டை, நிலைப்பட்டை). Mixar நீட்டிப்பு — தொடக்க வழிகாட்டல் மேல்பட்டையை மீண்டும் வரைவதற்கு அணுக இது வெளிப்படுத்தப்பட்டுள்ளது."
 
 msgid "QA UI Dump"
 msgstr "QA இடைமுக வெளியீடு"

@@ -465,8 +465,8 @@ msgstr "മൂഡ്ബോർഡിൽ '{name}' തിരഞ്ഞെടുത�
 msgid "Select in Scene"
 msgstr "സീനിൽ തിരഞ്ഞെടുക്കുക"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "ഈ സ്പ്ലാറ്റ് ലോകത്തിന്റെ പ്രോക്സി ഹാൻഡിൽ വ്യൂപോർട്ടിൽ തിരഞ്ഞെടുക്കുക"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "കളക്ഷൻ"
@@ -474,8 +474,11 @@ msgstr "കളക്ഷൻ"
 msgid "That splat world is no longer in this file"
 msgstr "ആ സ്പ്ലാറ്റ് ലോകം ഈ ഫയലിൽ ഇനിയില്ല"
 
-msgid "This splat world has no proxy handle"
-msgstr "ഈ സ്പ്ലാറ്റ് ലോകത്തിന് പ്രോക്സി ഹാൻഡിലില്ല"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' തിരഞ്ഞെടുത്തു"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "പിന്തുണയില്ലാത്ത സ്പ്ലാറ�
 msgid "File not found: {path}"
 msgstr "ഫയൽ കണ്ടെത്തിയില്ല: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-ൽ നിന്ന് ഒബ്ജക്റ്റുകൾ ഇമ്പോർട്ട് ചെയ്തില്ല"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "ചിത്രം വായിക്കാനായില്ല: {error}"
@@ -7043,8 +7055,8 @@ msgstr "ലോക ജനറേഷൻ ഫലത്തിൽ സ്പ്ലാറ
 msgid "World generation result missing collider (GLB) URL"
 msgstr "ലോക ജനറേഷൻ ഫലത്തിൽ കൊളൈഡർ (GLB) URL കാണുന്നില്ല"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "ലോകം ഡൗൺലോഡ്/പരിവർത്തനം ചെയ്യാനായില്ല: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "ലോകം ഇമ്പോർട്ട് ചെയ്തു, പക്ഷേ ഒബ്ജക്റ്റുകൾ ഉണ്ടായില്ല"
@@ -11095,14 +11107,32 @@ msgstr "ഒറിജിനിൽ ഗ്രൗണ്ട് ചെയ്യുക"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "സ്പ്ലാറ്റിന്റെ തറ Z=0-ൽ വരികയും അടിസ്ഥാന മധ്യം ഒറിജിനിൽ വരികയും ചെയ്യുന്ന വിധം അത് നീക്കുക (ജനറേറ്റ് ചെയ്ത ലോകങ്ങളുടെ അതേ ഗ്രൗണ്ടിങ്)"
 
+msgid "Source"
+msgstr "ഉറവിടം"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "സ്റ്റാൻഡേർഡ്"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "സ്പ്ലാറ്റ് ഫയലൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} സ്പ്ലാറ്റ് ഇംപോർട്ട് ചെയ്തു: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "ഗോസിയൻ സ്പ്ലാറ്റ് (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "മൂഡ്ബോർഡിലേക്ക് ഒരു ടെക്സ്റ്റ് ബോക്സ് ചേർക്കുക ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "എല്ലാ ബോൺ സ്വാധീനങ്ങളും ഉൾ
 
 msgid "Lighting Mode"
 msgstr "ലൈറ്റിങ് മോഡ്"
-
-msgid "Standard"
-msgstr "സ്റ്റാൻഡേർഡ്"
 
 msgid "Physically-based glTF lighting units"
 msgstr "ഫിസിക്കലി-ബേസ്ഡ് glTF ലൈറ്റിങ് യൂണിറ്റുകൾ"
@@ -18926,9 +18953,6 @@ msgstr "ബ്ലെൻഡിങ്"
 
 msgid "No masks"
 msgstr "മാസ്കുകളില്ല"
-
-msgid "Source"
-msgstr "ഉറവിടം"
 
 msgid "No node group loaded"
 msgstr "നോഡ് ഗ്രൂപ്പ് ലോഡ് ചെയ്തിട്ടില്ല"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "കാർഡ് വരയ്ക്കാൻ സജീവ മേഖലയുടെ ഡ്രോ കോൾബാക്ക് വേണം"
 
@@ -29904,6 +29925,9 @@ msgstr "വൃത്താകൃതി UI ഘടകങ്ങളുടെ കോ�
 msgid "Mixie Chat"
 msgstr "Mixie ചാറ്റ്"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "ഡ്രോപ്പ് പാതകൾ ശൂന്യമല്ലാ�
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ഡ്രോപ്പ് പാതകൾ ശൂന്യമല്ലാത്ത JSON അറേ ആയിരിക്കണം"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "ആഗോള ഏരിയകൾ"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "വിൻഡോ-ആഗോള ഏരിയകൾ (ടോപ്പ്ബാർ, സ്റ്റാറ്റസ്ബാർ). Mixar വിപുലീകരണം — ഓൺബോർഡിങിന് റീഡ്രോയ്ക്കായി ടോപ്പ്ബാർ അഭിസംബോധന ചെയ്യാൻ തുറന്നുവച്ചത്."
 
 msgid "QA UI Dump"
 msgstr "QA UI ഡമ്പ്"

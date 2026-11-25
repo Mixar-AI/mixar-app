@@ -12,7 +12,7 @@
 
 #include <string>
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 #include "BLI_vector.hh"
 
 #include "view3d_director.hh"

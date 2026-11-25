@@ -280,7 +280,7 @@ def test_clear_previous_runs_after_the_new_files_and_keeps_rewritten_ones(tmp_pa
     assert not (tmp_path / "stale.png").exists() and not (tmp_path / "manifest.json").exists()
 
 
-def test_texture_file_names_keep_blender_suffix_and_never_collide(tmp_path):
+def test_texture_file_names_keep_blender_suffix_and_never_collide(tmp_path, monkeypatch):
     stem = export_package._texture_stem
     assert stem("Wood") == "Wood" and stem("Wood.001") == "Wood.001"
     assert stem("Wood.png") == "Wood" and stem("Wood.png.001") == "Wood.001"
@@ -291,12 +291,10 @@ def test_texture_file_names_keep_blender_suffix_and_never_collide(tmp_path):
             self.name, self.size = name, (4, 4)
             self.filepath_raw = self.file_format = None
 
-        def copy(self):
-            return Image(self.name)
-
         def save(self):
             pass
 
+    monkeypatch.setattr(export_package, "_pixel_copy", lambda img, name: Image(name))
     images = [Image("Wood"), Image("Wood.001"), Image("A/B"), Image("A_B")]
     saved = export_package._save_textures(images, str(tmp_path / "textures"))
     names = [fname for _, fname in saved.values()]

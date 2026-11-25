@@ -15,7 +15,7 @@
 #include <cstring>
 #include <memory>
 
-#include "BLI_string.h"
+#include "BLI_string.hh"
 
 #include "BLF_api.hh"
 

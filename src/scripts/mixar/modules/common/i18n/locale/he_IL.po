@@ -465,8 +465,8 @@ msgstr "'{name}' הארשהה חולב רחבנ"
 msgid "Select in Scene"
 msgstr "הנצסב הריחב"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "הגוצתה ןולחב הזה טאלפסה םלוע לש יסקורפה תידי תריחב"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "ףסוא"
@@ -474,8 +474,11 @@ msgstr "ףסוא"
 msgid "That splat world is no longer in this file"
 msgstr "ץבוקב דוע אצמנ וניא הז טאלפס םלוע"
 
-msgid "This splat world has no proxy handle"
-msgstr "יסקורפ תידי ןיא הז טאלפס םלועל"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' רחבנ"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "(ply. וא spz. יופצ) '{ext}' ךמתנ אל טאלפס ץבוק גו
 msgid "File not found: {path}"
 msgstr "{path} :אצמנ אל ץבוקה"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-מ םיטקייבוא ואבוי אל"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "{error} :הלשכנ הנומתה תאירק"
@@ -7043,8 +7055,8 @@ msgstr "(SPZ) טאלפס לש URL תבותכ הרסח םלועה תריצי תא
 msgid "World generation result missing collider (GLB) URL"
 msgstr "(GLB) רדיילוק לש URL תבותכ הרסח םלועה תריצי תאצותב"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "{error} :הלשכנ םלועה לש הרמה/הדרוה"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "םיטקייבוא רצי אל ךא אבוי םלועה"
@@ -11095,14 +11107,32 @@ msgstr "רוקמב הפצרל דמצה"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "(ורצונש תומלוע ומכ הדמצה התוא) רוקמב לגרה תעיבט זכרמו Z=0 לע ולש הפצרהש ךכ טאלפסה תא זיזמ"
 
+msgid "Source"
+msgstr "רוקמ"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "יטרדנטס"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "טאלפס ץבוק רחבנ אל"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count}: {names} :ואבויש םיטאלפס"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "(spz/.ply.) ינאיסואג טאלפס"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "({shortcut}) הארשהה חולל טסקט תבית תפסוה"
@@ -12672,9 +12702,6 @@ msgstr "םצעה תועפשה לכ תא לולכ"
 
 msgid "Lighting Mode"
 msgstr "הרואת בצמ"
-
-msgid "Standard"
-msgstr "יטרדנטס"
 
 msgid "Physically-based glTF lighting units"
 msgstr "הקיזיפ תוססובמ glTF תרואת תודיחי"
@@ -18926,9 +18953,6 @@ msgstr "בוברע"
 
 msgid "No masks"
 msgstr "תוכסמ ןיא"
-
-msgid "Source"
-msgstr "רוקמ"
 
 msgid "No node group loaded"
 msgstr "םיתמצ תצובק הנעטנ אל"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "ליעפה רוזאה לש רויצה תאירק תא שרוד סיטרכ רויצ"
 
@@ -29904,6 +29925,9 @@ msgstr "םילגועמ קשממ יביכרל הניפ סוידר"
 msgid "Mixie Chat"
 msgstr "Mixie טא'צ"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "תוקיר אל תוזורחמ תויהל םיבייח רורחשה יב
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "קיר אל JSON ךרעמ תויהל םיבייח רורחשה יביתנ"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "םיילבולג םירוזא"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr ".שדחמ רויצל ןוילעה לגרסל תונפל לכות תינושארה הכרדההש ידכ הפושח — Mixar לש הבחרה .(בצמ תרוש ,ןוילע לגרס) ןולחה לש םיילבולג םירוזא"
 
 msgid "QA UI Dump"
 msgstr "QA קשממ תכלשה"

@@ -32,12 +32,12 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_math_vector.h"
-#include "BLI_rect.h"
-#include "BLI_string.h"
-#include "BLI_string_utf8.h"
-#include "BLI_time.h"
-#include "BLI_utildefines.h"
+#include "BLI_math_vector_c.hh"
+#include "BLI_rect.hh"
+#include "BLI_string.hh"
+#include "BLI_string_utf8.hh"
+#include "BLI_time.hh"
+#include "BLI_utildefines.hh"
 #include "BLI_vector.hh"
 
 #include "BKE_context.hh"
@@ -78,12 +78,12 @@ static SpaceMixieChat *history_space_from_area(ScrArea *area)
 {
   /* SPACE_AGENT_BUBBLE reuses these callbacks via its layout-compatible
    * spacedata struct (see DNA_space_types.h on SpaceAgentBubble). */
-  if (!area || !area->spacedata.first ||
+  if (!area || !area->spacedata.first() ||
       (area->spacetype != SPACE_AGENT_BUBBLE))
   {
     return nullptr;
   }
-  return static_cast<SpaceMixieChat *>(area->spacedata.first);
+  return area->spacedata.first_as<SpaceMixieChat>();
 }
 
 static float ease_out_cubic(float t)

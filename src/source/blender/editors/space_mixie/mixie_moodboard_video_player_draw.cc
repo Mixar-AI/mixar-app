@@ -17,8 +17,8 @@
 #include <algorithm>
 #include <string>
 
-#include "BLI_math_vector.h"
-#include "BLI_rect.h"
+#include "BLI_math_vector_c.hh"
+#include "BLI_rect.hh"
 
 #include "GPU_immediate.hh"
 #include "GPU_state.hh"

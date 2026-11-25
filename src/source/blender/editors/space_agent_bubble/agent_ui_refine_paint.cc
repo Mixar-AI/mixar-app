@@ -10,7 +10,7 @@
  * `mixie.revert_prompt` with `chat=True` (moodboard/core/prompt_refine_chat.py).
  */
 
-#include "BLI_rect.h"
+#include "BLI_rect.hh"
 
 #include "UI_mixar.hh"
 

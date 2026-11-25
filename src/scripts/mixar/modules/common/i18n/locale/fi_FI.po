@@ -465,8 +465,8 @@ msgstr "Kohde '{name}' valittiin tunnelmataululla"
 msgid "Select in Scene"
 msgstr "Valitse kohtauksessa"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Valitsee tämän splat-maailman sijaiskahvan näkymässä"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kokoelma"
@@ -474,8 +474,11 @@ msgstr "Kokoelma"
 msgid "That splat world is no longer in this file"
 msgstr "Splat-maailma ei ole enää tässä tiedostossa"
 
-msgid "This splat world has no proxy handle"
-msgstr "Tällä splat-maailmalla ei ole sijaiskahvaa"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Valittiin '{name}'"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Splat-tiedostotyyppiä '{ext}' ei tueta (odotettiin .spz tai .ply)"
 msgid "File not found: {path}"
 msgstr "Tiedostoa ei löydy: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Kohteesta {name} ei tuotu objekteja"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Kuvaa ei voitu lukea: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Maailman luonnin tuloksesta puuttuu splatin (SPZ) URL"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Maailman luonnin tuloksesta puuttuu törmäyttimen (GLB) URL"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Maailman lataus tai muunnos epäonnistui: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Maailma tuotiin, mutta objekteja ei syntynyt"
@@ -11095,14 +11107,32 @@ msgstr "Lattia origoon"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Siirtää splatin niin, että lattia on tasolla Z=0 ja jalanjäljen keskipiste origossa (sama maadoitus kuin luoduilla maailmoilla)."
 
+msgid "Source"
+msgstr "Lähde"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standardi"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Splat-tiedostoa ei ole valittu."
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Tuotuja splat-kohteita: {count}: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gauss-splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Lisää tekstilaatikon tunnelmatauluun ({shortcut})."
@@ -12672,9 +12702,6 @@ msgstr "Sisällytä kaikki luuvaikutukset"
 
 msgid "Lighting Mode"
 msgstr "Valotustila"
-
-msgid "Standard"
-msgstr "Standardi"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fysikaaliset glTF-valaistusyksiköt"
@@ -18926,9 +18953,6 @@ msgstr "Sekoitus"
 
 msgid "No masks"
 msgstr "Ei maskeja"
-
-msgid "Source"
-msgstr "Lähde"
 
 msgid "No node group loaded"
 msgstr "Noodiryhmää ei ole ladattu"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kortin piirto vaatii aktiivisen alueen piirtokutsun"
 
@@ -29904,6 +29925,9 @@ msgstr "Kulman säde pyöristetyille käyttöliittymäelementeille"
 msgid "Mixie Chat"
 msgstr "Mixie-keskustelu"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Pudotuspolkujen on oltava ei-tyhjiä merkkijonoja"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Pudotuspolkujen on oltava ei-tyhjä JSON-taulukko"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Yleisalueet"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Ikkunan yleiset alueet (yläpalkki, tilapalkki). Mixar-laajennus — tuotu esiin, jotta aloitus voi kohdistaa yläpalkin uudelleenpiirtoon."
 
 msgid "QA UI Dump"
 msgstr "QA-käyttöliittymän vedos"

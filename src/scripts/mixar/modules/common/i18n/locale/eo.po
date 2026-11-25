@@ -465,8 +465,8 @@ msgstr "Elektis '{name}' sur la inspirtabulo"
 msgid "Select in Scene"
 msgstr "Elektu en sceno"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Elektas la anstataŭan tenilon de ĉi tiu splata mondo en la vidujo"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Kolekto"
@@ -474,8 +474,11 @@ msgstr "Kolekto"
 msgid "That splat world is no longer in this file"
 msgstr "Tiu splata mondo ne plu estas en ĉi tiu dosiero"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ĉi tiu splata mondo ne havas anstataŭan tenilon"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Elektis '{name}'"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Nesubtenata tipo de splata dosiero '{ext}' (atenditaj .spz aŭ .ply)"
 msgid "File not found: {path}"
 msgstr "Dosiero ne trovita: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Neniuj objektoj importitaj el {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Malsukcesis legi bildon: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Al la rezulto de mondgenerado mankas URL de splato (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Al la rezulto de mondgenerado mankas URL de koliziilo (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Malsukcesis elŝuti/konverti mondon: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Mondo importita, sed produktis neniujn objektojn"
@@ -11095,14 +11107,32 @@ msgstr "Meti la plankon ĉe la origino"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Movi la splaton, por ke ĝia planko sidu sur Z=0 kaj la centro de ĝia bazo estu ĉe la origino (sama metado kiel ĉe generitaj mondoj)"
 
+msgid "Source"
+msgstr "Fonto"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Norma"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Neniu splata dosiero elektita"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Enportitaj splatoj: {count}: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaŭsa splato (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Aldoni tekstujon al la inspirtabulo ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "Inkluzivi ĉiujn ostajn influojn"
 
 msgid "Lighting Mode"
 msgstr "Luma modo"
-
-msgid "Standard"
-msgstr "Norma"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fizikaj lumaj unuoj de glTF"
@@ -18926,9 +18953,6 @@ msgstr "Miksado"
 
 msgid "No masks"
 msgstr "Neniuj maskoj"
-
-msgid "Source"
-msgstr "Fonto"
 
 msgid "No node group loaded"
 msgstr "Neniu noda grupo ŝargita"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Desegnado de karto postulas la desegnan revokon de la aktiva regiono"
 
@@ -29904,6 +29925,9 @@ msgstr "Angula radiuso por rondigitaj UI-elementoj"
 msgid "Mixie Chat"
 msgstr "Babilo de Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Demetaj vojoj devas esti nemalplenaj ĉenoj"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Demetaj vojoj devas esti nemalplena JSON-tabelo"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Ĝeneralaj areoj"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Fenestro-ĝeneralaj areoj (supra breto, stata breto). Etendo de Mixar — elmetita por ke la enkonduko povu alparoli la supran breton por redesegnado."
 
 msgid "QA UI Dump"
 msgstr "QA-UI-elŝuto"

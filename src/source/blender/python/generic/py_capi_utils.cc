@@ -15,7 +15,7 @@
 #include <Python.h>
 #include <frameobject.h>
 
-#include "BLI_utildefines.h" /* for bool */
+#include "BLI_utildefines.hh" /* for bool */
 
 #include "DNA_vec_types.h" /* for rcti */
 
@@ -26,11 +26,11 @@
 #ifndef MATH_STANDALONE
 #  include "MEM_guardedalloc.h"
 
-#  include "BLI_string_utf8.h"
+#  include "BLI_string_utf8.hh"
 #endif
 
 #ifdef _WIN32
-#  include "BLI_math_base.h" /* isfinite() */
+#  include "BLI_math_base_c.hh" /* isfinite() */
 #endif
 
 namespace blender {
@@ -609,7 +609,15 @@ int PyC_ParseOptionalBool(PyObject *o, void *p)
 int PyC_ParseRectI(PyObject *o, void *p)
 {
   rcti *rect = static_cast<rcti *>(p);
-  if (!PyArg_ParseTuple(o, "(ii)(ii)", &rect->xmin, &rect->ymin, &rect->xmax, &rect->ymax)) {
+  if (!PyArg_ParseTuple(o,
+                        "(ii)" /* `min` */
+                        "(ii)" /* `max` */
+                        ":rect",
+                        &rect->xmin,
+                        &rect->ymin,
+                        &rect->xmax,
+                        &rect->ymax))
+  {
     return 0;
   }
   return 1;
@@ -671,7 +679,12 @@ const char *PyC_StringEnum_FindIDFromValue(const PyC_StringEnumItems *items, con
 int PyC_CheckArgs_DeepCopy(PyObject *args)
 {
   PyObject *dummy_pydict;
-  return PyArg_ParseTuple(args, "|O!:__deepcopy__", &PyDict_Type, &dummy_pydict) != 0;
+  return PyArg_ParseTuple(args,
+                          "|"  /* Optional arguments. */
+                          "O!" /* `memo` */
+                          ":__deepcopy__",
+                          &PyDict_Type,
+                          &dummy_pydict) != 0;
 }
 
 /** \} */
@@ -831,41 +844,6 @@ void PyC_FileAndNum_Safe(const char **r_filename, int *r_lineno)
   }
 
   PyC_FileAndNum(r_filename, r_lineno);
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
-/** \name Object Access Utilities
- * \{ */
-
-PyObject *PyC_Object_GetAttrStringArgs(PyObject *o, Py_ssize_t n, ...)
-{
-  /* NOTE: Would be nice if python had this built in. */
-
-  Py_ssize_t i;
-  PyObject *item = o;
-  const char *attr;
-
-  va_list vargs;
-
-  va_start(vargs, n);
-  for (i = 0; i < n; i++) {
-    attr = va_arg(vargs, char *);
-    item = PyObject_GetAttrString(item, attr);
-
-    if (item) {
-      Py_DECREF(item);
-    }
-    else {
-      /* python will set the error value here */
-      break;
-    }
-  }
-  va_end(vargs);
-
-  Py_XINCREF(item); /* final value has is increfed, to match PyObject_GetAttrString */
-  return item;
 }
 
 /** \} */
@@ -1074,7 +1052,7 @@ PyObject *PyC_ExceptionBuffer()
   }
   else {
     PySys_WriteStderr("Internal error creating: io.StringIO()!\n");
-    if (UNLIKELY(PyErr_Occurred())) {
+    if (PyErr_Occurred()) [[unlikely]] {
       PyErr_Print(); /* Show the error accessing `io.StringIO`. */
     }
     PyErr_Display(error_type, error_value, error_traceback);
@@ -1087,7 +1065,7 @@ PyObject *PyC_ExceptionBuffer()
   if (result == nullptr) {
     result = PyObject_Str(error_value);
     /* Python does this too. */
-    if (UNLIKELY(result == nullptr)) {
+    if (result == nullptr) [[unlikely]] {
       result = PyUnicode_FromFormat("<unprintable %s object>", Py_TYPE(error_value)->tp_name);
     }
   }
@@ -1122,7 +1100,7 @@ PyObject *PyC_ExceptionBuffer_Simple()
   if (result == nullptr) {
     result = PyObject_Str(error_value);
     /* Python does this too. */
-    if (UNLIKELY(result == nullptr)) {
+    if (result == nullptr) [[unlikely]] {
       result = PyUnicode_FromFormat("<unprintable %s object>", Py_TYPE(error_value)->tp_name);
     }
   }
@@ -1220,7 +1198,7 @@ PyObject *PyC_UnicodeFromStdStr(const std::string &str)
 int PyC_ParseUnicodeAsBytesAndSize(PyObject *o, void *p)
 {
   PyC_UnicodeAsBytesAndSize_Data *data = static_cast<PyC_UnicodeAsBytesAndSize_Data *>(p);
-  if (UNLIKELY(o == nullptr)) {
+  if (o == nullptr) [[unlikely]] {
     /* Signal to cleanup. */
     Py_CLEAR(data->value_coerce);
     return 1;
@@ -1422,16 +1400,15 @@ void PyC_RunQuicky(const char *filepath, int n, ...)
     fclose(fp);
 
     if (py_result) {
+      /* don't use the result */
+      Py_DECREF(py_result);
+      py_result = nullptr;
 
       /* we could skip this but then only slice assignment would work
        * better not be so strict */
       values = PyDict_GetItemString(py_dict, "values");
 
       if (values && PyList_Check(values)) {
-
-        /* don't use the result */
-        Py_DECREF(py_result);
-        py_result = nullptr;
 
         /* now get the values back */
         va_start(vargs, n);
@@ -1932,10 +1909,10 @@ static ulong pyc_Long_AsUnsignedLong(PyObject *value)
 int PyC_Long_AsBool(PyObject *value)
 {
   const int test = PyLong_AsInt(value);
-  if (UNLIKELY(test == -1 && PyErr_Occurred())) {
+  if (test == -1 && PyErr_Occurred()) [[unlikely]] {
     return -1;
   }
-  if (UNLIKELY(uint(test) > 1)) {
+  if (uint(test) > 1) [[unlikely]] {
     PyErr_SetString(PyExc_TypeError, "Python number not a bool (0/1)");
     return -1;
   }
@@ -1945,10 +1922,10 @@ int PyC_Long_AsBool(PyObject *value)
 int8_t PyC_Long_AsI8(PyObject *value)
 {
   const int test = PyLong_AsInt(value);
-  if (UNLIKELY(test == -1 && PyErr_Occurred())) {
+  if (test == -1 && PyErr_Occurred()) [[unlikely]] {
     return -1;
   }
-  if (UNLIKELY(test < INT8_MIN || test > INT8_MAX)) {
+  if (test < INT8_MIN || test > INT8_MAX) [[unlikely]] {
     PyErr_SetString(PyExc_OverflowError, "Python int too large to convert to C int8");
     return -1;
   }
@@ -1958,10 +1935,10 @@ int8_t PyC_Long_AsI8(PyObject *value)
 int16_t PyC_Long_AsI16(PyObject *value)
 {
   const int test = PyLong_AsInt(value);
-  if (UNLIKELY(test == -1 && PyErr_Occurred())) {
+  if (test == -1 && PyErr_Occurred()) [[unlikely]] {
     return -1;
   }
-  if (UNLIKELY(test < INT16_MIN || test > INT16_MAX)) {
+  if (test < INT16_MIN || test > INT16_MAX) [[unlikely]] {
     PyErr_SetString(PyExc_OverflowError, "Python int too large to convert to C int16");
     return -1;
   }
@@ -1976,10 +1953,10 @@ int16_t PyC_Long_AsI16(PyObject *value)
 uint8_t PyC_Long_AsU8(PyObject *value)
 {
   const ulong test = pyc_Long_AsUnsignedLong(value);
-  if (UNLIKELY(test == ulong(-1) && PyErr_Occurred())) {
+  if (test == ulong(-1) && PyErr_Occurred()) [[unlikely]] {
     return uint8_t(-1);
   }
-  if (UNLIKELY(test > UINT8_MAX)) {
+  if (test > UINT8_MAX) [[unlikely]] {
     PyErr_SetString(PyExc_OverflowError, "Python int too large to convert to C uint8");
     return uint8_t(-1);
   }
@@ -1989,10 +1966,10 @@ uint8_t PyC_Long_AsU8(PyObject *value)
 uint16_t PyC_Long_AsU16(PyObject *value)
 {
   const ulong test = pyc_Long_AsUnsignedLong(value);
-  if (UNLIKELY(test == ulong(-1) && PyErr_Occurred())) {
+  if (test == ulong(-1) && PyErr_Occurred()) [[unlikely]] {
     return uint16_t(-1);
   }
-  if (UNLIKELY(test > UINT16_MAX)) {
+  if (test > UINT16_MAX) [[unlikely]] {
     PyErr_SetString(PyExc_OverflowError, "Python int too large to convert to C uint16");
     return uint16_t(-1);
   }
@@ -2002,10 +1979,10 @@ uint16_t PyC_Long_AsU16(PyObject *value)
 uint32_t PyC_Long_AsU32(PyObject *value)
 {
   const ulong test = pyc_Long_AsUnsignedLong(value);
-  if (UNLIKELY(test == ulong(-1) && PyErr_Occurred())) {
+  if (test == ulong(-1) && PyErr_Occurred()) [[unlikely]] {
     return uint32_t(-1);
   }
-  if (UNLIKELY(test > UINT32_MAX)) {
+  if (test > UINT32_MAX) [[unlikely]] {
     PyErr_SetString(PyExc_OverflowError, "Python int too large to convert to C uint32");
     return uint32_t(-1);
   }

@@ -465,8 +465,8 @@ msgstr "Valde '{name}' på moodboarden"
 msgid "Select in Scene"
 msgstr "Välj i scen"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Väljer den här splat-världens proxyhandtag i visningsvyn"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Samling"
@@ -474,8 +474,11 @@ msgstr "Samling"
 msgid "That splat world is no longer in this file"
 msgstr "Den splat-världen finns inte längre i den här filen"
 
-msgid "This splat world has no proxy handle"
-msgstr "Den här splat-världen har inget proxyhandtag"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Valde '{name}'"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Splatfiltypen '{ext}' stöds inte (förväntade .spz eller .ply)"
 msgid "File not found: {path}"
 msgstr "Filen hittades inte: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Inga objekt importerades från {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Det gick inte att läsa bilden: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Resultatet av världsgenereringen saknar URL för splat (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Resultatet av världsgenereringen saknar URL för kollisionsobjekt (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Det gick inte att ladda ned/konvertera världen: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Världen importerades men gav inga objekt"
@@ -11095,14 +11107,32 @@ msgstr "Placera vid origo"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Flyttar splaten så att dess golv ligger på Z=0 med fotavtryckets mitt i origo (samma markplacering som genererade världar)"
 
+msgid "Source"
+msgstr "Källa"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standard"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Ingen splatfil vald"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Importerade {count} splat(ar): {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussisk splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12672,9 +12702,6 @@ msgstr "Inkludera alla benpåverkningar"
 
 msgid "Lighting Mode"
 msgstr "Belysningsläge"
-
-msgid "Standard"
-msgstr "Standard"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fysiskt baserade ljusenheter för glTF"
@@ -18926,9 +18953,6 @@ msgstr "Blandning"
 
 msgid "No masks"
 msgstr "Inga masker"
-
-msgid "Source"
-msgstr "Källa"
 
 msgid "No node group loaded"
 msgstr "Ingen nodgrupp inläst"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Kortritning kräver den aktiva regionens ritåteranrop"
 
@@ -29904,6 +29925,9 @@ msgstr "Hörnradie för rundade gränssnittselement"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Släppsökvägar måste vara icke-tomma strängar"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Släppsökvägar måste vara en icke-tom JSON-array"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globala områden"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Fönsterglobala områden (toppfält, statusfält). Mixar-tillägg – exponeras så att introduktionen kan adressera toppfältet för omritning."
 
 msgid "QA UI Dump"
 msgstr "QA-gränssnittsdump"

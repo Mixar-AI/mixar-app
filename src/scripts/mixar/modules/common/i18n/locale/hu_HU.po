@@ -465,8 +465,8 @@ msgstr "„{name}” kijelölve a moodboardon"
 msgid "Select in Scene"
 msgstr "Kijelölés a jelenetben"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "A splatvilág proxyfogantyújának kijelölése a nézetablakban"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Gyűjtemény"
@@ -474,8 +474,11 @@ msgstr "Gyűjtemény"
 msgid "That splat world is no longer in this file"
 msgstr "Ez a splatvilág már nincs ebben a fájlban"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ennek a splatvilágnak nincs proxyfogantyúja"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "„{name}” kijelölve"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Nem támogatott splat fájltípus: „{ext}” (.spz vagy .ply várt)"
 msgid "File not found: {path}"
 msgstr "A fájl nem található: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Nem importálható objektum innen: {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "A kép olvasása sikertelen: {error}"
@@ -7043,8 +7055,8 @@ msgstr "A világgenerálás eredményéből hiányzik a splat (SPZ) URL"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "A világgenerálás eredményéből hiányzik az ütközőtest (GLB) URL"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "A világ letöltése vagy átalakítása sikertelen: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "A világ importálva, de nem jött létre objektum"
@@ -11095,14 +11107,32 @@ msgstr "Talaj az origónál"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "A splat mozgatása úgy, hogy a padlója Z=0-n legyen, a talpának közepe pedig az origónál (ugyanaz a leültetés, mint a generált világoknál)"
 
+msgid "Source"
+msgstr "Forrás"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Szabványos"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Nincs kijelölt splat fájl"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} splat importálva: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gauss-splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Szövegdoboz hozzáadása a Moodboardhoz ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "Minden csontbefolyás belefoglalása"
 
 msgid "Lighting Mode"
 msgstr "Megvilágítási mód"
-
-msgid "Standard"
-msgstr "Szabványos"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fizikai alapú glTF megvilágítási mértékegységek"
@@ -18926,9 +18953,6 @@ msgstr "Keverés"
 
 msgid "No masks"
 msgstr "Nincsenek maszkok"
-
-msgid "Source"
-msgstr "Forrás"
 
 msgid "No node group loaded"
 msgstr "Nincs betöltött csomópontcsoport"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "A kártyarajzoláshoz az aktív terület rajzolási visszahívása kell"
 
@@ -29904,6 +29925,9 @@ msgstr "Saroksugár a lekerekített felületelemekhez"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Az ejtési útvonalak nem lehetnek üres karakterláncok"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Az ejtési útvonalaknak nem üres JSON-tömbnek kell lenniük"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globális területek"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Ablakszintű globális területek (felső sáv, állapotsáv). Mixar-kiterjesztés — elérhető, hogy a bevezető a felső sávot újrarajzolhassa."
 
 msgid "QA UI Dump"
 msgstr "QA felületdump"

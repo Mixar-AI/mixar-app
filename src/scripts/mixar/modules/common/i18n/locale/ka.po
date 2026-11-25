@@ -465,8 +465,8 @@ msgstr "„{name}“ მონიშნულია მუდბორდზე"
 msgid "Select in Scene"
 msgstr "სცენაში მონიშვნა"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "მონიშნავს ამ სპლატის სამყაროს პროქსის სახელურს სარკმელში"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "კოლექცია"
@@ -474,8 +474,11 @@ msgstr "კოლექცია"
 msgid "That splat world is no longer in this file"
 msgstr "ეს სპლატის სამყარო ამ ფაილში აღარ არის"
 
-msgid "This splat world has no proxy handle"
-msgstr "ამ სპლატის სამყაროს პროქსის სახელური არ აქვს"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "„{name}“ მონიშნულია"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "მხარდაუჭერელი სპლატის ფაი�
 msgid "File not found: {path}"
 msgstr "ფაილი ვერ მოიძებნა: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name}-დან ობიექტები არ დაიმპორტდა"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "გამოსახულების წაკითხვა ვერ მოხერხდა: {error}"
@@ -7043,8 +7055,8 @@ msgstr "სამყაროს წარმოქმნის შედეგ�
 msgid "World generation result missing collider (GLB) URL"
 msgstr "სამყაროს წარმოქმნის შედეგს კოლაიდერის (GLB) URL აკლია"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "სამყაროს ჩამოტვირთვა/გარდაქმნა ვერ მოხერხდა: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "სამყარო დაიმპორტდა, მაგრამ ობიექტები არ შექმნილა"
@@ -11095,14 +11107,32 @@ msgstr "მიწაზე დასმა საწყისზე"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "სპლატის გადატანა ისე, რომ იატაკი Z=0-ზე იჯდეს და კვალის ცენტრი საწყისზე იყოს (იგივე მიწაზე დასმა, რაც წარმოქმნილ სამყაროებს)"
 
+msgid "Source"
+msgstr "წყარო"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "სტანდარტული"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "სპლატის ფაილი მონიშნული არ არის"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "იმპორტირებულია {count} სპლატი: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "გაუსის სპლატი (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "ტექსტური გრაფის მიმატება მუდბორდზე ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "ყველა ძვლის ზეგავლენის მით
 
 msgid "Lighting Mode"
 msgstr "განათების რეჟიმი"
-
-msgid "Standard"
-msgstr "სტანდარტული"
 
 msgid "Physically-based glTF lighting units"
 msgstr "ფიზიკაზე დაფუძნებული glTF განათების ერთეულები"
@@ -18926,9 +18953,6 @@ msgstr "შეზავება"
 
 msgid "No masks"
 msgstr "ნიღბები არ არის"
-
-msgid "Source"
-msgstr "წყარო"
 
 msgid "No node group loaded"
 msgstr "კვანძების ჯგუფი არ არის ჩატვირთული"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "ბარათის ხატვას სჭირდება აქტიური არეს ხატვის გამოძახება"
 
@@ -29904,6 +29925,9 @@ msgstr "კუთხის რადიუსი მომრგვალებ�
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "ჩაგდების გზები არაცარიელი 
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "ჩაგდების გზები არაცარიელი JSON მასივი უნდა იყოს"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "გლობალური არეები"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "ფანჯრის გლობალური არეები (ზედა ზოლი, სტატუსის ზოლი). Mixar-ის გაფართოება — გამჟღავნებულია, რათა გაცნობამ ზედა ზოლს გადახატვისთვის მიმართოს."
 
 msgid "QA UI Dump"
 msgstr "QA ინტერფეისის ამონაწერი"

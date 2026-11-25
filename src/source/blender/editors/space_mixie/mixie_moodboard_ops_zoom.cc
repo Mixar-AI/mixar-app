@@ -269,14 +269,14 @@ static wmOperatorStatus moodboard_ensure_visible_exec(bContext *C, wmOperator *o
   const bool drawer_live = drawer_amount >= MIXIE_MOODBOARD_DRAWER_ACTIVE_AMOUNT ||
                            (drawer_target_prop && RNA_property_int_get(&wm_ptr, drawer_target_prop));
 
-  for (wmWindow *win = static_cast<wmWindow *>(wm->windows.first); win; win = win->next) {
+  for (wmWindow *win = wm->windows.first_as<wmWindow>(); win; win = win->next) {
     bScreen *screen = WM_window_get_active_screen(win);
     if (!screen) {
       continue;
     }
     const WorkSpace *workspace = WM_window_get_active_workspace(win);
     const bool zen = workspace != nullptr && STREQ(workspace->id.name + 2, "Zen Mode");
-    for (ScrArea *area = static_cast<ScrArea *>(screen->areabase.first); area; area = area->next)
+    for (ScrArea *area = screen->areabase.first_as<ScrArea>(); area; area = area->next)
     {
       const bool mixie_canvas = area->spacetype == SPACE_MIXIE;
       const bool drawer_canvas = zen && drawer_live && area->spacetype == SPACE_VIEW3D;
@@ -284,13 +284,13 @@ static wmOperatorStatus moodboard_ensure_visible_exec(bContext *C, wmOperator *o
         continue;
       }
       if (mixie_canvas) {
-        SpaceMixie *smixie = static_cast<SpaceMixie *>(area->spacedata.first);
+        SpaceMixie *smixie = area->spacedata.first_as<SpaceMixie>();
         if (!smixie || smixie->mode != MIXIE_MODE_MOODBOARD) {
           continue;
         }
       }
       const int want_region = mixie_canvas ? RGN_TYPE_WINDOW : RGN_TYPE_TOOL_PROPS;
-      for (ARegion *region = static_cast<ARegion *>(area->regionbase.first); region;
+      for (ARegion *region = area->regionbase.first_as<ARegion>(); region;
            region = region->next)
       {
         if (region->regiontype != want_region) {

@@ -19,17 +19,17 @@
 
 #ifdef RNA_RUNTIME
 
-#  include "BLI_string.h"
-#  include "BLI_string_utf8.h"
+#  include "BLI_string.hh"
+#  include "BLI_string_utf8.hh"
 
 #  include "BKE_action.hh"
+#  include "BKE_annotations.h"
 #  include "BKE_armature.hh"
 #  include "BKE_brush.hh"
 #  include "BKE_camera.h"
 #  include "BKE_collection.hh"
 #  include "BKE_curve.hh"
 #  include "BKE_curves.h"
-#  include "BKE_gpencil_legacy.h"
 #  include "BKE_grease_pencil.hh"
 #  include "BKE_idtype.hh"
 #  include "BKE_image.hh"
@@ -112,8 +112,8 @@ namespace blender {
 
 static void rna_idname_validate(const char *name, char *r_name)
 {
-  BLI_strncpy(r_name, name, MAX_ID_NAME - 2);
-  BLI_str_utf8_invalid_strip(r_name, strlen(r_name));
+  const size_t r_name_len = BLI_strncpy_rlen(r_name, name, MAX_ID_NAME - 2);
+  BLI_str_utf8_invalid_strip(r_name, r_name_len);
 }
 
 static void rna_Main_ID_remove(Main *bmain,
@@ -133,19 +133,25 @@ static void rna_Main_ID_remove(Main *bmain,
     return;
   }
 
-  /* Volume light probes being baked cannot be removed. */
+  const LightProbe *light_probe = nullptr;
   if (GS(id->name) == ID_OB) {
-    Object *ob = reinterpret_cast<Object *>(id);
-    if (ob->type == OB_LIGHTPROBE &&
-        (reinterpret_cast<LightProbe *>(ob->data))->type == LIGHTPROBE_TYPE_VOLUME)
-    {
-      wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
-      if (wm && WM_jobs_test(wm, nullptr, WM_JOB_TYPE_LIGHT_BAKE)) {
-        BKE_reportf(reports,
-                    RPT_ERROR,
-                    "Cannot remove volume light probes while light probe baking is running");
-        return;
-      }
+    const Object *ob = reinterpret_cast<Object *>(id);
+    if (ob->type == OB_LIGHTPROBE) {
+      light_probe = reinterpret_cast<LightProbe *>(ob->data);
+    }
+  }
+  else if (GS(id->name) == ID_LP) {
+    light_probe = reinterpret_cast<LightProbe *>(id);
+  }
+
+  /* Volume light probes being baked cannot be removed. */
+  if (light_probe && light_probe->type == LIGHTPROBE_TYPE_VOLUME) {
+    wmWindowManager *wm = bmain->wm.first();
+    if (wm && WM_jobs_has_running(wm, nullptr, WM_JOB_TYPE_LIGHT_BAKE)) {
+      BKE_reportf(reports,
+                  RPT_ERROR,
+                  "Cannot remove volume light probes while light probe baking is running");
+      return;
     }
   }
 
@@ -153,7 +159,7 @@ static void rna_Main_ID_remove(Main *bmain,
    * duplicated for the job, see `duplicate_ids()` in render_preview.cc), so freeing the ID
    * here would be a use-after-free race. Upstream editor operators call
    * ED_preview_kill_jobs() before deleting; this Python path must do the same. */
-  ED_preview_kill_jobs_for_id(static_cast<wmWindowManager *>(bmain->wm.first), id);
+  ED_preview_kill_jobs_for_id(bmain->wm.first_as<wmWindowManager>(), id);
 
   /* Mixar: a scene's Render (and its result buffers, and with Persistent Data the whole
    * engine) is keyed by the Scene's address and upstream frees it only on file load or
@@ -161,8 +167,8 @@ static void rna_Main_ID_remove(Main *bmain,
    * so every job leaked one (~12 MB at 1024x768). Free it here unless a job still owns
    * the scene. */
   if (GS(id->name) == ID_SCE) {
-    wmWindowManager *wm = static_cast<wmWindowManager *>(bmain->wm.first);
-    if (wm == nullptr || !WM_jobs_test(wm, id, WM_JOB_TYPE_ANY)) {
+    wmWindowManager *wm = bmain->wm.first_as<wmWindowManager>();
+    if (wm == nullptr || !WM_jobs_progress_test(wm, id, WM_JOB_TYPE_ANY)) {
       if (Render *re = RE_GetSceneRender(reinterpret_cast<Scene *>(id))) {
         RE_FreeRender(re);
       }
@@ -806,7 +812,7 @@ static bGPdata *rna_Main_annotations_new(Main *bmain, const char *name)
   char safe_name[MAX_ID_NAME - 2];
   rna_idname_validate(name, safe_name);
 
-  bGPdata *gpd = BKE_gpencil_data_addnew(bmain, safe_name);
+  bGPdata *gpd = BKE_annotations_data_addnew(bmain, safe_name);
   id_us_min(&gpd->id);
 
   WM_main_add_notifier(NC_ID | NA_ADDED, nullptr);
@@ -965,6 +971,7 @@ void RNA_def_main_cameras(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "camera", "Camera", "", "New camera data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1009,6 +1016,7 @@ void RNA_def_main_scenes(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "scene", "Scene", "", "New scene data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_scenes_remove");
@@ -1046,6 +1054,7 @@ void RNA_def_main_objects(BlenderRNA *brna, PropertyRNA *cprop)
 
   /* return type */
   parm = RNA_def_pointer(func, "object", "Object", "", "New object data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1086,6 +1095,7 @@ void RNA_def_main_materials(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "material", "Material", "", "New material data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "create_gpencil_data", "rna_Main_materials_gpencil_data");
@@ -1178,6 +1188,7 @@ void RNA_def_main_meshes(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "mesh", "Mesh", "", "New mesh data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "new_from_object", "rna_Main_meshes_new_from_object");
@@ -1206,6 +1217,7 @@ void RNA_def_main_meshes(BlenderRNA *brna, PropertyRNA *cprop)
                          "Mesh",
                          "",
                          "Mesh created from object, remove it if it is only used for export");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1253,6 +1265,7 @@ void RNA_def_main_lights(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "light", "Light", "", "New light data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1371,6 +1384,7 @@ void RNA_def_main_images(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_boolean(func, "tiled", false, "Tiled", "Create a tiled image");
   /* return type */
   parm = RNA_def_pointer(func, "image", "Image", "", "New image data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "load", "rna_Main_images_load");
@@ -1386,6 +1400,7 @@ void RNA_def_main_images(BlenderRNA *brna, PropertyRNA *cprop)
                   "Using existing data-block if this file is already loaded");
   /* return type */
   parm = RNA_def_pointer(func, "image", "Image", "", "New image data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1426,6 +1441,7 @@ void RNA_def_main_lattices(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "lattice", "Lattice", "", "New lattice data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1472,6 +1488,7 @@ void RNA_def_main_curves(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "curve", "Curve", "", "New curve data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1515,6 +1532,7 @@ void RNA_def_main_metaballs(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "metaball", "MetaBall", "", "New metaball data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1565,6 +1583,7 @@ void RNA_def_main_fonts(BlenderRNA *brna, PropertyRNA *cprop)
                   "Using existing data-block if this file is already loaded");
   /* return type */
   parm = RNA_def_pointer(func, "vfont", "VectorFont", "", "New font data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1604,6 +1623,7 @@ void RNA_def_main_textures(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "texture", "Texture", "", "New texture data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1649,6 +1669,7 @@ void RNA_def_main_brushes(BlenderRNA *brna, PropertyRNA *cprop)
                       "Paint Mode for the new brush");
   /* return type */
   parm = RNA_def_pointer(func, "brush", "Brush", "", "New brush data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1694,6 +1715,7 @@ void RNA_def_main_worlds(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "world", "World", "", "New world data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1734,6 +1756,7 @@ void RNA_def_main_collections(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "collection", "Collection", "", "New collection data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1774,6 +1797,7 @@ void RNA_def_main_speakers(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "speaker", "Speaker", "", "New speaker data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1818,6 +1842,7 @@ void RNA_def_main_texts(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "text", "Text", "", "New text data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1844,6 +1869,7 @@ void RNA_def_main_texts(BlenderRNA *brna, PropertyRNA *cprop)
       func, "internal", false, "Make internal", "Make text file internal after loading");
   /* return type */
   parm = RNA_def_pointer(func, "text", "Text", "", "New text data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "tag", "rna_Main_texts_tag");
@@ -1875,6 +1901,7 @@ void RNA_def_main_sounds(BlenderRNA *brna, PropertyRNA *cprop)
                   "Using existing data-block if this file is already loaded");
   /* return type */
   parm = RNA_def_pointer(func, "sound", "Sound", "", "New text data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1915,6 +1942,7 @@ void RNA_def_main_armatures(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "armature", "Armature", "", "New armature data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -1958,6 +1986,7 @@ void RNA_def_main_actions(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "action", "Action", "", "New action data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2000,6 +2029,7 @@ void RNA_def_main_particles(BlenderRNA *brna, PropertyRNA *cprop)
   /* return type */
   parm = RNA_def_pointer(
       func, "particle", "ParticleSettings", "", "New particle settings data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2047,6 +2077,7 @@ void RNA_def_main_palettes(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "palette", "Palette", "", "New palette data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2120,6 +2151,7 @@ void RNA_def_main_annotations(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "annotation", "Annotation", "", "New annotation data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2161,6 +2193,7 @@ void RNA_def_main_grease_pencil(BlenderRNA *brna, PropertyRNA *cprop)
   /* return type */
   parm = RNA_def_pointer(
       func, "grease_pencil", "GreasePencil", "", "New Grease Pencil data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2230,6 +2263,7 @@ void RNA_def_main_movieclips(BlenderRNA *brna, PropertyRNA *cprop)
                   "Using existing data-block if this file is already loaded");
   /* return type */
   parm = RNA_def_pointer(func, "clip", "MovieClip", "", "New movie clip data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 }
 
@@ -2256,6 +2290,7 @@ void RNA_def_main_masks(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "mask", "Mask", "", "New mask data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   /* remove func */
@@ -2294,6 +2329,7 @@ void RNA_def_main_linestyles(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "linestyle", "FreestyleLineStyle", "", "New line style data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2349,6 +2385,7 @@ void RNA_def_main_lightprobes(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "lightprobe", "LightProbe", "", "New light probe data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2393,6 +2430,7 @@ void RNA_def_main_hair_curves(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "curves", "Curves", "", "New curves data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2437,6 +2475,7 @@ void RNA_def_main_pointclouds(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "pointcloud", "PointCloud", "", "New point cloud data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");
@@ -2484,6 +2523,7 @@ void RNA_def_main_volumes(BlenderRNA *brna, PropertyRNA *cprop)
   RNA_def_parameter_flags(parm, PropertyFlag(0), PARM_REQUIRED);
   /* return type */
   parm = RNA_def_pointer(func, "volume", "Volume", "", "New volume data-block");
+  RNA_def_parameter_flags(parm, PROP_NEVER_NULL, ParameterFlag(0));
   RNA_def_function_return(func, parm);
 
   func = RNA_def_function(srna, "remove", "rna_Main_ID_remove");

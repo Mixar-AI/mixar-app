@@ -465,8 +465,8 @@ msgstr "Valgte '{name}' på moodboardet"
 msgid "Select in Scene"
 msgstr "Vælg i scene"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Vælg denne splatverdens proxyhåndtag i 3D-visningen"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Samling"
@@ -474,8 +474,11 @@ msgstr "Samling"
 msgid "That splat world is no longer in this file"
 msgstr "Den splatverden er ikke længere i denne fil"
 
-msgid "This splat world has no proxy handle"
-msgstr "Denne splatverden har intet proxyhåndtag"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Valgte '{name}'"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Ikke-understøttet splatfiltype '{ext}' (forventede .spz eller .ply)"
 msgid "File not found: {path}"
 msgstr "Fil ikke fundet: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Ingen objekter importeret fra {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Kunne ikke læse billede: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Resultatet af verdensgenerering mangler splat-URL (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Resultatet af verdensgenerering mangler kollider-URL (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Kunne ikke downloade eller konvertere verden: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Verden blev importeret, men gav ingen objekter"
@@ -11095,14 +11107,32 @@ msgstr "Jord ved origo"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Flyt splatten, så gulvet ligger på Z=0 med fodaftrykkets centrum i origo (samme jordning som genererede verdener)"
 
+msgid "Source"
+msgstr "Kilde"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standard"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Ingen splatfil valgt"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Importerede {count} splats: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussisk splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Tilføj en tekstboks til moodboardet ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "Medtag alle knoglepåvirkninger"
 
 msgid "Lighting Mode"
 msgstr "Lystilstand"
-
-msgid "Standard"
-msgstr "Standard"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Fysisk baserede glTF-lysenheder"
@@ -18926,9 +18953,6 @@ msgstr "Blanding"
 
 msgid "No masks"
 msgstr "Ingen masker"
-
-msgid "Source"
-msgstr "Kilde"
 
 msgid "No node group loaded"
 msgstr "Ingen nodegruppe indlæst"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Korttegning kræver det aktive områdes tegne-callback"
 
@@ -29904,6 +29925,9 @@ msgstr "Hjørneradius for afrundede brugerfladeelementer"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Slipstier skal være strenge der ikke er tomme"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Slipstier skal være et JSON-array der ikke er tomt"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Globale områder"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Vinduesglobale områder (topbjælke, statusbjælke). Mixar-udvidelse — vist så introduktionen kan ramme topbjælken til gentegning."
 
 msgid "QA UI Dump"
 msgstr "QA-brugerfladeudtræk"

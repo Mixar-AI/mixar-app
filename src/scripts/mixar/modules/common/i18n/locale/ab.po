@@ -465,8 +465,8 @@ msgstr "«{name}» амудборд аҿы иалхын"
 msgid "Select in Scene"
 msgstr "Асцена аҿы алхра"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Ари асплат адунеи апрокси арыцхә 3Д Аԥшра аҿы алх"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Аизга"
@@ -474,8 +474,11 @@ msgstr "Аизга"
 msgid "That splat world is no longer in this file"
 msgstr "Ари асплат адунеи ари ашәҟәы аҿы ыҟаӡам"
 
-msgid "This splat world has no proxy handle"
-msgstr "Ари асплат адунеи апрокси арыцхә амаӡам"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "«{name}» иалхын"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Асплат ашәҟәы ахкы «{ext}» аднакылаӡом (.sp
 msgid "File not found: {path}"
 msgstr "Ашәҟәы ԥым: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "{name} аҟынтәи амаҭәарқәа иимпортым"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Асахьанҵа аԥхьара алымшеит: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Адунеи аԥҵамҭа алҵшәа аҿы асплат (SPZ) URL �
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Адунеи аԥҵамҭа алҵшәа аҿы аколлаидер (GLB) URL ыҟаӡам"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Адунеи аҭыгара/аиҭакреира алымшеит: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Адунеи иимпорттәуп, аха амаҭәарқәа алымшеит"
@@ -11095,14 +11107,32 @@ msgstr "Алагара Аҭыԥ Аҟны Адгьыл"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Асплат аиагара, адгьыл Z=0 аҟны иҭоу, ашьа агәы алагара аҭыԥ аҟны (иԥҵоу адунеиқәа реиԥш аҭәара)"
 
+msgid "Source"
+msgstr "Ахыҵхырҭа"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Астандарт"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Асплат ашәҟәы алхым"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} асплат иимпортытәит: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Гаусс Асплат (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Амудборд ахь аҳәоу аҟәарда ацҵара ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "Абаҩ Аҵаҵәарақәа Зегьы Ралаҵара"
 
 msgid "Lighting Mode"
 msgstr "Алашара Аиҿкаашьа"
-
-msgid "Standard"
-msgstr "Астандарт"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Афизиктә glTF алашара аеидиницақәа"
@@ -18926,9 +18953,6 @@ msgstr "Аеилалара"
 
 msgid "No masks"
 msgstr "Амаскақәа ыҟаӡам"
-
-msgid "Source"
-msgstr "Ахыҵхырҭа"
 
 msgid "No node group loaded"
 msgstr "Аузел агәыԥ иагоум"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Акарточка асахьа активтә арегион асахьа аколбек аҭахуп"
 
@@ -29904,6 +29925,9 @@ msgstr "Иргьежьу UI аелементқәа ркәакь арадиус"
 msgid "Mixie Chat"
 msgstr "Mixie Ачат"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Акаҳара амҩақәа аҭацәым ацәаҳәақәа заҵ
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Акаҳара амҩақәа аҭацәым JSON амассив заҵәык ыҟазароуп"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Зеиԥшла Аҭыԥқәа"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Аԥенџьыр-зеиԥшла аҭыԥқәа (ахахьтәи апанель, астатус апанель). Mixar арасширение — иаартуп, алагаратә тур ахахьтәи апанель аиҭасахьа азы иазхьарԥшхарц"
 
 msgid "QA UI Dump"
 msgstr "QA UI Адамп"

@@ -465,8 +465,8 @@ msgstr "«{name}» выбрана на мудбордзе"
 msgid "Select in Scene"
 msgstr "Выбраць у сцэне"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Выбірае проксі-маркер гэтага свету сплатаў у акне прагляду"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Калекцыя"
@@ -474,8 +474,11 @@ msgstr "Калекцыя"
 msgid "That splat world is no longer in this file"
 msgstr "Гэтага свету сплатаў больш няма ў гэтым файле"
 
-msgid "This splat world has no proxy handle"
-msgstr "У гэтага свету сплатаў няма проксі-маркера"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "Выбрана «{name}»"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Непадтрыманы тып файла сплата «{ext}» (ча�
 msgid "File not found: {path}"
 msgstr "Файл не знойдзены: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "З {name} не імпартавана аб'ектаў"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Не ўдалося прачытаць выяву: {error}"
@@ -7043,8 +7055,8 @@ msgstr "У выніку генерацыі свету няма URL сплата 
 msgid "World generation result missing collider (GLB) URL"
 msgstr "У выніку генерацыі свету няма URL калайдара (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Не ўдалося спампаваць або пераўтварыць свет: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Свет імпартаваны, але не даў аб'ектаў"
@@ -11095,14 +11107,32 @@ msgstr "Паставіць на пачатак каардынат"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Перамяшчае сплат так, каб падлога ляжала на Z=0, а цэнтр следа — у пачатку каардынат (тое самае грунтаванне, што ў згенераваных светаў)"
 
+msgid "Source"
+msgstr "Крыніца"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Стандарт"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Файл сплата не выбраны"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "Імпартавана сплатаў: {count}: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Гаўсаў сплат (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr "Дадаць тэкставае поле на мудборд ({shortcut})"
@@ -12672,9 +12702,6 @@ msgstr "Уключыць усе ўплывы костак"
 
 msgid "Lighting Mode"
 msgstr "Рэжым асвятлення"
-
-msgid "Standard"
-msgstr "Стандарт"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Фізічныя адзінкі асвятлення glTF"
@@ -18926,9 +18953,6 @@ msgstr "Змешванне"
 
 msgid "No masks"
 msgstr "Няма масак"
-
-msgid "Source"
-msgstr "Крыніца"
 
 msgid "No node group loaded"
 msgstr "Група вузлоў не загружана"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Маляванне карткі патрабуе зваротнага выкліку малявання актыўнай вобласці"
 
@@ -29904,6 +29925,9 @@ msgstr "Радыус кутоў закругленых элементаў інт
 msgid "Mixie Chat"
 msgstr "Чат Mixie"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Шляхі перацягвання павінны быць непуст
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Шляхі перацягвання павінны быць непустым масівам JSON"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Глабальныя вобласці"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Глабальныя вобласці акна (верхняя панэль, радок стану). Пашырэнне Mixar — адкрыта, каб азнаямленне магло звяртацца да верхняй панэлі для перамалёўкі."
 
 msgid "QA UI Dump"
 msgstr "Дамп інтэрфейсу QA"

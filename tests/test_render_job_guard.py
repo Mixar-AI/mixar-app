@@ -230,7 +230,7 @@ def test_contract_doc_exists_and_is_linked():
         "is_job_running",
         "use_lock_interface",
         "render_complete",
-        "splat_render_camera",
+        "splat_legacy",
         "tests/test_render_job_guard.py",
         "mixie_chat.agent_preview_render",
         "__deferred_preview__",

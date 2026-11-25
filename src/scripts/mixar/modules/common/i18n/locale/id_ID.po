@@ -465,8 +465,8 @@ msgstr "'{name}' diseleksi di moodboard"
 msgid "Select in Scene"
 msgstr "Seleksi di Adegan"
 
-msgid "Select this splat world's proxy handle in the viewport"
-msgstr "Menyeleksi pegangan proksi dunia splat ini di jendela tampilan"
+msgid "Select this splat world in the viewport"
+msgstr ""
 
 msgid "Collection"
 msgstr "Koleksi"
@@ -474,8 +474,11 @@ msgstr "Koleksi"
 msgid "That splat world is no longer in this file"
 msgstr "Dunia splat tersebut tidak lagi ada di berkas ini"
 
-msgid "This splat world has no proxy handle"
-msgstr "Dunia splat ini tidak memiliki pegangan proksi"
+msgid "This splat world has no splat left"
+msgstr ""
+
+msgid "This splat world is hidden or excluded from the view layer"
+msgstr ""
 
 msgid "Selected '{name}'"
 msgstr "'{name}' diseleksi"
@@ -5702,6 +5705,9 @@ msgstr ""
 msgid "MCP is enabled for this session; saving the preference failed"
 msgstr ""
 
+msgid "Could not write Mixar's MCP launcher in {folder}. Check that files there can be created and are not open in another program, then try again"
+msgstr ""
+
 msgid "Connect MCP"
 msgstr ""
 
@@ -6887,8 +6893,14 @@ msgstr "Tipe berkas splat '{ext}' tidak didukung (seharusnya .spz atau .ply)"
 msgid "File not found: {path}"
 msgstr "Berkas tidak ditemukan: {path}"
 
-msgid "No objects imported from {name}"
-msgstr "Tidak ada objek yang diimpor dari {name}"
+msgid "Unknown splat source '{source}'"
+msgstr ""
+
+msgid "{name} is not a Gaussian splat file"
+msgstr ""
+
+msgid "This build has no SPZ importer"
+msgstr ""
 
 msgid "Failed to read image: {error}"
 msgstr "Gagal membaca gambar: {error}"
@@ -7043,8 +7055,8 @@ msgstr "Hasil generasi dunia tidak memiliki URL splat (SPZ)"
 msgid "World generation result missing collider (GLB) URL"
 msgstr "Hasil generasi dunia tidak memiliki URL collider (GLB)"
 
-msgid "Failed to download/convert world: {error}"
-msgstr "Gagal mengunduh/mengonversi dunia: {error}"
+msgid "Failed to download world: {error}"
+msgstr ""
 
 msgid "World imported but produced no objects"
 msgstr "Dunia diimpor tetapi tidak menghasilkan objek"
@@ -11095,14 +11107,32 @@ msgstr "Tapakkan di Titik Asal"
 msgid "Move the splat so its floor sits on Z=0 with its footprint centre at the origin (same grounding as generated worlds)"
 msgstr "Memindahkan splat agar lantainya berada di Z=0 dengan pusat tapaknya di titik asal (penapakan yang sama seperti dunia yang dihasilkan)"
 
+msgid "Source"
+msgstr "Sumber"
+
+msgid "Who wrote the .spz file (decides which way is up; .ply ignores it)"
+msgstr ""
+
+msgid "Standard"
+msgstr "Standar"
+
+msgid "SPZ spec orientation (Scaniverse, Polycam, most splat tools)"
+msgstr ""
+
+msgid "World Labs"
+msgstr ""
+
+msgid "A world downloaded from World Labs Marble"
+msgstr ""
+
 msgid "No splat file selected"
 msgstr "Tidak ada berkas splat terseleksi"
 
 msgid "Imported {count} splat(s): {names}"
 msgstr "{count} splat diimpor: {names}"
 
-msgid "Gaussian Splat (.spz/.ply)"
-msgstr "Gaussian Splat (.spz/.ply)"
+msgid "Gaussian Splat, Grounded (.spz/.ply)"
+msgstr ""
 
 msgid "Add a text box to the moodboard ({shortcut})"
 msgstr ""
@@ -12672,9 +12702,6 @@ msgstr "Sertakan Semua Pengaruh Tulang"
 
 msgid "Lighting Mode"
 msgstr "Mode Pencahayaan"
-
-msgid "Standard"
-msgstr "Standar"
 
 msgid "Physically-based glTF lighting units"
 msgstr "Satuan pencahayaan glTF berbasis fisik"
@@ -18926,9 +18953,6 @@ msgstr "Pencampuran"
 
 msgid "No masks"
 msgstr "Tidak ada masker"
-
-msgid "Source"
-msgstr "Sumber"
 
 msgid "No node group loaded"
 msgstr "Tidak ada kelompok simpul yang dimuat"
@@ -28632,9 +28656,6 @@ msgstr ""
 msgid "Image '%s' failed to decode movie frame %d"
 msgstr ""
 
-msgid "Failed to load image texture '%s'"
-msgstr ""
-
 msgid "Card drawing requires the active region's draw callback"
 msgstr "Penggambaran kartu memerlukan callback penggambaran wilayah aktif"
 
@@ -29904,6 +29925,9 @@ msgstr "Radius sudut untuk elemen UI membulat"
 msgid "Mixie Chat"
 msgstr "Mixie Chat"
 
+msgid "context \"window\" has no event state (popups need an interactive window)"
+msgstr ""
+
 msgid "Double-click injection requires event simulation"
 msgstr ""
 
@@ -29915,18 +29939,6 @@ msgstr "Jalur yang diletakkan harus berupa string yang tidak kosong"
 
 msgid "Drop paths must be a nonempty JSON array"
 msgstr "Jalur yang diletakkan harus berupa array JSON yang tidak kosong"
-
-msgid "rna_iterator_listbase_end"
-msgstr ""
-
-msgid "rna_iterator_listbase_get"
-msgstr ""
-
-msgid "Global Areas"
-msgstr "Area Global"
-
-msgid "Window-global areas (topbar, statusbar). Mixar extension — exposed so onboarding can address the topbar for redraw."
-msgstr "Area global jendela (bilah atas, bilah status). Ekstensi Mixar — diekspos agar orientasi dapat menjangkau bilah atas untuk penggambaran ulang."
 
 msgid "QA UI Dump"
 msgstr "Dump UI QA"
