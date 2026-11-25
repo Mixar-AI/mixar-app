@@ -65,6 +65,24 @@ class MATERIAL_PT_mixar_axf(Panel):
             sub.scale_y = 0.8
             sub.label(text=check["convention"], translate=False)
 
+        from mixar.modules.axf.core import flake_mapping as fm
+
+        if fm.has_mapping(mat):
+            box = layout.box()
+            box.label(text="Flake Mapping", icon='UV')
+            if mat.get(fm.PROP_MAPPING) == fm.MAPPING_UV:
+                su, sv = (list(mat.get(fm.PROP_UV_METRES, (0.0, 0.0))) + [0.0, 0.0])[:2]
+                box.label(text=iface_("UV map {uv}, {u:.0f} x {v:.0f} mm per UV unit").format(
+                    uv=mat.get(fm.PROP_UV_MAP, ""), u=float(su) * 1000.0, v=float(sv) * 1000.0),
+                    translate=False)
+                row = box.row(align=True)
+                row.operator("mixie.axf_flake_mapping", text="Update from UV Map",
+                             icon='FILE_REFRESH').mapping = 'UV'
+                row.operator("mixie.axf_flake_mapping", text="Use Box Projection").mapping = 'BOX'
+            else:
+                box.label(text="Box projection (seams on curved panels)")
+                box.operator("mixie.axf_flake_mapping", text="Use UV Map", icon='UV').mapping = 'UV'
+
         nodes = [n for n in (mat.node_tree.nodes if mat.node_tree else [])
                  if n.bl_idname == C.NODE_IDNAME]
         if nodes and any(n.get(C.PROP_EEVEE_FIT) is None for n in nodes):

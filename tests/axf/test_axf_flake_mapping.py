@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+"""UV-based placement of AxF flakes: the metres-per-UV scale (no Blender needed) and the
+operator's contract (source level, since bpy is a mock here)."""
+
+import ast
+from pathlib import Path
+
+import numpy as np
+
+from mixar.modules.axf.core.flake_mapping import metres_per_uv, uv_aspect, uv_scale
+
+ROOT = Path(__file__).resolve().parents[2]
+OPS = ROOT / "src/scripts/mixar/modules/axf/ui/operators/axf_flake_mapping_ops.py"
+
+
+def _quad(width, height, uv_scale=1.0, offset=(0.0, 0.0, 0.0)):
+    """Two triangles of a width x height plane and their UVs (0..uv_scale)."""
+    o = np.asarray(offset)
+    p = np.array([[0, 0, 0], [width, 0, 0], [width, height, 0], [0, height, 0]], float) + o
+    uv = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], float) * uv_scale
+    tris = [(0, 1, 2), (0, 2, 3)]
+    return p[np.array(tris)], uv[np.array(tris)]
+
+
+def test_unit_uv_square_on_a_two_metre_plane_is_two_metres_per_unit():
+    w, u = _quad(2.0, 2.0)
+    assert abs(metres_per_uv(w, u) - 2.0) < 1e-12
+
+
+def test_scale_is_area_weighted_over_islands():
+    # A 1 m and a 3 m square plane, each filling a quarter of UV space: world area 10 m^2,
+    # UV area 0.5 -> sqrt(20) metres per UV unit.
+    w1, u1 = _quad(1.0, 1.0, 0.5)
+    w2, u2 = _quad(3.0, 3.0, 0.5, offset=(5, 0, 0))
+    got = metres_per_uv(np.concatenate([w1, w2]), np.concatenate([u1, u2]))
+    assert abs(got - np.sqrt(20.0)) < 1e-12
+
+
+def test_degenerate_uvs_give_no_scale():
+    w, u = _quad(1.0, 1.0, 0.0)
+    assert metres_per_uv(w, u) == 0.0
+    assert metres_per_uv(np.empty((0, 3, 3)), np.empty((0, 3, 2))) == 0.0
+
+
+def test_stretched_unwrap_keeps_flakes_square():
+    # A 2 m x 1 m plane on the whole unit UV square: 2 m per unit U, 1 m per unit V.
+    w, u = _quad(2.0, 1.0)
+    assert abs(uv_aspect(w, u) - 2.0) < 1e-12
+    su, sv = uv_scale(w, u)
+    assert abs(su - 2.0) < 1e-12 and abs(sv - 1.0) < 1e-12
+    # The split preserves the area scale.
+    assert abs(su * sv - metres_per_uv(w, u) ** 2) < 1e-12
+
+
+def test_undistorted_unwrap_has_unit_aspect():
+    w, u = _quad(3.0, 3.0, 0.25)
+    assert abs(uv_aspect(w, u) - 1.0) < 1e-12
+    assert uv_scale(*_quad(1.0, 1.0, 0.0)) == (0.0, 0.0)
+
+
+def test_operator_contract():
+    tree = ast.parse(OPS.read_text(encoding="utf-8"))
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef))
+    fields = {t.id: ast.literal_eval(n.value) for n in cls.body if isinstance(n, ast.Assign)
+              for t in n.targets if isinstance(t, ast.Name) and t.id in ("bl_idname", "bl_options")}
+    assert fields["bl_idname"] == "mixie.axf_flake_mapping"
+    assert "UNDO" in fields["bl_options"]
+    src = OPS.read_text(encoding="utf-8")
+    # The scale comes from the evaluated mesh in world space, so object scale is honoured.
+    assert "evaluated_depsgraph_get" in src and "object_uv_scale" in src

@@ -34,7 +34,9 @@ void node_bsdf_axf_carpaint(float3 /*flake_uv*/,
   float3 V = coordinate_impl(kg, sd, sd.P, sd.N).incoming;
   float NV = dot(N, V);
 
-  float coat_reflectance = bsdf_lut(kg, NV, 0.0f, max(coat_ior, 1.0f), false).x;
+  /* Exact unpolarised dielectric Fresnel at the view angle, as Cycles' coat closure: EEVEE's
+   * split-sum LUT runs about 5 % low for this sharp coat. */
+  float coat_reflectance = axf_fresnel(NV, max(coat_ior, 1.0f));
   ClosureReflection coat_data;
   coat_data.N = N;
   coat_data.roughness = saturate(coat_roughness);
@@ -90,7 +92,9 @@ void node_bsdf_axf_carpaint_fit(float3 flake_uv,
   float3 V = coordinate_impl(kg, sd, sd.P, sd.N).incoming;
   float NV = clamp(dot(N, V), 1e-4f, 1.0f);
 
-  float coat_reflectance = bsdf_lut(kg, NV, 0.0f, max(coat_ior, 1.0f), false).x;
+  /* Exact unpolarised dielectric Fresnel at the view angle, as Cycles' coat closure: EEVEE's
+   * split-sum LUT runs about 5 % low for this sharp coat. */
+  float coat_reflectance = axf_fresnel(NV, max(coat_ior, 1.0f));
   ClosureReflection coat_data;
   coat_data.N = N;
   coat_data.roughness = saturate(coat_roughness);

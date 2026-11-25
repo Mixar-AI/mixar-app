@@ -49,8 +49,13 @@ struct Receiver {
   int ray_step_count;
 };
 
-/* Samples per side of the grid an area light is integrated over (16 BRDF evaluations). */
-#define AXF_AREA_GRID 4
+/* Samples per side of the grid an area light is integrated over, chosen by how large the
+ * light looks from the shaded point (its half extent over its distance, in radians): below
+ * AXF_AREA_SMALL the centre direction is exact enough (one evaluation), below
+ * AXF_AREA_MEDIUM a 2 x 2 grid, otherwise 4 x 4 (16 evaluations). */
+#define AXF_AREA_GRID_MAX 4
+#define AXF_AREA_SMALL 0.03f
+#define AXF_AREA_MEDIUM 0.15f
 
 /* Shirley-Chiu concentric map of [-1, 1]^2 onto the unit disk (area preserving). */
 float2 area_square_to_disk(float2 s)
@@ -91,7 +96,10 @@ float3 light_contribution(LightEvalData &srt,
   /* Area lights are integrated over their surface below, sample by sample, so each sample
    * meets the surface's horizon on its own; the whole-light horizon fade would cut the
    * light off as soon as its centre went below the horizon (a hard terminator). */
-  const bool integrate_area = !is_directional && is_area_light(light.type);
+  const float area_extent = (!is_directional && is_area_light(light.type)) ?
+                                max(light.area.size.x, light.area.size.y) / max(lv.dist, 1e-6f) :
+                                0.0f;
+  const bool integrate_area = area_extent >= AXF_AREA_SMALL;
   float attenuation = light_attenuation_surface(light, is_directional, lv);
   if (!integrate_area) {
     attenuation *= light_attenuation_facing(light, lv.L, lv.dist, N, false);
@@ -132,13 +140,13 @@ float3 light_contribution(LightEvalData &srt,
     const float3 Nl = cross(Px, Py);
     const float2 size = light.area.size; /* Half extents. */
     const bool ellipse = light.type == LIGHT_ELLIPSE;
-    const float cell_area = (ellipse ? M_PI : 4.0f) * size.x * size.y /
-                            float(AXF_AREA_GRID * AXF_AREA_GRID);
+    const int grid = area_extent < AXF_AREA_MEDIUM ? 2 : AXF_AREA_GRID_MAX;
+    const float cell_area = (ellipse ? M_PI : 4.0f) * size.x * size.y / float(grid * grid);
     const float3 center = light.position();
     float3 sum = float3(0.0f);
-    for (int j = 0; j < AXF_AREA_GRID; j++) {
-      for (int i = 0; i < AXF_AREA_GRID; i++) {
-        float2 s = (float2(i, j) + 0.5f) * (2.0f / float(AXF_AREA_GRID)) - 1.0f;
+    for (int j = 0; j < grid; j++) {
+      for (int i = 0; i < grid; i++) {
+        float2 s = (float2(i, j) + 0.5f) * (2.0f / float(grid)) - 1.0f;
         if (ellipse) {
           s = area_square_to_disk(s);
         }

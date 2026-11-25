@@ -1487,6 +1487,45 @@ msgstr ""
 msgid "Fitting {count} AxF car paint(s) for EEVEE in the background"
 msgstr ""
 
+msgid "AxF Flake Mapping"
+msgstr ""
+
+msgid "Place the car paint's flakes and clear coat texture along the object's UV map, which follows curved panels and has seams only where the UV map is cut, or back on the box projection used at import. Flakes keep their measured size"
+msgstr ""
+
+msgid "Mapping"
+msgstr "Mapovanie"
+
+msgid "UV Map"
+msgstr "UV mapovanie"
+
+msgid "Along the active object's UV map, scaled to the measured flake size"
+msgstr ""
+
+msgid "Box Projection"
+msgstr ""
+
+msgid "Projected from the dominant axis of the object's surface"
+msgstr ""
+
+msgid "UV map to use (empty: the active object's active render UV map)"
+msgstr ""
+
+msgid "AxF flakes placed by box projection"
+msgstr ""
+
+msgid "Select the mesh whose UV map should carry the flakes"
+msgstr ""
+
+msgid "The object has no UV map. Unwrap it first"
+msgstr ""
+
+msgid "The UV map has no area. Unwrap the object first"
+msgstr ""
+
+msgid "AxF flakes placed along UV map {uv} ({u:.0f} x {v:.0f} mm per UV unit)"
+msgstr ""
+
 msgid "original .axf kept in the .blend"
 msgstr ""
 
@@ -1578,6 +1617,24 @@ msgid "Trade-off: worse at {geos}"
 msgstr ""
 
 msgid "Rendering the file's lobes: the refit was not used because {reason}"
+msgstr ""
+
+msgid "Flake Mapping"
+msgstr ""
+
+msgid "UV map {uv}, {u:.0f} x {v:.0f} mm per UV unit"
+msgstr ""
+
+msgid "Update from UV Map"
+msgstr ""
+
+msgid "Use Box Projection"
+msgstr ""
+
+msgid "Box projection (seams on curved panels)"
+msgstr ""
+
+msgid "Use UV Map"
 msgstr ""
 
 msgid "Fitting for EEVEE…"
@@ -16746,9 +16803,6 @@ msgstr "Typ súradníc"
 msgid "Texture coordinate type"
 msgstr "Typ súradníc textúry"
 
-msgid "UV Map"
-msgstr "UV mapovanie"
-
 msgid "UV map to use for texture coordinates"
 msgstr "Mapa UV použitá pre súradnice textúry"
 
@@ -18815,9 +18869,6 @@ msgstr "Rozostup"
 
 msgid "Texture"
 msgstr "Textúra"
-
-msgid "Mapping"
-msgstr "Mapovanie"
 
 msgid "Offset"
 msgstr "Posuv"
