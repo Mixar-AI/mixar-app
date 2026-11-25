@@ -1928,6 +1928,24 @@ msgstr ""
 msgid "; file lobes kept: {reason}"
 msgstr ""
 
+msgid "; flakes along UV map {uv} of {obj} ({u:.0f} x {v:.0f} mm per UV unit)"
+msgstr ""
+
+msgid "{obj} has no UV map"
+msgstr ""
+
+msgid "the UV map of {obj} has uneven texel density"
+msgstr ""
+
+msgid "the UV map of {obj} is stretched"
+msgstr ""
+
+msgid "{obj} is not a mesh"
+msgstr ""
+
+msgid "; flakes by box projection because {why}"
+msgstr ""
+
 msgid "Import AxF Material"
 msgstr ""
 
@@ -1950,6 +1968,12 @@ msgid "Assign to Selected"
 msgstr ""
 
 msgid "Assign the material to the selected meshes"
+msgstr ""
+
+msgid "Flakes Along UV Map"
+msgstr ""
+
+msgid "Car paints assigned to a mesh with a clean UV map (even texel density, little stretch): place the flakes along that UV map at their measured size instead of the box projection. Uses the active selected mesh; other meshes keep box projection until you choose otherwise in Material Properties > AxF"
 msgstr ""
 
 msgid "Export AxF Material"

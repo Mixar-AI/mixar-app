@@ -61,6 +61,59 @@ def test_undistorted_unwrap_has_unit_aspect():
     assert uv_scale(*_quad(1.0, 1.0, 0.0)) == (0.0, 0.0)
 
 
+def test_degenerate_uv_slivers_do_not_skew_the_scale():
+    # A clean 1 m panel on a quarter of UV space, plus one sliver: a 0.1 m^2 triangle whose
+    # UVs nearly collapse along V (a seam artifact). Before filtering, its huge dP/dv
+    # dragged the aspect far from 1 on a real car body.
+    w, u = _quad(1.0, 1.0, 0.5)
+    sliver_w = np.array([[[2, 0, 0], [2.5, 0, 0], [2, 0.4, 0]]], float)
+    sliver_u = np.array([[[0.6, 0.6], [0.7, 0.6], [0.6, 0.6000001]]], float)
+    ww, uu = np.concatenate([w, sliver_w]), np.concatenate([u, sliver_u])
+    assert abs(uv_aspect(ww, uu) - 1.0) > 0.5  # The raw estimate is skewed.
+    su, sv = uv_scale(ww, uu)
+    assert abs(su - 2.0) < 1e-9 and abs(sv - 2.0) < 1e-9
+
+
+def test_clean_unwrap_is_accepted_for_auto_uv_mapping():
+    from mixar.modules.axf.core.flake_mapping import uv_quality, uv_verdict
+
+    q = uv_quality(*_quad(1.0, 1.0, 0.5))
+    assert abs(q['even_area'] - 1.0) < 1e-12 and abs(q['stretch'] - 1.0) < 1e-12
+    assert uv_verdict(q) == ''
+
+
+def test_stretched_unwrap_keeps_box_projection():
+    from mixar.modules.axf.core.flake_mapping import REASON_STRETCHED, uv_quality, uv_verdict
+
+    q = uv_quality(*_quad(2.0, 1.0))  # 2:1 stretch everywhere.
+    assert abs(q['stretch'] - 2.0) < 1e-12
+    assert uv_verdict(q) == REASON_STRETCHED
+
+
+def test_unevenly_packed_islands_keep_box_projection():
+    from mixar.modules.axf.core.flake_mapping import REASON_UNEVEN, uv_quality, uv_verdict
+
+    # Two equal-area panels packed at 2 m and 6 m per UV unit: half the car would get
+    # flakes three times the wrong size.
+    w1, u1 = _quad(1.0, 1.0, 0.5)
+    w2, u2 = _quad(1.0, 1.0, 1.0 / 6.0, offset=(5, 0, 0))
+    q = uv_quality(np.concatenate([w1, w2]), np.concatenate([u1, u2]))
+    assert abs(q['even_area'] - 0.5) < 1e-12
+    assert uv_verdict(q) == REASON_UNEVEN
+
+
+def test_import_places_flakes_along_clean_uvs():
+    src = (ROOT / "src/scripts/mixar/modules/axf/ui/operators/axf_import_ops.py").read_text(
+        encoding="utf-8")
+    tree = ast.parse(src)
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "MIXIE_OT_import_axf")
+    prop = next(n for n in cls.body if isinstance(n, ast.AnnAssign)
+                and getattr(n.target, "id", "") == "flakes_along_uv")
+    default = next(k.value for k in prop.annotation.keywords if k.arg == "default")
+    assert ast.literal_eval(default) is True
+    assert "auto_uv_mapping" in src and "evaluated_depsgraph_get" in src
+
+
 def test_operator_contract():
     tree = ast.parse(OPS.read_text(encoding="utf-8"))
     cls = next(n for n in tree.body if isinstance(n, ast.ClassDef))

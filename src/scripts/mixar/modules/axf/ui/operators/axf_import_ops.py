@@ -42,6 +42,27 @@ def _import_message(mat, archive_source: bool) -> str:
     return msg
 
 
+def _flake_mapping_message(mat, context, meshes) -> str:
+    """Place the flakes along the active selected mesh's UV map when it is clean, and say
+    which placement the paint got and why."""
+    from mixar.modules.axf.core import flake_mapping as fm
+    from mixar.modules.common.i18n import rpt_
+
+    if not fm.has_mapping(mat):
+        return ""
+    obj = context.active_object if context.active_object in meshes else meshes[0]
+    reason, (su, sv), uv_name = fm.auto_uv_mapping(mat, obj, context.evaluated_depsgraph_get())
+    if not reason:
+        return rpt_("; flakes along UV map {uv} of {obj} ({u:.0f} x {v:.0f} mm per UV unit)").format(
+            uv=uv_name, obj=obj.name, u=su * 1000.0, v=sv * 1000.0)
+    why = {
+        fm.REASON_NO_UV: rpt_("{obj} has no UV map"),
+        fm.REASON_UNEVEN: rpt_("the UV map of {obj} has uneven texel density"),
+        fm.REASON_STRETCHED: rpt_("the UV map of {obj} is stretched"),
+    }.get(reason, rpt_("{obj} is not a mesh"))
+    return rpt_("; flakes by box projection because {why}").format(why=why.format(obj=obj.name))
+
+
 class MIXIE_OT_import_axf(Operator, ImportHelper):
     bl_idname = "mixie.import_axf"
     bl_label = "Import AxF Material"
@@ -77,6 +98,16 @@ class MIXIE_OT_import_axf(Operator, ImportHelper):
         description="Assign the material to the selected meshes",
         default=True,
     )
+    flakes_along_uv: BoolProperty(
+        name="Flakes Along UV Map",
+        description=(
+            "Car paints assigned to a mesh with a clean UV map (even texel density, little "
+            "stretch): place the flakes along that UV map at their measured size instead of "
+            "the box projection. Uses the active selected mesh; other meshes keep box projection "
+            "until you choose otherwise in Material Properties > AxF"
+        ),
+        default=True,
+    )
 
     def execute(self, context):
         from mixar.modules.axf.core.blender_import import import_axf
@@ -93,14 +124,16 @@ class MIXIE_OT_import_axf(Operator, ImportHelper):
             self.report({'ERROR'}, f"AxF import failed: {e}")
             return {'CANCELLED'}
 
-        if self.assign:
-            for obj in context.selected_objects:
-                if obj.type == 'MESH':
-                    if obj.data.materials:
-                        obj.data.materials[0] = mat
-                    else:
-                        obj.data.materials.append(mat)
-        self.report({'INFO'}, _import_message(mat, self.archive_source))
+        meshes = [o for o in context.selected_objects if o.type == 'MESH'] if self.assign else []
+        for obj in meshes:
+            if obj.data.materials:
+                obj.data.materials[0] = mat
+            else:
+                obj.data.materials.append(mat)
+        msg = _import_message(mat, self.archive_source)
+        if meshes and self.flakes_along_uv:
+            msg += _flake_mapping_message(mat, context, meshes)
+        self.report({'INFO'}, msg)
         return {'FINISHED'}
 
 

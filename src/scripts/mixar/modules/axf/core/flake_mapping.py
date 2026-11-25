@@ -68,14 +68,116 @@ def uv_aspect(world_tris: np.ndarray, uv_tris: np.ndarray) -> float:
     return float(su / sv) if sv > 0 and su > 0 else 1.0
 
 
+def representative_triangles(world_tris: np.ndarray, uv_tris: np.ndarray,
+                             spread: float = 4.0):
+    """Drop triangles whose own metres-per-UV is more than spread x off the area-weighted
+    median: near-degenerate UV triangles (a sliver collapsed in UV, an unwrap seam) carry
+    huge surface-per-UV lengths that would otherwise dominate the aspect and inflate the
+    area scale. Returns the kept (world_tris, uv_tris)."""
+    w = np.asarray(world_tris, np.float64)
+    u = np.asarray(uv_tris, np.float64)
+    if w.size == 0:
+        return w, u
+    area_w = 0.5 * np.linalg.norm(np.cross(w[:, 1] - w[:, 0], w[:, 2] - w[:, 0]), axis=1)
+    e1, e2 = u[:, 1] - u[:, 0], u[:, 2] - u[:, 0]
+    area_uv = 0.5 * np.abs(e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0])
+    ok = (area_uv > 1e-20) & (area_w > 0.0)
+    if not ok.any():
+        return w[:0], u[:0]
+    dens = np.sqrt(area_w[ok] / area_uv[ok])
+    order = np.argsort(dens)
+    cum = np.cumsum(area_w[ok][order])
+    median = dens[order][np.searchsorted(cum, 0.5 * cum[-1])]
+    keep = np.zeros(len(w), bool)
+    keep[np.flatnonzero(ok)] = (dens >= median / spread) & (dens <= median * spread)
+    return w[keep], u[keep]
+
+
 def uv_scale(world_tris: np.ndarray, uv_tris: np.ndarray) -> tuple[float, float]:
     """Metres per unit U and per unit V: the area-preserving magnitude of metres_per_uv
-    split by uv_aspect, so a stretched unwrap does not stretch the flakes."""
+    split by uv_aspect, so a stretched unwrap does not stretch the flakes. Both are
+    measured over representative_triangles."""
+    world_tris, uv_tris = representative_triangles(world_tris, uv_tris)
     s = metres_per_uv(world_tris, uv_tris)
     if s <= 0.0:
         return 0.0, 0.0
     a = np.sqrt(uv_aspect(world_tris, uv_tris))
     return float(s * a), float(s / a)
+
+
+def uv_quality(world_tris: np.ndarray, uv_tris: np.ndarray) -> dict:
+    """How well a UV map can carry flakes: the share of surface area whose texel density
+    is within 25 % of the area-weighted median, and the median local stretch
+    (max(|dP/du| / |dP/dv|, inverse) per triangle, area-weighted)."""
+    w = np.asarray(world_tris, np.float64)
+    u = np.asarray(uv_tris, np.float64)
+    out = {'even_area': 0.0, 'stretch': float('inf'), 'triangles': int(len(w))}
+    if w.size == 0:
+        return out
+    e = np.stack([w[:, 1] - w[:, 0], w[:, 2] - w[:, 0]], -1)
+    d = np.stack([u[:, 1] - u[:, 0], u[:, 2] - u[:, 0]], -1)
+    area_w = 0.5 * np.linalg.norm(np.cross(e[..., 0], e[..., 1]), axis=1)
+    det = d[:, 0, 0] * d[:, 1, 1] - d[:, 0, 1] * d[:, 1, 0]
+    ok = (np.abs(det) > 1e-20) & (area_w > 0.0)
+    total = area_w.sum()
+    if not ok.any() or total <= 0.0:
+        return out
+    a = area_w[ok]
+    dens = np.sqrt(a / (0.5 * np.abs(det[ok])))
+    order = np.argsort(dens)
+    cum = np.cumsum(a[order])
+    median = dens[order][np.searchsorted(cum, 0.5 * cum[-1])]
+    out['even_area'] = float(a[np.abs(dens / median - 1.0) <= 0.25].sum() / total)
+    inv = np.stack([np.stack([d[ok][:, 1, 1], -d[ok][:, 0, 1]], -1),
+                    np.stack([-d[ok][:, 1, 0], d[ok][:, 0, 0]], -1)], -2) / det[ok][:, None, None]
+    jac = e[ok] @ inv
+    su, sv = np.linalg.norm(jac[..., 0], axis=1), np.linalg.norm(jac[..., 1], axis=1)
+    stretch = np.maximum(su / sv, sv / su)
+    order = np.argsort(stretch)
+    cum = np.cumsum(a[order])
+    out['stretch'] = float(stretch[order][np.searchsorted(cum, 0.5 * cum[-1])])
+    return out
+
+
+# A UV map is clean enough to carry the flakes when most of the surface shares one texel
+# density and the unwrap is not visibly stretched.
+CLEAN_EVEN_AREA = 0.8
+CLEAN_STRETCH = 1.2
+
+REASON_NO_MESH = "no_mesh"
+REASON_NO_UV = "no_uv"
+REASON_UNEVEN = "uneven"
+REASON_STRETCHED = "stretched"
+
+
+def uv_verdict(quality: dict) -> str:
+    """'' when the UV map is clean, else REASON_UNEVEN / REASON_STRETCHED."""
+    if quality['even_area'] < CLEAN_EVEN_AREA:
+        return REASON_UNEVEN
+    if quality['stretch'] > CLEAN_STRETCH:
+        return REASON_STRETCHED
+    return ''
+
+
+def auto_uv_mapping(mat, obj, depsgraph) -> tuple[str, tuple[float, float], str]:
+    """At import: place mat's flakes along obj's active render UV map when it is clean.
+    Returns (reason, (metres per U, per V), uv name); an empty reason means applied."""
+    if obj is None or obj.type != 'MESH':
+        return REASON_NO_MESH, (0.0, 0.0), ''
+    uv = next((u for u in obj.data.uv_layers if u.active_render), None)
+    if uv is None:
+        return REASON_NO_UV, (0.0, 0.0), ''
+    tris = _object_triangles(obj, depsgraph, uv.name)
+    if tris is None:
+        return REASON_NO_UV, (0.0, 0.0), uv.name
+    reason = uv_verdict(uv_quality(*tris))
+    if reason:
+        return reason, (0.0, 0.0), uv.name
+    su, sv = uv_scale(*tris)
+    if su <= 0.0 or sv <= 0.0:
+        return REASON_UNEVEN, (0.0, 0.0), uv.name
+    set_mapping(mat, MAPPING_UV, uv_name=uv.name, metres=(su, sv))
+    return '', (su, sv), uv.name
 
 
 def object_uv_scale(obj, depsgraph, uv_name: str) -> tuple[float, float]:
