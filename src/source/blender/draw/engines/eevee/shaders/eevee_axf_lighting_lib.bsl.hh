@@ -249,7 +249,9 @@ float3 lighting_eval(LightEvalIterator &lights,
 
   direct = colorspace::brightness_clamp_max(direct, uni.uniform_buf.clamp.surface_direct);
   indirect = colorspace::brightness_clamp_max(indirect, uni.uniform_buf.clamp.surface_indirect);
-  return max(direct, float3(0.0f)) * uni.uniform_buf.clamp.direct_scale +
+  /* No clamp at zero: a paint outside Rec.709 has negative channels, and Cycles keeps them
+   * (clamping brightened ext_blue by up to 9 %). */
+  return direct * uni.uniform_buf.clamp.direct_scale +
          indirect * uni.uniform_buf.clamp.indirect_scale;
 }
 
