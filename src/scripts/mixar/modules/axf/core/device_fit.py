@@ -16,6 +16,12 @@ fitted. The result is accepted only when it generalises:
 - leave-one-geometry-out: every geometry is predicted by a fit that never saw it;
 - accepted only if the held-out mean and the held-out maximum CIEDE2000 both improve
   on the file's model by at least MIN_GAIN;
+- and only if, holding out each half-angle group whole (angles the fit has not seen,
+  as between the instrument's angles in a render), the mean is no worse than the file's.
+  On twelve Pantora 2026 car paints (2026-11-25) every refit failed this check (3.26 vs
+  1.01 dE00 mean), so they keep the file's lobes; a paint whose readings really follow a
+  2-lobe CarPaint2 passes it. Pulling the fit toward the twelve paints' mean refit halved
+  that figure but still failed, and distorted a paint unlike them, so it is not used;
 - the refit lobes keep the directional albedo of the whole BRDF at or below 1.
 
 A refit trades error between geometries: the 22.5 degree half-angle errors fall
@@ -43,10 +49,14 @@ FIT_LOBES = 2
 MIN_GAIN = 0.1           # held-out mean and max must improve by at least this (dE00)
 DEFAULT_TOLERANCE = 0.3  # repeatability assumed where the file has one scan (dE00)
 
+# Geometries within this many degrees of half-angle form one group for the angle check.
+GROUP_SPREAD_DEG = 3.0
+
 # Decision codes (the UI words them: ui/panels/axf_material_panel.py).
 REASON_ACCEPTED = "accepted"
 REASON_MEAN = "held_out_mean"
 REASON_MAX = "held_out_max"
+REASON_ANGLES = "held_out_angles"
 REASON_ALBEDO = "albedo"
 
 
@@ -148,6 +158,20 @@ def _albedo_ok(m: dict, lobes: np.ndarray) -> bool:
     return True
 
 
+def angle_groups(d: dict) -> np.ndarray:
+    """Group index per geometry: geometries whose half-angles lie within
+    GROUP_SPREAD_DEG of a neighbour share a group (7 groups on the MA-T12 set)."""
+    th = np.degrees(np.arccos(np.clip(d["nh"], -1.0, 1.0)))
+    order = np.argsort(th)
+    groups = np.zeros(len(th), int)
+    k = 0
+    for a, b in zip(order[:-1], order[1:]):
+        if th[b] - th[a] > GROUP_SPREAD_DEG:
+            k += 1
+        groups[b] = k
+    return groups
+
+
 def refit(m: dict, d: dict, n_lobes: int = FIT_LOBES) -> dict:
     """Refit n_lobes lobes; return the decision and every figure behind it.
 
@@ -171,8 +195,19 @@ def refit(m: dict, d: dict, n_lobes: int = FIT_LOBES) -> dict:
         mask[i] = False
         lobes_i = _fit(d, n_lobes, mask, [full], f0, step=0.1)
         loo[i] = dc.delta_e(d, lobes_i)[i]
+    # Stricter: hold out each half-angle group whole. A render shows every angle, and a
+    # neighbour at nearly the same angle makes leave-one-geometry-out look better than
+    # the refit really is between the instrument's angles.
+    groups = angle_groups(d)
+    log = np.zeros(n_geo)
+    for k in np.unique(groups):
+        mask = groups != k
+        lobes_k = _fit(d, n_lobes, mask, [full], f0, step=0.1)
+        log[~mask] = dc.delta_e(d, lobes_k)[~mask]
     out = {"file": base, "held_out": [float(v) for v in loo],
            "held_out_mean": float(loo.mean()), "held_out_max": float(loo.max()),
+           "held_out_angles": [float(v) for v in log],
+           "held_out_angles_mean": float(log.mean()),
            "worse": [n for n, a, b, t in zip(d["names"], loo, base_de, tol) if a > b + t],
            "lobes": np.asarray(m["lobes"], np.float64), "accepted": False, "refit": None}
     if not loo.mean() <= base["mean"] - MIN_GAIN:
@@ -180,6 +215,9 @@ def refit(m: dict, d: dict, n_lobes: int = FIT_LOBES) -> dict:
         return out
     if not loo.max() <= base["max"] - MIN_GAIN:
         out["reason"] = REASON_MAX
+        return out
+    if not log.mean() <= base["mean"]:
+        out["reason"] = REASON_ANGLES
         return out
     lobes = full
     if not _albedo_ok(m, lobes):
@@ -211,6 +249,7 @@ def analyse(m: dict, path: str, fit_to_device: bool) -> dict | None:
             "accepted": res["accepted"], "reason": res["reason"],
             "held_out_mean": res["held_out_mean"], "held_out_max": res["held_out_max"],
             "held_out": res["held_out"], "worse": res["worse"],
+            "held_out_angles_mean": res["held_out_angles_mean"],
             "refit": res["refit"], "lobes": np.asarray(res["lobes"]).tolist(),
         })
     return summary

@@ -176,6 +176,37 @@ def test_refit_recovers_a_two_lobe_paint_stored_with_one_lobe():
     np.testing.assert_array_equal(res["lobes"][:, 2], [0.5, 0.5, 0.04])  # F0 stays the file's
 
 
+# Brightness factors (log) a real Pantora silver needs per MA-T12 geometry, in GEOMETRIES
+# order (research of 2026-11-25): the shoulder too dark, the peak and the flop too bright.
+# Not a CarPaint2 shape, so a refit matches the instrument's angles but not between them.
+SILVER_LOG_FACTORS = [0.01, -0.13, -0.13, 0.29, 0.01, -0.17, 0.24, -0.01, 0.04, 0.0, 0.39, -0.01]
+
+
+def test_refit_is_refused_when_it_does_not_hold_between_the_instruments_angles():
+    stored = _paint([(0.06, 0.16, 0.5), (0, 0.35, 0.04), (0, 0.35, 0.04)])
+    readings = _readings(stored)
+    for scan in readings["scans"]:
+        for (pk, asp), k in zip(GEOMETRIES, SILVER_LOG_FACTORS):
+            scan["geometries"][f"r{pk}as{asp}"]["value"] = scan["geometries"][f"r{pk}as{asp}"]["value"] * np.exp(k)
+    d = dc.prepare(stored, readings)
+    res = df.refit(stored, d)
+    assert not res["accepted"]
+    assert res["reason"] == df.REASON_ANGLES, res["reason"]
+    assert res["held_out_angles_mean"] > res["file"]["mean"]
+    assert len(res["held_out_angles"]) == len(GEOMETRIES)
+
+
+def test_angle_groups_follow_the_half_angle():
+    d = dc.prepare(_paint([(0.06, 0.16, 0.5)]), _readings(_paint([(0.06, 0.16, 0.5)])))
+    g = df.angle_groups(d)
+    th = np.degrees(np.arccos(np.clip(d["nh"], -1, 1)))
+    order = np.argsort(th)
+    for a, b in zip(order[:-1], order[1:]):
+        # Neighbours in half-angle share a group exactly when they are close.
+        assert (g[a] == g[b]) == (th[b] - th[a] <= df.GROUP_SPREAD_DEG)
+    assert 3 <= len(set(g.tolist())) < len(th)
+
+
 def test_refit_is_refused_when_the_file_already_matches():
     m = _paint([(0.05, 0.15, 0.5), (0, 0.35, 0.04)])
     res = df.refit(m, dc.prepare(m, _readings(m, noise=0.003)))

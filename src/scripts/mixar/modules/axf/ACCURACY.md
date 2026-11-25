@@ -63,37 +63,46 @@ sources; their numbers differ from these by up to about 0.3.
 
 On metallic paints the model is 18–39 % darker than the device where the half-angle is
 22.5° (`r45as45`, `r15as45`, `r15as-45`) and up to 65 % brighter at the flop. X-Rite's
-own decoder agrees with the model there, so the gap is in the file. On silver, grey and
-beige it is almost all lightness; on blue and red at those geometries hue and chroma
-are a large part. Part of it comes from the encoder: these files keep one active
-Cook-Torrance lobe of the three CarPaint2 allows. Flakes are not the cause (on or off,
-the figures move by at most about 0.4).
+own decoder agrees with the model there, so the gap is in the file. It is a brightness
+error, not a colour one: correcting only the brightness at each geometry would take the
+mean from about 1.0 to 0.15 ΔE00, below the scans' repeatability; on blue and red the
+paint loses chroma because it is too dark there, not because its hue is wrong. Part of it
+comes from the encoder: these files keep one active Cook-Torrance lobe of the three
+CarPaint2 allows. Flakes are not the cause (on or off, the figures move by at most about
+0.4), and neither is the instrument's angular aperture (modelling it makes the fit worse).
 
 ## Fit Lobes to Device (optional)
 
 The import option **Fit Lobes to Device** refits two Cook-Torrance lobes (coefficient
 and width; F0, the colour table, diffuse, clear coat and flakes stay as stored) to the
 readings in the file, and renders the refit only when it predicts angles it has not
-seen better than the file's lobes. Each geometry in turn is left out, the lobes are
-fitted to the other eleven, and the left-out geometry is predicted; the refit is used
-only if that held-out mean and maximum both improve by at least 0.1 ΔE00 and the lobes
-reflect no more light than they receive. Off (the default), the file renders as stored.
-Either way the packed original is unchanged and export writes it byte for byte.
+seen better than the file's lobes. Two checks, both on data the fit did not see:
 
-| Paint | file's lobes mean / max | refit, held out mean / max | used |
-|---|---|---|---|
-| silver | 2.59 / 8.77 | 1.51 / 3.12 | yes |
-| grey | 1.56 / 3.68 | 1.20 / 3.16 | yes |
-| beige | 1.66 / 4.24 | 1.39 / 3.28 | yes |
-| green | 1.30 / 2.95 | 0.95 / 2.65 | yes |
-| blue, scans_blr / exterior | 0.93 / 2.20, 0.94 / 2.37 | 0.81 / 1.69, 0.68 / 1.56 | yes |
-| red | 0.84 / 1.81 | 0.57 / 1.37 | yes |
-| white, black, black2, grill black, piano black, chrome garnish | 0.22–0.71 / 0.36–2.69 | held-out mean no better | no |
+- each geometry in turn is left out; the held-out mean and maximum must both improve on
+  the file's lobes by at least 0.1 ΔE00;
+- each group of geometries at a similar half-angle (within 3°) is left out whole; the
+  held-out mean must be no worse than the file's. This is the check that matters for a
+  render, which shows every angle, not only the instrument's twelve.
 
-A refit moves error between geometries: the large 22.5° errors fall, while a few
-near-specular geometries the file already matched rise, by up to about 1.8 ΔE00 on
-silver. Material Properties ▸ AxF lists those geometries. The refit cannot correct hue
-in the colour table, so most of the blue and red hue error at 22.5° remains.
+The lobes must also reflect no more light than they receive. Off (the default), the file
+renders as stored. Either way the packed original is unchanged and export writes it byte
+for byte.
+
+| Paint | file's lobes mean | geometry left out | angle group left out | used |
+|---|---|---|---|---|
+| silver | 2.59 | 1.51 | 5.47 | no |
+| beige | 1.66 | 1.39 | 5.44 | no |
+| grey | 1.56 | 1.20 | 4.04 | no |
+| green | 1.30 | 0.95 | 2.85 | no |
+| blue, scans_blr / exterior | 0.93 / 0.94 | 0.81 / 0.68 | 2.14 / 3.92 | no |
+| red | 0.84 | 0.57 | 1.01 | no |
+| white, black, black2, grill black, chrome garnish | 0.34–0.71 | no better | — | no |
+
+On these twelve Pantora 2026 paints the refit matches the instrument's angles better but
+predicts the angles between them worse than the file, so every one keeps the file's
+lobes: twelve readings cannot say what the paint does between them. A file whose
+readings follow a two-lobe CarPaint2 passes both checks. Better files (all three lobes
+active) or readings at more angles are what would close the gap.
 
 ## Choices the files do not state
 

@@ -17,6 +17,7 @@ REASONS = {
     device_fit.REASON_ACCEPTED: n_("it predicts unseen angles better than the file's lobes"),
     device_fit.REASON_MEAN: n_("it does not lower the mean error at unseen angles"),
     device_fit.REASON_MAX: n_("it does not lower the largest error at unseen angles"),
+    device_fit.REASON_ANGLES: n_("it predicts angles between the instrument's worse than the file's lobes"),
     device_fit.REASON_ALBEDO: n_("its lobes would reflect more light than they receive"),
 }
 

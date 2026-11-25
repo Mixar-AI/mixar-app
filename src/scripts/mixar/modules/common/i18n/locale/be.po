@@ -1457,6 +1457,9 @@ msgstr ""
 msgid "it does not lower the largest error at unseen angles"
 msgstr ""
 
+msgid "it predicts angles between the instrument's worse than the file's lobes"
+msgstr ""
+
 msgid "its lobes would reflect more light than they receive"
 msgstr ""
 
