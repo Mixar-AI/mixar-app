@@ -148,11 +148,13 @@ use these defaults.
 Cycles. Checked against the reference on CPU (macOS) and Apple Metal. Windows CPU
 renders match macOS CPU to float precision (direct light, per pixel); on textured
 materials the few pixels that differ are as many as moving the object by 1e-7 m on one
-platform changes (texel lookups at texel edges). NVIDIA
-CUDA/OptiX builds compile the same kernel code but have not been checked against the
-reference yet. OSL shows a neutral grey stand-in. EEVEE renders a car paint imported
-by this version close to Cycles (median ΔE76 under 1 on a lit sphere, area lights
-approximated by their centre direction). Car paints imported by an earlier version
+platform changes (texel lookups at texel edges). NVIDIA CUDA renders match Windows CPU
+renders (checked on a GTX 1650 at all 96 instrument geometries: 99 % of pixels within
+1.4e-5 without flakes; with flakes, the pixels that differ sit on flake texel edges and
+the averaged colour agrees to 0.02 %). OptiX has not been checked yet. OSL shows a neutral grey stand-in. EEVEE renders a car paint imported
+by this version close to Cycles: within ΔE00 0.1 under a sun on most paints, and a
+median of 0.1–0.5 ΔE00 on a sphere lit by a large area light (area lights are integrated
+over their surface). Car paints imported by an earlier version
 show a preview until Material Properties ▸ AxF ▸ Add EEVEE Fit fits them from the
 material's own data (no re-import, no original file needed). SVBRDF materials show a
 preview, not the measured material.

@@ -49,6 +49,27 @@ struct Receiver {
   int ray_step_count;
 };
 
+/* Samples per side of the grid an area light is integrated over (16 BRDF evaluations). */
+#define AXF_AREA_GRID 4
+
+/* Shirley-Chiu concentric map of [-1, 1]^2 onto the unit disk (area preserving). */
+float2 area_square_to_disk(float2 s)
+{
+  if (s.x == 0.0f && s.y == 0.0f) {
+    return float2(0.0f);
+  }
+  float r, phi;
+  if (abs(s.x) > abs(s.y)) {
+    r = s.x;
+    phi = (M_PI / 4.0f) * (s.y / s.x);
+  }
+  else {
+    r = s.y;
+    phi = (M_PI / 2.0f) - (M_PI / 4.0f) * (s.x / s.y);
+  }
+  return r * float2(cos(phi), sin(phi));
+}
+
 /* Radiance leaving the surface toward V from one light (Cycles: eval_cos x light). */
 float3 light_contribution(LightEvalData &srt,
                           LightData light,
@@ -67,8 +88,14 @@ float3 light_contribution(LightEvalData &srt,
     return float3(0.0f);
   }
   LightVector lv = LightVector::get(light, is_directional, rcv.P);
+  /* Area lights are integrated over their surface below, sample by sample, so each sample
+   * meets the surface's horizon on its own; the whole-light horizon fade would cut the
+   * light off as soon as its centre went below the horizon (a hard terminator). */
+  const bool integrate_area = !is_directional && is_area_light(light.type);
   float attenuation = light_attenuation_surface(light, is_directional, lv);
-  attenuation *= light_attenuation_facing(light, lv.L, lv.dist, N, false);
+  if (!integrate_area) {
+    attenuation *= light_attenuation_facing(light, lv.L, lv.dist, N, false);
+  }
   attenuation *= light::power_get(light, LIGHT_DIFFUSE);
   if (attenuation < LIGHT_ATTENUATION_THRESHOLD) {
     return float3(0.0f);
@@ -94,6 +121,36 @@ float3 light_contribution(LightEvalData &srt,
   }
   if (shadow * attenuation < 1e-30f) {
     return float3(0.0f);
+  }
+
+  if (integrate_area) {
+    /* Rectangle / ellipse: Lo = Le * sum_k eval_cos(w_k) dOmega_k over a stratified grid on
+     * the light's surface (Cycles integrates the same BRDF over the light by sampling).
+     * dOmega_k = A_k |cos(light normal, w_k)| / d_k^2. */
+    const float3 Px = light.x_axis();
+    const float3 Py = light.y_axis();
+    const float3 Nl = cross(Px, Py);
+    const float2 size = light.area.size; /* Half extents. */
+    const bool ellipse = light.type == LIGHT_ELLIPSE;
+    const float cell_area = (ellipse ? M_PI : 4.0f) * size.x * size.y /
+                            float(AXF_AREA_GRID * AXF_AREA_GRID);
+    const float3 center = light.position();
+    float3 sum = float3(0.0f);
+    for (int j = 0; j < AXF_AREA_GRID; j++) {
+      for (int i = 0; i < AXF_AREA_GRID; i++) {
+        float2 s = (float2(i, j) + 0.5f) * (2.0f / float(AXF_AREA_GRID)) - 1.0f;
+        if (ellipse) {
+          s = area_square_to_disk(s);
+        }
+        const float3 to_light = center + Px * (s.x * size.x) + Py * (s.y * size.y) - rcv.P;
+        const float d2 = max(dot(to_light, to_light), 1e-12f);
+        const float3 L = to_light * inversesqrt(d2);
+        const float d_omega = cell_area * abs(dot(L, Nl)) / d2;
+        sum += axf_eval_cos(table, flakes, has_flakes, p, N, N, flake_uv, flake_strength, V, L) *
+               d_omega;
+      }
+    }
+    return sum * light.color * (attenuation * shadow);
   }
 
   /* Irradiance on a plane facing the light: the cosine lobe integrated over the light's
