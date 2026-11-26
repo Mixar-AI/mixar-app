@@ -47,7 +47,7 @@ from .sandbox_builtins import get_safe_builtins
 from .executor_handlers import HandlerCleanupMixin
 from .executor_result import ExecutionResult  # noqa: F401 — re-exported
 from .sandbox_validator import validate_script_ast
-from .sandbox_transform import snapshot_collection_iterations
+from .sandbox_transform import SNAPSHOT_FUNC_NAME, snapshot_collection_iterations, snapshot_iterable
 from .sandbox_evaluated import NOTE as EVALUATED_NOTE, may_store_evaluated, restore_original_materials
 from .sandbox_mesh import guard_from_mesh, guard_mesh_conversions
 from .sandbox_editmesh import may_edit_bmesh, refresh_edit_meshes
@@ -456,13 +456,13 @@ class ScriptExecutor(SceneStateMixin, HandlerCleanupMixin):
             if ast_error:
                 raise SandboxViolationError(ast_error)
 
-            # Crash-safety transform: rewrite `for x in <coll>.all_objects:` into
-            # `for x in list(...):` so a mutation inside the loop can't free the
-            # live RNA array the C iterator walks (a native segfault we cannot
-            # catch). The transformed AST is compiled directly (no unparse round
-            # trip). See sandbox_transform.py for the full rationale.
+            # Crash-safety transform: loops and comprehensions over a live RNA
+            # collection (`.objects`, `.nodes`, ...) iterate `_mixar_snapshot(...)`
+            # (an iter()-only drain, not `list`), so the body can't free storage
+            # the C iterator walks (an uncatchable segfault). See sandbox_transform.py.
             tree = ast.parse(script, filename="<agent_script>", mode="exec")
             tree = snapshot_collection_iterations(tree)
+            exec_namespace[SNAPSHOT_FUNC_NAME] = snapshot_iterable
             tree = guard_mesh_conversions(tree)
             exec_namespace["_mixar_guard_from_mesh"] = guard_from_mesh
             if time_limit_s:

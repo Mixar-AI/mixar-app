@@ -39,19 +39,50 @@ change inside the loop is fatal; it is iterated as a native snapshot
 (MIXAR-1978, ``python/intern/bpy_rna.cc``), so the transform is defence in
 depth there.
 
-Wrapping the iterable in ``list(...)`` drains the collection into a plain Python
-list up front, so the loop walks Python references instead of the live C array.
-Any mutation inside the body is then safe. This is body-agnostic: it fixes the
-crash no matter *how* the loop mutates, without having to enumerate every
-mutating call. ``list(bpy.data.objects)`` is semantically identical for the
-common (read-only) case and matches the author's intent in the mutating case.
+Wrapping the iterable in a list snapshot drains the collection into a plain
+Python list up front, so the loop walks Python references instead of the live C
+array. Membership changes no longer invalidate the iterator. This is
+body-agnostic: it fixes the crash no matter *how* the loop mutates, without
+having to enumerate every mutating call. A snapshot of ``bpy.data.objects`` is
+semantically identical for the common (read-only) case and matches the author's
+intent in the mutating case.
 
-Coverage — this handles the two dominant idioms, both purely syntactically (no
-dataflow analysis, which aliasing/reassignment would make unreliable):
+The injected call is ``_mixar_snapshot(EXPR)`` (``SNAPSHOT_FUNC_NAME``), not
+``list(EXPR)``: a script may bind ``list`` itself (a module global, a parameter
+or a local), which would turn every rewritten loop into a ``TypeError``. The
+executor binds the reserved global to :func:`snapshot_iterable` in the script's
+namespace. It drains through ``iter()`` only: ``list(x)`` would also call
+``x.__len__`` as a length hint, and the backend's scoped ``__ws_data``
+collection views run a full scope scan in both ``__len__`` and ``__iter__``.
+
+The snapshot holds Python wrappers, which do not keep their elements alive.
+Only IDs are invalidated on deletion (``lib_id_delete.cc`` clears the ID's
+``py_instance``), so reaching a deleted ID through the snapshot raises
+``ReferenceError``. Release builds do not define ``WITH_PYTHON_SAFETY``, so a
+non-ID struct (node, link, modifier, constraint, vertex group, UV layer, edit
+bone) freed indirectly (by an operator, a ``.clear()``, or ``.remove()`` called
+with another wrapper of it) leaves its snapshot wrapper dangling, and reaching
+it is still a native use-after-free.
+
+Comprehension clauses (including generator expressions) receive the same
+snapshot before their filters or elements execute. A generator's outer
+iterable is snapshotted when the generator is created; inner clauses snapshot
+when entered. Async iteration is excluded.
+
+Coverage — this handles the dominant iteration shapes, all purely
+syntactically (no dataflow analysis, which aliasing/reassignment would make
+unreliable):
 
     for obj in bpy.data.objects: ...              # inline attribute iterable
+    for i, obj in enumerate(coll.objects): ...    # live argument of a lazy builtin
     objs = coll.objects
     for obj in objs: ...                          # bound then *immediately* iterated
+
+The lazy builtins are plain-name ``enumerate``, ``zip``, ``filter`` and
+``map``: each positional argument that is a live attribute is snapshotted
+(``enumerate(_mixar_snapshot(coll.objects))``); keyword arguments and other
+callables are left alone (``sorted``/``list`` already drain their argument).
+The adjacent-binding rule still needs a bare ``for x in NAME:``.
 
 It does NOT catch a live collection bound to a variable and iterated later with
 other statements in between (``objs = coll.objects; print(...); for o in
@@ -69,10 +100,25 @@ from mixar.config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+# Reserved global the injected snapshot call names. The executor binds it to
+# ``snapshot_iterable`` in every script namespace this transform runs on.
+SNAPSHOT_FUNC_NAME = "_mixar_snapshot"
+
+
+def snapshot_iterable(iterable):
+    """Drain *iterable* into a list via ``iter()`` alone.
+
+    ``list(iterable)`` asks the object for ``__len__`` as a length hint before
+    iterating; on the backend's scoped ``__ws_data`` views that is a second full
+    scope scan. ``iter()`` returns a native bpy collection's own iterator (or
+    the view's list iterator), whose length hint costs nothing.
+    """
+    return list(iter(iterable))
+
 
 # Attribute names that resolve to a LIVE bpy RNA collection whose backing array
 # is freed on membership change. Iterating one of these directly (not via
-# ``list(...)``) and mutating inside the loop segfaults Blender.
+# a list snapshot) and mutating inside the loop segfaults Blender.
 #
 # Beyond the original ``.objects``/``.all_objects`` crash, the same
 # mechanism (C iterator holding a pointer into a ListBase/Main-backed array
@@ -88,7 +134,7 @@ logger = get_logger(__name__)
 # - ``selected_objects`` — returns a fresh Python list per access, already safe.
 # - High-cardinality mesh data (``vertices``, ``edges``, ``loops``,
 #   ``polygons``) — not element-removable mid-loop through these handles, and a
-#   ``list(...)`` snapshot of a million-element array per loop would be a real
+#   list snapshot of a million-element array per loop would be a real
 #   performance regression on exactly the heavy scripts this guards.
 _LIVE_COLLECTION_ATTRS = frozenset({
     # object membership
@@ -102,42 +148,83 @@ _LIVE_COLLECTION_ATTRS = frozenset({
 })
 
 
-class _SnapshotForIterables(ast.NodeTransformer):
-    """Wrap ``for x in <live collection>:`` iterables in ``list(...)``.
+def _is_live_collection(expr: ast.expr) -> bool:
+    """True for ``<anything>.<attr>`` with ``attr`` in ``_LIVE_COLLECTION_ATTRS``."""
+    return isinstance(expr, ast.Attribute) and expr.attr in _LIVE_COLLECTION_ATTRS
 
-    Only rewrites when the iterable is an attribute access whose final attribute
-    is a known live collection (``.objects`` / ``.all_objects``). Iterables that
-    are already ``list(...)``-wrapped, comprehension calls, ``.values()`` calls,
-    plain names, or anything else are left untouched.
+
+# Builtins that iterate their positional arguments lazily, in step with the
+# loop: ``for i, o in enumerate(coll.objects):`` still walks the live native
+# iterator while the body runs. ``sorted``/``list``/``tuple`` drain their
+# argument up front and need no snapshot.
+_LAZY_ITERATION_WRAPPERS = frozenset({"enumerate", "zip", "filter", "map"})
+
+
+def _is_lazy_iteration_wrapper(expr: ast.expr) -> bool:
+    """True for a call to a plain-name ``enumerate``/``zip``/``filter``/``map``."""
+    return (
+        isinstance(expr, ast.Call)
+        and isinstance(expr.func, ast.Name)
+        and expr.func.id in _LAZY_ITERATION_WRAPPERS
+    )
+
+
+class _SnapshotForIterables(ast.NodeTransformer):
+    """Wrap live-collection iterables of ``for`` loops and comprehensions.
+
+    Rewrites ``for x in EXPR:`` and every synchronous comprehension clause
+    (list, set, dict, generator) to iterate ``_mixar_snapshot(EXPR)`` when
+    ``EXPR`` is an attribute in ``_LIVE_COLLECTION_ATTRS`` (see
+    :func:`_is_live_collection`). When ``EXPR`` is a call to plain-name
+    ``enumerate``/``zip``/``filter``/``map``, each positional argument that is
+    such an attribute is wrapped instead. Iterables that are already wrapped
+    (by the transform or the author's own ``list(...)``), ``.values()`` calls,
+    plain names, keyword arguments, other callables, or anything else are left
+    untouched.
     """
 
     def __init__(self) -> None:
         self.rewrites = 0
 
-    def _snapshot(self, node: ast.For) -> None:
+    def _snapshot(self, node: ast.For | ast.comprehension) -> None:
         iter_node = node.iter
-        if not isinstance(iter_node, ast.Attribute):
-            return
-        if iter_node.attr not in _LIVE_COLLECTION_ATTRS:
-            return
-        # Replace `EXPR` with `list(EXPR)` so the collection is drained into a
-        # Python list before the loop body can mutate the live collection.
-        node.iter = _wrap_in_list(iter_node)
-        self.rewrites += 1
+        if _is_live_collection(iter_node):
+            # Replace `EXPR` with `_mixar_snapshot(EXPR)` so the collection is
+            # drained into a Python list before the loop body can mutate it.
+            node.iter = _wrap_in_snapshot(iter_node)
+            self.rewrites += 1
+        elif _is_lazy_iteration_wrapper(iter_node):
+            # `enumerate(EXPR)` etc. pull from EXPR as the loop advances, so
+            # snapshot the live arguments themselves. An argument already
+            # wrapped is a Call, not an Attribute, which keeps this idempotent.
+            for index, arg in enumerate(iter_node.args):
+                if _is_live_collection(arg):
+                    iter_node.args[index] = _wrap_in_snapshot(arg)
+                    self.rewrites += 1
 
     def visit_For(self, node: ast.For) -> ast.AST:
         self._snapshot(node)
         self.generic_visit(node)
         return node
 
+    def visit_comprehension(self, node: ast.comprehension) -> ast.AST:
+        # Filters and element expressions may mutate the collection too.
+        if not node.is_async:
+            self._snapshot(node)
+        self.generic_visit(node)
+        return node
 
-def _wrap_in_list(expr: ast.expr) -> ast.Call:
-    """Return ``list(expr)`` as an AST Call node."""
-    return ast.Call(
-        func=ast.Name(id="list", ctx=ast.Load()),
-        args=[expr],
-        keywords=[],
-    )
+
+def _wrap_in_snapshot(expr: ast.expr) -> ast.Call:
+    """Return ``_mixar_snapshot(expr)`` as an AST Call at ``expr``'s location.
+
+    Copying the iterable's span (including end positions) keeps tracebacks and
+    crash reports' ``<agent_script>:N`` on the iterable's own line instead of
+    a location inherited from an enclosing multi-line statement.
+    """
+    name = ast.Name(id=SNAPSHOT_FUNC_NAME, ctx=ast.Load())
+    func = ast.copy_location(name, expr)
+    return ast.copy_location(ast.Call(func=func, args=[expr], keywords=[]), expr)
 
 
 # Statement-list fields on AST nodes that form an execution block.
@@ -151,8 +238,9 @@ def _snapshot_adjacent_bindings(tree: ast.AST) -> int:
     variable and then iterated on the *immediately following* statement. Purely
     syntactic (adjacency only, no dataflow): fires only when the very next
     statement is a ``for`` over that exact name, and rewrites the *loop's*
-    iterable (``for x in list(NAME):``) rather than the binding — so any other
-    use of ``NAME`` (e.g. ``NAME.new(...)``) is left untouched and cannot break.
+    iterable (``for x in _mixar_snapshot(NAME):``) rather than the binding —
+    so any other use of ``NAME`` (e.g. ``NAME.new(...)``) is left untouched and
+    cannot break.
     """
     rewrites = 0
     for node in ast.walk(tree):
@@ -165,19 +253,21 @@ def _snapshot_adjacent_bindings(tree: ast.AST) -> int:
                     isinstance(a, ast.Assign)
                     and len(a.targets) == 1
                     and isinstance(a.targets[0], ast.Name)
-                    and isinstance(a.value, ast.Attribute)
-                    and a.value.attr in _LIVE_COLLECTION_ATTRS
+                    and _is_live_collection(a.value)
                     and isinstance(b, ast.For)
                     and isinstance(b.iter, ast.Name)
                     and b.iter.id == a.targets[0].id
                 ):
-                    b.iter = _wrap_in_list(b.iter)
+                    b.iter = _wrap_in_snapshot(b.iter)
                     rewrites += 1
     return rewrites
 
 
 def snapshot_collection_iterations(tree: ast.Module) -> ast.Module:
-    """Rewrite live-collection ``for`` loops to iterate a ``list(...)`` snapshot.
+    """Make loops and comprehensions over live collections iterate a snapshot.
+
+    Covers inline ``for``/comprehension iterables and the adjacent
+    ``NAME = <live coll>; for x in NAME:`` binding; see the module docstring.
 
     Mutates ``tree`` in place and returns it (with locations fixed so the result
     is ready to ``compile``).
@@ -194,7 +284,7 @@ def snapshot_collection_iterations(tree: ast.Module) -> ast.Module:
     if rewrites:
         ast.fix_missing_locations(tree)
         logger.debug(
-            "Snapshotted %d live-collection loop(s) with list() for crash safety",
+            "Snapshotted %d live-collection loop(s) for crash safety",
             rewrites,
         )
     return tree
