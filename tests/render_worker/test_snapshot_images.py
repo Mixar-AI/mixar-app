@@ -117,6 +117,27 @@ def test_unchanged_dirty_images_reuse_the_snapshot(reuse):
     assert again["save_s"] == 0.0 and len(reuse.writes) == 1
 
 
+def test_snapshot_comparison_stops_reading_after_first_difference(tmp_path, monkeypatch):
+    images = [_image("A", _byte_pixels(1)), _image("B", _byte_pixels(2))]
+    _, keys = snapshot._write_images(images, str(tmp_path))
+    reads = []
+    read = snapshot._pixels
+
+    def count(image):
+        reads.append(image.name)
+        return read(image)
+
+    monkeypatch.setattr(snapshot, "_pixels", count)
+    assert not snapshot._images_match(images[:1], keys)
+    images[1].name = "renamed"
+    assert not snapshot._images_match(images, keys)
+    assert reads == []
+    images[1].name = "B"
+    images[0].pixels.data[3] += 0.5
+    assert not snapshot._images_match(images, keys)
+    assert reads == ["A"]
+
+
 def test_a_changed_pixel_writes_a_new_snapshot(reuse):
     snapshot.write_or_reuse("preview", lambda: ("same",))
     data = reuse.images[0].pixels.data.copy()
@@ -135,6 +156,6 @@ def test_a_newly_dirty_image_writes_a_new_snapshot(reuse):
 def test_a_scene_change_writes_without_reading_pixels(reuse, monkeypatch):
     snapshot.write_or_reuse("preview", lambda: ("before",))
     read = []
-    monkeypatch.setattr(snapshot, "image_keys", lambda images: read.append(images) or [])
+    monkeypatch.setattr(snapshot, "_images_match", lambda images, keys: read.append(images) or False)
     assert snapshot.write_or_reuse("preview", lambda: ("after",))["reused"] is False
     assert not read, "a fingerprint mismatch needs no key"

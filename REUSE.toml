@@ -28,6 +28,7 @@ SPDX-License-Identifier = "GPL-2.0-or-later"
 [[annotations]]
 path = [
   "docs/development/forest-runtime-fixed.png",
+  "docs/development/glb-round-trip.png",
   "docs/development/forest-review-viewport.png",
   "docs/development/modeling-bicycle.png",
   "docs/development/modeling-forest-fixed.png",

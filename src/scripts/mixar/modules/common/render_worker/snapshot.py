@@ -103,17 +103,19 @@ def _key(name, is_float, buffer, width, height, channels) -> tuple:
     return (name, width, height, channels, bool(is_float), zlib.crc32(memoryview(buffer)))
 
 
-def _change_key(image, buffer, width, height, channels) -> tuple:
-    return _key(image.name, image.is_float, buffer, width, height, channels)
+def _images_match(images, keys) -> bool:
+    """Rule out metadata changes before reading pixels on the main thread."""
+    if keys is None or len(images) != len(keys):
+        return False
+    for image, key in zip(images, keys):
+        if (image.name, *image.size, image.channels, bool(image.is_float)) != key[:-1]:
+            return False
 
-
-def image_keys(images) -> list:
-    """The change key of each image's current pixels (one full read each)."""
-    keys = []
-    for image in images:
+    def matches_pixels(image, key):
         buffer, width, height, channels = _pixels(image)
-        keys.append(_change_key(image, buffer, width, height, channels))
-    return keys
+        return _key(image.name, image.is_float, buffer, width, height, channels) == key
+
+    return all(matches_pixels(image, key) for image, key in zip(images, keys))
 
 
 #: At most this many bytes of pixel copies wait for the background writer. Each
@@ -326,7 +328,7 @@ def write_or_reuse(purpose: str, key_fn, after_write=None, background: bool = Fa
     if previous is not None and cached[0] == key and os.path.isfile(previous["path"]):
         started = time.perf_counter()
         try:
-            unchanged = image_keys(dirty_images()) == previous.get("image_keys")
+            unchanged = _images_match(dirty_images(), previous.get("image_keys"))
         except (ReferenceError, RuntimeError, AttributeError):
             unchanged = False
         if unchanged:

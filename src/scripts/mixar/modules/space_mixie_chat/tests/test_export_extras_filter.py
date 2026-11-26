@@ -5,6 +5,7 @@
 (``export_extras_filter``), pinned on hand-built GLB / glTF files."""
 
 import json
+import os
 import struct
 
 import pytest
@@ -77,6 +78,18 @@ def test_glb_is_rewritten_without_secrets_and_with_the_bin_chunk_intact(tmp_path
     assert read_glb_json(str(path))["nodes"][0]["name"] == "Body"
 
 
+def test_rewrite_preserves_multiple_copy_blocks_and_unknown_chunks(tmp_path):
+    path = tmp_path / "large.glb"
+    binary = bytes(range(256)) * 9000
+    extension = struct.pack("<I4s", 4, b"TEST") + b"tail"
+    raw = _glb(_doc(), binary) + extension
+    path.write_bytes(raw[:8] + struct.pack("<I", len(raw)) + raw[12:])
+    assert ef.strip_private_extras(str(path), "glb", REGISTERED) == 9
+    rewritten = path.read_bytes()
+    assert struct.unpack_from("<I", rewritten, 8)[0] == len(rewritten)
+    assert rewritten.endswith(binary + extension)
+
+
 def test_clean_glb_is_left_untouched(tmp_path):
     path = tmp_path / "clean.glb"
     original = _glb({"asset": {"version": "2.0"}, "nodes": [{"extras": {"part": "arm"}}]})
@@ -125,7 +138,7 @@ def test_failed_rewrite_leaves_the_original_and_no_temp(tmp_path, monkeypatch, f
     def replace_fails(src, dst):
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr(ef.os, "replace", replace_fails)
+    monkeypatch.setattr(os, "replace", replace_fails)
     with pytest.raises(OSError):
         ef.strip_private_extras(str(path), fmt, REGISTERED)
     assert path.read_bytes() == original

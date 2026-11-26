@@ -257,7 +257,7 @@ def test_a_failed_write_keeps_the_original_and_leaves_no_tmp(guard, tmp_path, mo
     monkeypatch.setattr(guard.m.os, "replace", locked)
     assert not guard.m.keep_default_scene(str(path))
     assert path.read_bytes() == original
-    assert not (tmp_path / "model.glb.tmp").exists()
+    assert list(tmp_path.iterdir()) == [path]
 
 
 # --- import_gltf -----------------------------------------------------------
