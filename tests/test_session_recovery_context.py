@@ -24,7 +24,7 @@ def window(*, temporary=False, kind='VIEW_3D', screen=True):
 def context(monkeypatch):
     wm = NS(windows=[])
     monkeypatch.setattr(bubble_windows.bpy.context, 'window_manager', wm, raising=False)
-    purge = Mock()
+    purge = Mock(return_value=0)              # the real purge returns a count
     monkeypatch.setitem(sys.modules,
         "mixar.modules.agent_bubble.core.bubble_lifecycle",
         NS(close_restored_agent_bubble_windows=purge))
@@ -104,7 +104,7 @@ def restore(tmp_path, monkeypatch, context):
     def run(kind='save_point'):
         monkeypatch.setitem(runtime._state, 'offer', {'session': 'old', 'target': {
             'kind': kind, 'path': str(point), 'at': NOW}})
-        runtime._restore_now()
+        return runtime._restore_now()
     return NS(rt=runtime, run=run, wm=context[0], purge=context[1], point=point,
               tracked=tracked, reported=reported, override=override)
 
@@ -139,6 +139,69 @@ def test_a_refused_context_never_reads_and_keeps_the_offer(restore, monkeypatch,
     assert restore.point.exists() and restore.rt.current_offer() is not None
     assert restore.rt._state['restoring'] is False
     assert restore.rt._state['journal'].data['restore_attempt'] is None
+
+
+# backend#2018: on Windows a native read in the same timer tick as the bubble
+# windows' native teardown crashes, so a live bubble defers the read a tick.
+
+def _close_bubbles(wm, keep):
+    def purge():
+        wm.windows = [keep]
+        return 1
+    return purge
+
+
+def test_a_live_bubble_is_purged_and_the_read_waits_for_the_next_tick(restore, monkeypatch):
+    main = window()
+    restore.wm.windows = [window(kind='AGENT_BUBBLE'), main]
+    restore.purge.side_effect = _close_bubbles(restore.wm, main)
+    read = Mock(return_value={'FINISHED'})
+    monkeypatch.setattr(restore.rt.bpy.ops.wm, 'recover_auto_save', read, raising=False)
+
+    interval = restore.run()
+    assert interval and interval > 0
+    restore.purge.assert_called_once()
+    read.assert_not_called()
+    assert restore.tracked == [] and restore.reported == []
+    assert restore.rt._state['journal'].data.get('restore_attempt') is None
+    assert restore.rt._state['restoring'] is False
+
+    assert restore.run() is None                  # the timer's next tick reads
+    read.assert_called_once()
+    assert restore.override.call_args.kwargs == {'window': main}
+    assert restore.tracked[-1][0] == 'scene_restored'
+    assert restore.rt._state['journal'].data['restore_attempt']['point'] == str(restore.point)
+
+
+def test_without_a_bubble_the_first_tick_reads(restore, monkeypatch):
+    main = window()
+    restore.wm.windows = [main]
+    read = Mock(return_value={'FINISHED'})
+    monkeypatch.setattr(restore.rt.bpy.ops.wm, 'recover_auto_save', read, raising=False)
+    assert restore.run() is None
+    read.assert_called_once()
+    assert restore.tracked[-1][0] == 'scene_restored'
+
+
+def test_a_purge_that_closes_nothing_never_defers(restore, monkeypatch):
+    restore.wm.windows = [window(), window(kind='AGENT_BUBBLE')]
+    read = Mock()
+    monkeypatch.setattr(restore.rt.bpy.ops.wm, 'recover_auto_save', read, raising=False)
+    assert restore.run() is None
+    read.assert_not_called()
+    assert restore.tracked == [('failed', {'surface': restore.rt._state['surface'],
+                                           'failure_category': 'context_unavailable'})]
+    assert len(restore.reported) == 1 and 'Close the Agent island' in restore.reported[0]
+
+
+def test_a_purge_that_raises_with_a_live_bubble_is_refused_not_deferred(restore, monkeypatch):
+    restore.wm.windows = [window(), window(kind='AGENT_BUBBLE')]
+    restore.purge.side_effect = ReferenceError('removed window')
+    read = Mock()
+    monkeypatch.setattr(restore.rt.bpy.ops.wm, 'recover_auto_save', read, raising=False)
+    assert restore.run() is None
+    read.assert_not_called()
+    assert restore.tracked[-1][1]['failure_category'] == 'context_unavailable'
 
 
 def test_a_failing_purge_is_a_refusal_not_a_read_error(restore, monkeypatch):
