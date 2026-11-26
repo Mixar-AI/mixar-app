@@ -111,73 +111,11 @@ def _link(nt, a, out, b, inp):
 
 
 def _surface_mapping(nt, x: float, y: float, *, tangent: bool = True):
-    """Object-space coordinates projected on the dominant normal axis (metres), and the
-    world-space direction of increasing u (the tangent; None when tangent=False, so a
-    material with nothing to feed it carries no unconnected tangent nodes).
-
-    One projection per point (no blending), so flake statistics stay exactly the
-    measured ones. u is mirrored where needed so (tangent, normal x tangent, normal) is
-    right handed on every face, which keeps the clear coat normal map a true surface.
-    Object scale is assumed to be 1 (metres).
-
-    z-dominant: (u, v) = (s Px, Py); x-dominant: (s Py, Pz); y-dominant: (s Px, Pz),
-    with s = sign(nz), sign(nx), -sign(ny)."""
-    nodes = nt.nodes
-    tc = nodes.new("ShaderNodeTexCoord"); tc.location = (x - 900, y)
-    sp = nodes.new("ShaderNodeSeparateXYZ"); sp.location = (x - 700, y + 120)
-    sn = nodes.new("ShaderNodeSeparateXYZ"); sn.location = (x - 700, y - 120)
-    _link(nt, tc, "Object", sp, 0)
-    _link(nt, tc, "Normal", sn, 0)
-
-    def math(op, a, b=None, loc=(0, 0)):
-        n = nodes.new("ShaderNodeMath"); n.operation = op; n.location = loc
-        for i, v in enumerate((a, b)):
-            if v is None:
-                continue
-            if isinstance(v, (int, float)):
-                n.inputs[i].default_value = v
-            else:
-                nt.links.new(v, n.inputs[i])
-        return n.outputs[0]
-
-    ax = math('ABSOLUTE', sn.outputs[0], loc=(x - 500, y - 60))
-    ay = math('ABSOLUTE', sn.outputs[1], loc=(x - 500, y - 120))
-    az = math('ABSOLUTE', sn.outputs[2], loc=(x - 500, y - 180))
-    z_ge_x = math('GREATER_THAN', az, ax, loc=(x - 330, y - 60))
-    z_ge_y = math('GREATER_THAN', az, ay, loc=(x - 330, y - 120))
-    z_dom = math('MULTIPLY', z_ge_x, z_ge_y, loc=(x - 180, y - 90))
-    x_ge_y = math('GREATER_THAN', ax, ay, loc=(x - 330, y - 180))
-    not_z = math('SUBTRACT', 1.0, z_dom, loc=(x - 180, y - 150))
-    x_dom = math('MULTIPLY', not_z, x_ge_y, loc=(x - 60, y - 150))
-    y_dom = math('SUBTRACT', not_z, x_dom, loc=(x - 60, y - 210))
-    # s = sign of the dominant component (negated for y) -> right-handed frames.
-    sx = math('SIGN', sn.outputs[0], loc=(x - 330, y - 260))
-    sy = math('SIGN', sn.outputs[1], loc=(x - 330, y - 300))
-    sz = math('SIGN', sn.outputs[2], loc=(x - 330, y - 340))
-    s = math('ADD', math('MULTIPLY', z_dom, sz, loc=(x - 180, y - 260)),
-             math('SUBTRACT', math('MULTIPLY', x_dom, sx, loc=(x - 180, y - 300)),
-                  math('MULTIPLY', y_dom, sy, loc=(x - 180, y - 340)), loc=(x - 60, y - 320)),
-             loc=(x + 60, y - 290))
-    # u = s * (Py if x-dominant else Px); v = Py if z-dominant else Pz
-    one_minus_x = math('SUBTRACT', 1.0, x_dom, loc=(x + 60, y + 60))
-    u_base = math('ADD', math('MULTIPLY', one_minus_x, sp.outputs[0], loc=(x + 180, y + 60)),
-                  math('MULTIPLY', x_dom, sp.outputs[1], loc=(x + 180, y)), loc=(x + 300, y + 30))
-    u = math('MULTIPLY', s, u_base, loc=(x + 420, y + 30))
-    v = math('ADD', math('MULTIPLY', z_dom, sp.outputs[1], loc=(x + 180, y - 60)),
-             math('MULTIPLY', not_z, sp.outputs[2], loc=(x + 180, y - 120)), loc=(x + 300, y - 90))
-    comb = nodes.new("ShaderNodeCombineXYZ"); comb.location = (x + 540, y)
-    nt.links.new(u, comb.inputs[0]); nt.links.new(v, comb.inputs[1])
-    if not tangent:
-        return comb.outputs[0], None
-
-    # Tangent (object space) = s * (Y if x-dominant else X), then to world space.
-    tan = nodes.new("ShaderNodeCombineXYZ"); tan.location = (x + 540, y - 260)
-    nt.links.new(math('MULTIPLY', s, one_minus_x, loc=(x + 420, y - 230)), tan.inputs[0])
-    nt.links.new(math('MULTIPLY', s, x_dom, loc=(x + 420, y - 290)), tan.inputs[1])
-    vt = nodes.new("ShaderNodeVectorTransform"); vt.location = (x + 700, y - 260)
-    vt.vector_type = 'VECTOR'; vt.convert_from = 'OBJECT'; vt.convert_to = 'WORLD'
-    _link(nt, tan, 0, vt, 0)
-    return comb.outputs[0], vt.outputs[0]
+    """Flake/coat coordinates for a mesh without UVs: one "AxF Box Projection" group node
+    (box_projection.py). Returns (object-space metres on the dominant face, world-space
+    tangent or None when tangent=False)."""
+    from .box_projection import add_box_projection
+    return add_box_projection(nt, x, y, tangent=tangent)
 
 
 def _tile_coordinates(nt, uv_m, size_mm, x: float, y: float):

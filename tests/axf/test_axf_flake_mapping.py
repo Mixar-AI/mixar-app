@@ -124,3 +124,16 @@ def test_operator_contract():
     src = OPS.read_text(encoding="utf-8")
     # The scale comes from the evaluated mesh in world space, so object scale is honoured.
     assert "evaluated_depsgraph_get" in src and "object_uv_scale" in src
+
+
+def test_box_projection_is_one_shared_node_group():
+    """A mesh without UVs gets one "AxF Box Projection" group node, not ~30 loose math nodes."""
+    core = ROOT / "src/scripts/mixar/modules/axf/core"
+    tree = ast.parse((core / "blender_import.py").read_text(encoding="utf-8"))
+    fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_surface_mapping")
+    src = ast.unparse(fn)
+    assert "add_box_projection" in src and "ShaderNodeMath" not in src
+    box = (core / "box_projection.py").read_text(encoding="utf-8")
+    for needle in ('GROUP_NAME = "AxF Box Projection"', "ShaderNodeGroup", 'OUT_UV = "UV"',
+                   'OUT_TANGENT = "Tangent"', "ShaderNodeVectorTransform", "GROUP_VERSION"):
+        assert needle in box, needle
