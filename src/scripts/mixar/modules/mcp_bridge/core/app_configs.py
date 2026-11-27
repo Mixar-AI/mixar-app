@@ -102,7 +102,8 @@ def find_cli(name):
 
 def _run(args):
     env = {**os.environ, "PATH": os.pathsep.join([str(Path(args[0]).parent), _search_path()])}
-    result = subprocess.run(args, capture_output=True, text=True, timeout=CLI_TIMEOUT, env=env)
+    result = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                            timeout=CLI_TIMEOUT, env=env)
     return result.returncode, (result.stdout or "") + (result.stderr or "")
 
 

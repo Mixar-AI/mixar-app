@@ -149,3 +149,12 @@ def test_the_dialog_offers_add_copy_open_and_the_guide():
     assert "translation_context=PRODUCT_NAMES" in dialog
     assert app_configs.ADDABLE == ("CLAUDE_CODE", "CODEX")
     assert app_configs.FORMATS == ("JSON", "COMMAND")
+
+
+def test_cli_output_that_is_not_valid_text_never_raises():
+    # Mixar runs Python in UTF-8 mode, so captured output is decoded as strict
+    # UTF-8; a Windows CLI or cmd.exe shim printing in the OEM code page crashed
+    # the reader thread (#1944).
+    child = "import sys; sys.stdout.buffer.write('added ✓ '.encode() + bytes([0x81, 0x9d, 0xff]))"
+    code, out = app_configs._run([sys.executable, "-c", child])
+    assert code == 0 and out.startswith("added ✓ ")
