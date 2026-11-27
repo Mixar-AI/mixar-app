@@ -241,6 +241,7 @@ class SocketConnection:
             self._send_backlog = None
             self._last_send_progress = 0.0
             self._upload_clear_at = 0.0
+            self._patience_since = time.monotonic()
 
             self._ws.settimeout(10.0)
             self._diag.phase('connected')
