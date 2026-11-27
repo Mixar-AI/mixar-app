@@ -38,7 +38,17 @@
 #include <shellapi.h>
 #include <shellscalingapi.h>
 #include <string.h>
+#include <unordered_set>
 #include <windowsx.h>
+
+/* Mixar: windows whose caption setState() removed to enter full screen.
+ * Upstream re-adds WS_CAPTION on every state change; Mixar does not, so
+ * chromeless windows (Agent Bubble, pill) stay caption-free. Leaving full
+ * screen must therefore give the caption back to exactly the windows that
+ * lost it there, or the main window's title bar (move, minimize, maximize,
+ * close) disappears for good. Kept outside the class so the upstream header
+ * stays unmodified. */
+static std::unordered_set<HWND> s_mixar_fullscreen_stripped_caption;
 
 #ifndef GET_POINTERID_WPARAM
 #  define GET_POINTERID_WPARAM(wParam) (LOWORD(wParam))
@@ -267,6 +277,8 @@ GHOST_WindowWin32::~GHOST_WindowWin32()
 {
   if (h_wnd_) {
     unregisterWindowAppUserModelProperties();
+    /* Mixar: a recycled HWND must not inherit a stale caption restore. */
+    s_mixar_fullscreen_stripped_caption.erase(h_wnd_);
   }
 
   if (bar_) {
@@ -547,12 +559,15 @@ void GHOST_WindowWin32::clientToScreen(int32_t inX,
 GHOST_TSuccess GHOST_WindowWin32::setState(GHOST_TWindowState state)
 {
   GHOST_TWindowState curstate = getState();
-  /* Mixar: only add WS_CAPTION if the window already has it.
-   * Chromeless popup windows (Agent Bubble) must stay caption-free
-   * or they reappear in Alt+Tab and the taskbar. */
+  /* Mixar: upstream adds WS_CAPTION back on every state change. Chromeless
+   * popup windows (Agent Bubble) must stay caption-free or they reappear in
+   * Alt+Tab and the taskbar, so the caption is restored only to a window that
+   * lost it entering full screen (see s_mixar_fullscreen_stripped_caption). */
   LONG_PTR style = GetWindowLongPtr(h_wnd_, GWL_STYLE);
-  if (style & WS_CAPTION) {
-    style |= WS_CAPTION;  /* no-op but keeps original intent clear */
+  if (state != GHOST_kWindowStateFullScreen &&
+      s_mixar_fullscreen_stripped_caption.erase(h_wnd_) != 0)
+  {
+    style |= WS_CAPTION;
   }
   WINDOWPLACEMENT wp;
   wp.length = sizeof(WINDOWPLACEMENT);
@@ -572,6 +587,9 @@ GHOST_TSuccess GHOST_WindowWin32::setState(GHOST_TWindowState state)
       wp.showCmd = SW_SHOWMAXIMIZED;
       wp.ptMaxPosition.x = 0;
       wp.ptMaxPosition.y = 0;
+      if ((style & WS_CAPTION) == WS_CAPTION) {
+        s_mixar_fullscreen_stripped_caption.insert(h_wnd_);
+      }
       style &= ~(WS_CAPTION | WS_MAXIMIZE);
       break;
     case GHOST_kWindowStateNormal:
