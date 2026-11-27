@@ -41,7 +41,6 @@ which applies the same rewrite to job uploads before a provider sees them.
 
 from __future__ import annotations
 
-import json
 import re
 import os
 import struct
@@ -49,13 +48,10 @@ from typing import Any, NamedTuple
 
 from mixar.config.logging_config import get_logger
 
+from .gltf_file import rewrite_document
 from .scenes_log import slog
 
 logger = get_logger(__name__)
-
-_GLB_MAGIC = 0x46546C67          # b"glTF"
-_CHUNK_JSON = 0x4E4F534A         # b"JSON"
-
 
 class Stripped(NamedTuple):
     scenes: list      # names of the scenes dropped ("" for an unnamed one)
@@ -273,68 +269,13 @@ def strip_gltf_json(doc: dict) -> Stripped:
     return Stripped(dropped_scenes, dropped_nodes)
 
 
-def _read_glb(data: bytes):
-    """(header_version, json_doc, remaining_chunks_bytes) or None if not a GLB."""
-    if len(data) < 20:
-        return None
-    magic, version, _length = struct.unpack_from("<III", data, 0)
-    if magic != _GLB_MAGIC:
-        return None
-    chunk_len, chunk_type = struct.unpack_from("<II", data, 12)
-    if chunk_type != _CHUNK_JSON or 20 + chunk_len > len(data):
-        return None
-    doc = json.loads(data[20:20 + chunk_len].decode("utf-8"))
-    return version, doc, data[20 + chunk_len:]
-
-
-def _write_glb(version: int, doc: dict, rest: bytes) -> bytes:
-    payload = json.dumps(doc, separators=(",", ":")).encode("utf-8")
-    payload += b" " * (-len(payload) % 4)          # JSON chunks pad with spaces
-    body = struct.pack("<II", len(payload), _CHUNK_JSON) + payload + rest
-    return struct.pack("<III", _GLB_MAGIC, version, 12 + len(body)) + body
-
-
 def keep_default_scene(filepath: str) -> Stripped:
     """Rewrite ``filepath`` (``.glb`` or ``.gltf``) in place so it holds only its
     default scene and what it reaches. Returns what was dropped; nothing when
     the file was already clean or could not be parsed (the import then proceeds
     unchanged and the post-import guard still applies)."""
     try:
-        with open(filepath, "rb") as f:
-            data = f.read()
-    except OSError as error:
-        logger.debug("gltf import guard: cannot read %s: %s", filepath, error)
-        return _NOTHING
-    try:
-        glb = _read_glb(data)
-        if glb is not None:
-            version, doc, rest = glb
-            if not isinstance(doc, dict):
-                return _NOTHING
-            stripped = strip_gltf_json(doc)
-            if stripped:
-                out = _write_glb(version, doc, rest)
-        else:
-            doc = json.loads(data.decode("utf-8"))
-            if not isinstance(doc, dict):
-                return _NOTHING
-            stripped = strip_gltf_json(doc)
-            if stripped:
-                out = json.dumps(doc).encode("utf-8")
-        if not stripped:
-            return _NOTHING
-        tmp = filepath + ".tmp"
-        try:
-            with open(tmp, "wb") as f:
-                f.write(out)
-            os.replace(tmp, filepath)
-        finally:
-            if os.path.exists(tmp):                 # the write or replace failed (e.g. a Windows lock)
-                try:
-                    os.remove(tmp)
-                except OSError:
-                    pass
-        return stripped
+        return rewrite_document(filepath, strip_gltf_json)
     except (ValueError, struct.error, OSError, UnicodeDecodeError, TypeError, AttributeError) as error:
         logger.debug("gltf import guard: %s left unchanged: %s", filepath, error)
         return _NOTHING

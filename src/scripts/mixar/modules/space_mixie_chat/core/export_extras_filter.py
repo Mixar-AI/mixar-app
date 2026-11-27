@@ -20,12 +20,8 @@ leaves a truncated export.
 
 from __future__ import annotations
 
-import json
-import os
-import struct
-import uuid
+from mixar.modules.common.gltf_file import rewrite_document
 
-JSON_CHUNK = 0x4E4F534A
 KEEP = frozenset({"mixar_active_camera"})
 PREFIXES = ("mixie_", "mixar_", "_mixie_", "_mixar_", "_RNA_UI")
 # glTF collection → Blender RNA type whose registered properties it may carry.
@@ -85,58 +81,11 @@ def strip_document(doc: dict, registered: dict | None = None) -> int:
     return stripped
 
 
-def _replace_atomically(path: str, data: bytes) -> None:
-    """Write a sibling temp file (exclusive create, no ``mkstemp``) and
-    ``os.replace`` it over ``path``; the temp is removed on any failure."""
-    temp = f"{path}.tmp-{uuid.uuid4().hex}"
-    try:
-        with open(temp, "xb") as handle:
-            handle.write(data)
-        os.replace(temp, path)
-    except BaseException:
-        try:
-            os.unlink(temp)
-        except OSError:
-            pass
-        raise
-
-
-def _rewrite_glb(path: str, registered) -> int:
-    with open(path, "rb") as handle:
-        data = handle.read()
-    magic, version, _length = struct.unpack_from("<4sII", data, 0)
-    if magic != b"glTF":
-        raise ValueError("not a GLB container")
-    chunk_length, chunk_type = struct.unpack_from("<II", data, 12)
-    if chunk_type != JSON_CHUNK:
-        raise ValueError("first GLB chunk is not JSON")
-    doc = json.loads(data[20:20 + chunk_length].decode("utf-8"))
-    stripped = strip_document(doc, registered)
-    if not stripped:
-        return 0
-    payload = json.dumps(doc, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    payload += b" " * (-len(payload) % 4)  # spec: JSON chunk padded with spaces
-    rest = data[20 + chunk_length:]  # BIN chunk (and any others), byte-identical
-    body = struct.pack("<II", len(payload), JSON_CHUNK) + payload + rest
-    _replace_atomically(path, struct.pack("<4sII", b"glTF", version, 12 + len(body)) + body)
-    return stripped
-
-
-def _rewrite_gltf(path: str, registered) -> int:
-    with open(path, "r", encoding="utf-8") as handle:
-        doc = json.load(handle)
-    stripped = strip_document(doc, registered)
-    if stripped:
-        _replace_atomically(path, json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8"))
-    return stripped
-
-
 def strip_private_extras(path: str, fmt: str, registered: dict | None = None) -> int:
     """Rewrite the written glTF/GLB at ``path`` without private extras."""
     registered = registered if registered is not None else registered_properties()
     fmt = str(fmt or "").lower().lstrip(".")
-    if fmt == "glb":
-        return _rewrite_glb(path, registered)
-    if fmt == "gltf":
-        return _rewrite_gltf(path, registered)
-    return 0
+    if fmt not in {"glb", "gltf"}:
+        return 0
+    return rewrite_document(path, lambda doc: strip_document(doc, registered),
+                            fmt=fmt, ensure_ascii=False, indent=2)

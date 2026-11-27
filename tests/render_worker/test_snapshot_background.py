@@ -157,4 +157,4 @@ def test_staged_pixel_copies_never_exceed_the_budget(doc, monkeypatch):
     manifest = json.loads(open(record["images"]).read())
     assert [m["name"] for m in manifest] == ["painted", "hdr"], "original order kept"
     assert [k[0] for k in record["image_keys"]] == ["painted", "hdr"]
-    assert snapshot.image_keys(snapshot.dirty_images()) == record["image_keys"]
+    assert snapshot._images_match(snapshot.dirty_images(), record["image_keys"])
