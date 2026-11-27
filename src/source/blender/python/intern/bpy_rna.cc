@@ -2810,6 +2810,14 @@ static PyObject *pyrna_prop_array_subscript_slice(BPy_PropertyArrayRNA *self,
   // PYRNA_PROP_CHECK_OBJ((BPy_PropertyRNA *)self);
 
   tuple = PyTuple_New(slice_length);
+  /* MIXAR-2144 begin */
+  /* MIXAR: none of these allocations were checked. `list(image.pixels)` on a 4096^2 image builds a
+   * 67M-item tuple; a low-memory machine got NULL from PyTuple_New, PyMem_MALLOC or PyFloat_From*
+   * and the app crashed (mixar-backend#2144, an agent script) instead of raising MemoryError. */
+  if (tuple == nullptr) {
+    return nullptr;
+  }
+  /* MIXAR-2144 end */
 
   totdim = RNA_property_array_dimension(ptr, prop, nullptr);
 
@@ -2825,6 +2833,12 @@ static PyObject *pyrna_prop_array_subscript_slice(BPy_PropertyArrayRNA *self,
         float *values;
         if (array_length > PYRNA_STACK_ARRAY) {
           values = static_cast<float *>(PyMem_MALLOC(sizeof(float) * array_length));
+          /* MIXAR-2144 begin */
+          if (values == nullptr) {
+            Py_DECREF(tuple);
+            return PyErr_NoMemory();
+          }
+          /* MIXAR-2144 end */
         }
         else {
           values = values_stack;
@@ -2845,6 +2859,12 @@ static PyObject *pyrna_prop_array_subscript_slice(BPy_PropertyArrayRNA *self,
         bool *values;
         if (array_length > PYRNA_STACK_ARRAY) {
           values = static_cast<bool *>(PyMem_MALLOC(sizeof(bool) * array_length));
+          /* MIXAR-2144 begin */
+          if (values == nullptr) {
+            Py_DECREF(tuple);
+            return PyErr_NoMemory();
+          }
+          /* MIXAR-2144 end */
         }
         else {
           values = values_stack;
@@ -2865,6 +2885,12 @@ static PyObject *pyrna_prop_array_subscript_slice(BPy_PropertyArrayRNA *self,
         int *values;
         if (array_length > PYRNA_STACK_ARRAY) {
           values = static_cast<int *>(PyMem_MALLOC(sizeof(int) * array_length));
+          /* MIXAR-2144 begin */
+          if (values == nullptr) {
+            Py_DECREF(tuple);
+            return PyErr_NoMemory();
+          }
+          /* MIXAR-2144 end */
         }
         else {
           values = values_stack;
@@ -2889,6 +2915,16 @@ static PyObject *pyrna_prop_array_subscript_slice(BPy_PropertyArrayRNA *self,
         break;
     }
   }
+  /* MIXAR-2144 begin */
+  if (tuple != nullptr) {
+    for (count = 0; count < slice_length; count++) {
+      if (PyTuple_GET_ITEM(tuple, count) == nullptr) {
+        Py_DECREF(tuple);
+        return PyErr_Occurred() ? nullptr : PyErr_NoMemory();
+      }
+    }
+  }
+  /* MIXAR-2144 end */
   return tuple;
 }
 
