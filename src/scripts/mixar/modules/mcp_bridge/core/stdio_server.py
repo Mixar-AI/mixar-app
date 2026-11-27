@@ -18,7 +18,7 @@ from .connector import Connector, Unconfirmed, instances, signed_in, usable
 # keeps only their first 2,048 characters: core rules first, the full playbook
 # is the backend's free mixar_guide tool.
 GUIDE = """\
-Mixar is an AI-native 3D editor built on Blender 5.2. These tools act on the
+Mixar is an AI-native 3D editor built on Blender. These tools act on the
 user's open, signed-in Mixar desktop. Call mixar_guide first, then
 mixar_guide(topic) before planning that kind of work (build, generate,
 characters, environments, materials, delivery).
