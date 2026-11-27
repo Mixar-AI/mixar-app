@@ -156,6 +156,9 @@ class Job:
     # Set once a FAILED toast has been surfaced for this job, so the queue's
     # per-notify failure sweep shows the toast exactly once (edge-detected).
     _failure_notified: bool = field(default=False, repr=False)
+    # Epoch of the last REST fallback poll (queue_manager._rest_poll_fallback),
+    # which runs only while the agent WebSocket is down. 0.0 = never.
+    _rest_polled_at: float = field(default=0.0, repr=False)
     # Identity of the agent generation that enqueued this job, stamped by
     # FeatureQueue.submit() from the window_manager side channel the backend's
     # enqueue script sets (common/utils/agent_feedback.take_agent_ref). Empty
