@@ -46,7 +46,7 @@ REQUIRED = (
     "type",
     "Exception", "ValueError", "KeyError", "TypeError", "IndexError",
     "AttributeError", "RuntimeError", "ImportError", "ZeroDivisionError",
-    "StopIteration",
+    "StopIteration", "ReferenceError",
 )
 
 # Names that must never be reachable: they either create code

@@ -253,11 +253,13 @@ int BPy_Wrap_SetMapItem(IDProperty *prop, PyObject *key, PyObject *val)
 
 static int BPy_IDGroup_Map_SetItem(BPy_IDProperty *self, PyObject *key, PyObject *val)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   return BPy_Wrap_SetMapItem(self->prop, key, val);
 }
 
 static PyObject *BPy_IDGroup_iter(BPy_IDProperty *self)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   PyObject *iterable = BPy_IDGroup_ViewKeys_CreatePyObject(self);
   PyObject *ret;
   if (iterable) {
@@ -427,6 +429,7 @@ static int BPy_IDGroup_Iter_is_gc(BPy_IDGroup_Iter *self)
 
 static bool BPy_Group_Iter_same_size_or_raise_error(BPy_IDGroup_Iter *self)
 {
+  if (UNLIKELY(self->group->prop == nullptr)) { BPy_IDProperty_raise_removed(); return false; } /* MIXAR-2031 */
   if (self->len_init == self->group->prop->len) {
     return true;
   }

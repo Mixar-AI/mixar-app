@@ -28,6 +28,7 @@ PyDoc_STRVAR(
     "   :rtype: :class:`IDPropertyGroupViewKeys`\n");
 static PyObject *BPy_IDGroup_keys(BPy_IDProperty *self)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   return BPy_IDGroup_ViewKeys_CreatePyObject(self);
 }
 
@@ -42,6 +43,7 @@ PyDoc_STRVAR(
     "   :rtype: :class:`IDPropertyGroupViewValues`\n");
 static PyObject *BPy_IDGroup_values(BPy_IDProperty *self)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   return BPy_IDGroup_ViewValues_CreatePyObject(self);
 }
 
@@ -56,11 +58,13 @@ PyDoc_STRVAR(
     "   :rtype: :class:`IDPropertyGroupViewItems`\n");
 static PyObject *BPy_IDGroup_items(BPy_IDProperty *self)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   return BPy_IDGroup_ViewItems_CreatePyObject(self);
 }
 
 static int BPy_IDGroup_Contains(BPy_IDProperty *self, PyObject *value)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   const char *name = PyUnicode_AsUTF8(value);
 
   if (!name) {
@@ -87,11 +91,13 @@ PyDoc_STRVAR(
     "   :type other: :class:`IDPropertyGroup` | dict[str, Any]\n");
 static PyObject *BPy_IDGroup_update(BPy_IDProperty *self, PyObject *value)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   PyObject *pkey, *pval;
   Py_ssize_t i = 0;
 
   if (BPy_IDGroup_Check(value)) {
     BPy_IDProperty *other = reinterpret_cast<BPy_IDProperty *>(value);
+    BPY_IDPROP_CHECK_OBJ(other->prop); /* MIXAR-2031 */
     if (self->prop == other->prop) [[unlikely]] {
       Py_RETURN_NONE;
     }
@@ -128,6 +134,7 @@ PyDoc_STRVAR(
     "   :rtype: dict[str, Any]\n");
 static PyObject *BPy_IDGroup_to_dict(BPy_IDProperty *self)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   return BPy_IDGroup_MapDataToPy(self->prop);
 }
 
@@ -139,6 +146,7 @@ PyDoc_STRVAR(
     "   Clear all members from this group.\n");
 static PyObject *BPy_IDGroup_clear(BPy_IDProperty *self)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   IDP_ClearProperty(self->prop);
   Py_RETURN_NONE;
 }
@@ -158,6 +166,7 @@ PyDoc_STRVAR(
     "   :rtype: Any\n");
 static PyObject *BPy_IDGroup_get(BPy_IDProperty *self, PyObject *args)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   IDProperty *idprop;
   const char *key;
   PyObject *def = Py_None;
@@ -269,7 +278,7 @@ PyTypeObject BPy_IDGroup_Type = {
     /*tp_name*/ "IDPropertyGroup",
     /*tp_basicsize*/ sizeof(BPy_IDProperty),
     /*tp_itemsize*/ 0,
-    /*tp_dealloc*/ nullptr,
+    /*tp_dealloc*/ reinterpret_cast<destructor>(BPy_IDProperty_dealloc), /* MIXAR-2031 */
     /*tp_vectorcall_offset*/ 0,
     /*tp_getattr*/ nullptr,
     /*tp_setattr*/ nullptr,
@@ -345,6 +354,7 @@ static PyTypeObject *idp_array_py_type(BPy_IDArray *self, size_t *elem_size)
 
 static PyObject *BPy_IDArray_repr(BPy_IDArray *self)
 {
+  if (UNLIKELY(self->prop == nullptr)) { return PyUnicode_FromString("<bpy id property array: removed>"); } /* MIXAR-2031 */
   return PyUnicode_FromFormat("<bpy id property array [%d]>", self->prop->len);
 }
 
@@ -358,6 +368,7 @@ PyDoc_STRVAR(
     ":type: Literal['f', 'd', 'i', 'b']\n");
 static PyObject *BPy_IDArray_get_typecode(BPy_IDArray *self, void * /*closure*/)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   const char *typecode;
   switch (self->prop->subtype) {
     case IDP_FLOAT:
@@ -405,6 +416,7 @@ PyDoc_STRVAR(
     "   :rtype: list[int] | list[float] | list[bool]\n");
 static PyObject *BPy_IDArray_to_list(BPy_IDArray *self)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   return BPy_IDGroup_MapDataToPy(self->prop);
 }
 
@@ -436,11 +448,13 @@ static PyMethodDef BPy_IDArray_methods[] = {
 
 static Py_ssize_t BPy_IDArray_Len(BPy_IDArray *self)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   return self->prop->len;
 }
 
 static PyObject *BPy_IDArray_GetItem(BPy_IDArray *self, Py_ssize_t index)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   if (index < 0 || index >= self->prop->len) {
     PyErr_SetString(PyExc_IndexError, "index out of range!");
     return nullptr;
@@ -465,6 +479,7 @@ static PyObject *BPy_IDArray_GetItem(BPy_IDArray *self, Py_ssize_t index)
 
 static int BPy_IDArray_SetItem(BPy_IDArray *self, Py_ssize_t index, PyObject *value)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   if (index < 0 || index >= self->prop->len) {
     PyErr_SetString(PyExc_RuntimeError, "index out of range!");
     return -1;

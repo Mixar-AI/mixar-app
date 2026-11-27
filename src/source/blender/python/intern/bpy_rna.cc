@@ -72,6 +72,7 @@
 
 #include "../generic/idprop_py_api.hh" /* For IDprop lookups. */
 #include "../generic/idprop_py_ui_api.hh"
+#include "../generic/idprop_py_liveness.hh" /* MIXAR-2031 */
 #include "../generic/py_capi_rna.hh"
 #include "../generic/py_capi_utils.hh"
 #include "../generic/python_compat.hh" /* IWYU pragma: keep. */
@@ -4792,6 +4793,7 @@ static PyObject *pyrna_struct_id_properties_ensure(BPy_StructRNA *self)
   group->owner_id = self->ptr->owner_id;
   group->prop = idprops;
   group->parent = nullptr;
+  BPy_IDProperty_liveness_track(&group->prop); /* MIXAR-2031 */
   return reinterpret_cast<PyObject *>(group);
 }
 
@@ -4844,6 +4846,7 @@ static PyObject *pyrna_struct_id_properties_ui(BPy_StructRNA *self, PyObject *ar
   BPy_IDPropertyUIManager *ui_manager = PyObject_New(BPy_IDPropertyUIManager,
                                                      &BPy_IDPropertyUIManager_Type);
   ui_manager->property = property;
+  BPy_IDProperty_liveness_track(&ui_manager->property); /* MIXAR-2031 */
   return reinterpret_cast<PyObject *>(ui_manager);
 }
 
