@@ -34,6 +34,14 @@
 			<true/>
 		</dict>
 	</array>
+	<key>LSEnvironment</key>
+	<dict>
+		<!-- Opt out of libmalloc deferred reclamation: on macOS 26 a failed
+		     kernel ring flush aborts the process ("err == VM_RECLAIM_SUCCESS")
+		     from any free(). Pinned by tests/test_macos_malloc_env.py. -->
+		<key>MallocLargeCache</key>
+		<string>0</string>
+	</dict>
 	<key>CFBundleExecutable</key>
 	<string>Mixar</string>
 	<key>CFBundleGetInfoString</key>
