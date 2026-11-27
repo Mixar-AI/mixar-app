@@ -56,6 +56,7 @@ static PySequenceMethods BPy_IDArray_Seq = {
 /* sequence slice (get): idparr[a:b] */
 static PyObject *BPy_IDArray_slice(BPy_IDArray *self, int begin, int end)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   IDProperty *prop = self->prop;
   PyObject *tuple;
   int count;
@@ -105,6 +106,7 @@ static PyObject *BPy_IDArray_slice(BPy_IDArray *self, int begin, int end)
 /* sequence slice (set): idparr[a:b] = value */
 static int BPy_IDArray_ass_slice(BPy_IDArray *self, int begin, int end, PyObject *seq)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   IDProperty *prop = self->prop;
   size_t elem_size;
   const PyTypeObject *py_type = idp_array_py_type(self, &elem_size);
@@ -138,6 +140,7 @@ static int BPy_IDArray_ass_slice(BPy_IDArray *self, int begin, int end, PyObject
 
 static PyObject *BPy_IDArray_subscript(BPy_IDArray *self, PyObject *item)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   if (PyIndex_Check(item)) {
     Py_ssize_t i;
     i = PyNumber_AsSsize_t(item, PyExc_IndexError);
@@ -176,6 +179,7 @@ static PyObject *BPy_IDArray_subscript(BPy_IDArray *self, PyObject *item)
 
 static int BPy_IDArray_ass_subscript(BPy_IDArray *self, PyObject *item, PyObject *value)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   if (PyIndex_Check(item)) {
     Py_ssize_t i = PyNumber_AsSsize_t(item, PyExc_IndexError);
     if (i == -1 && PyErr_Occurred()) {
@@ -231,6 +235,7 @@ static int itemsize_by_idarray_type(int array_type)
 
 static int BPy_IDArray_getbuffer(BPy_IDArray *self, Py_buffer *view, int flags)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   IDProperty *prop = self->prop;
   const int itemsize = itemsize_by_idarray_type(prop->subtype);
   const int length = itemsize * prop->len;
@@ -283,7 +288,7 @@ PyTypeObject BPy_IDArray_Type = {
     /*tp_name*/ "IDPropertyArray",
     /*tp_basicsize*/ sizeof(BPy_IDArray),
     /*tp_itemsize*/ 0,
-    /*tp_dealloc*/ nullptr,
+    /*tp_dealloc*/ reinterpret_cast<destructor>(BPy_IDProperty_dealloc), /* MIXAR-2031 */
     /*tp_vectorcall_offset*/ 0,
     /*tp_getattr*/ nullptr,
     /*tp_setattr*/ nullptr,
@@ -351,6 +356,8 @@ void IDProp_Init_Types()
   PyType_Ready(&BPy_IDGroup_ViewKeys_Type);
   PyType_Ready(&BPy_IDGroup_ViewValues_Type);
   PyType_Ready(&BPy_IDGroup_ViewItems_Type);
+
+  BPy_IDProperty_liveness_init(); /* MIXAR-2031 */
 }
 
 /**

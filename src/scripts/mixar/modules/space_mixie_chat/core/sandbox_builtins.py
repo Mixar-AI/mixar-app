@@ -52,6 +52,10 @@ SAFE_BUILTIN_NAMES = frozenset({
     'Exception', 'ValueError', 'KeyError', 'TypeError', 'IndexError',
     'AttributeError', 'RuntimeError', 'ImportError', 'ZeroDivisionError',
     'StopIteration', 'FileNotFoundError', 'OSError', 'PermissionError',
+    # Raised by a removed datablock (StructRNA) and by a removed custom
+    # property's wrapper (MIXAR-2031, mixar-backend#2031); a script must be
+    # able to catch it by name.
+    'ReferenceError',
 })
 
 

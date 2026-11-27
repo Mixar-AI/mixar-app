@@ -38,6 +38,10 @@ UPSTREAM_CANDIDATES = (
 )
 MIXAR_SPDX = " * SPDX-FileCopyrightText: 2026 Adeveda Enterprises Private Limited\n"
 MARKED = re.compile(r"[ \t]*/\* MIXAR-1978 begin \*/\n.*?[ \t]*/\* MIXAR-1978 end \*/\n", re.S)
+OTHER_TAGGED = re.compile(r"^[^\n]*/\* MIXAR-2031 \*/\r?\n", re.M)
+# The same file carries the MIXAR-2144 allocation checks, pinned by
+# tests/test_rna_array_slice_oom_overlay.py.
+OTHER_FENCED = re.compile(r"[ \t]*/\* MIXAR-2144 begin \*/\n.*?[ \t]*/\* MIXAR-2144 end \*/\n", re.S)
 
 
 def _block() -> str:
@@ -80,6 +84,10 @@ def test_the_overlay_is_upstream_plus_the_marked_hunk():
     assert ov.count("/* MIXAR-1978 begin */") == ov.count("/* MIXAR-1978 end */") == 1
     assert MIXAR_SPDX in ov
     unpatched = MARKED.sub("", ov.replace(MIXAR_SPDX, "", 1))
+    # The file also carries the MIXAR-2031 wrapper-tracking lines, pinned by
+    # tests/test_idprop_liveness_overlay.py.
+    unpatched = OTHER_TAGGED.sub("", unpatched)
+    unpatched = OTHER_FENCED.sub("", unpatched)
     if unpatched != upstream.read_text(encoding="utf-8"):
         pytest.fail(
             "upstream bpy_rna.cc changed, or an overlay edit is not fenced: re-copy the "

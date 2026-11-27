@@ -67,6 +67,8 @@ def test_instructions_teach_the_scene_workflow_within_claude_codes_cap():
     assert "Splat worlds (world_labs) and videos only when the user wants one" in flat
     assert "Ask the user when an open choice matters" in flat and "never use OS-level computer use" in flat
     assert 'Choose each part\'s approach by judgement (notes in mixar_guide("generate"))' in flat
+    import re
+    assert not re.search(r"Blender\s+\d+\.\d+", stdio_server.GUIDE)
     from mixar.modules.common.ui_control.core import schema
     assert all(len(tool["description"]) <= CLAUDE_CODE_TEXT_CAP for tool in schema.tools())
 

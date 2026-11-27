@@ -249,6 +249,20 @@ WS_LIVENESS_PROBE_GRACE = 5.0
 # message is resent ~15 s after the send, not ~76 s (socket_liveness.py).
 WS_ACK_TIMEOUT = 8.0
 
+# Patience for a path that keeps stalling: each socket torn down because a
+# reply did not come in time doubles the unanswered-command window and its
+# probe grace for this session, up to this factor (8 s + 5 s becomes 24 s +
+# 15 s, still inside the idle watchdog). A long-haul path (prod 2026-10-25,
+# Shanghai → us-west-1) stalled its downstream 13–30 s at a time while the
+# server kept reading every frame; the fixed 13 s tore down a live socket
+# every ~35 s, and each reconnect replayed the turn into the same stall.
+WS_ACK_PATIENCE_MAX = 3.0
+
+# Each span this long with no unanswered probe steps the patience down one
+# level (3 -> 1.5 -> 1): a path that only stalls now and then keeps what holds
+# its sockets up, a recovered one is back to resending lost commands fast.
+WS_ACK_PATIENCE_RESET_S = 300.0
+
 # The slowest uplink still treated as alive: every frame sent holds the fast
 # probes off for size / this rate (a 250 KB image ~16 s), since a local proxy
 # or TLS-inspecting antivirus can swallow a frame at once and upload it slowly

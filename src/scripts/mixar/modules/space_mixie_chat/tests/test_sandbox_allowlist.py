@@ -46,7 +46,7 @@ REQUIRED = (
     "type",
     "Exception", "ValueError", "KeyError", "TypeError", "IndexError",
     "AttributeError", "RuntimeError", "ImportError", "ZeroDivisionError",
-    "StopIteration",
+    "StopIteration", "ReferenceError",
 )
 
 # Names that must never be reachable: they either create code
@@ -303,3 +303,27 @@ def test_copy_returns_no_new_handles(script_executor):
     )
     assert result.success, result.error
     assert "{'a': [1, 2]} (1, 2)" in result.output
+
+
+def test_snapshot_ignores_a_script_bound_list(script_executor):
+    """The live-collection snapshot calls the executor-injected
+    `_mixar_snapshot`, so a script that rebinds `list` still runs."""
+    result = script_executor.execute(
+        "list = None\n"
+        "names = [o for o in bpy.context.scene.objects]\n"
+        "for o in bpy.context.scene.objects:\n"
+        "    names.append(o)\n"
+        "print('ok', list, len(names))\n",
+        push_undo=False,
+    )
+    assert result.success, result.error
+    assert "ok None" in result.output
+
+
+def test_snapshot_binding_drains_without_a_length_hint(script_executor):
+    """The executor binds `_mixar_snapshot` to the iter()-only drain, not the
+    builtin `list`, which would also call a scoped `__ws_data` view's
+    `__len__` (a second full scope scan)."""
+    result = script_executor.execute("print(_mixar_snapshot)\n", push_undo=False)
+    assert result.success, result.error
+    assert "<function snapshot_iterable" in result.output

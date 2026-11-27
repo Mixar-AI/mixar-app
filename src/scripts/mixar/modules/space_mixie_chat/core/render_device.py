@@ -9,6 +9,9 @@ Preview jobs may temporarily select GPU, but never discover devices or write
 preferences (see docs/render-job-contract.md). No supported device means CPU.
 """
 
+import os
+import sys
+
 import bpy
 
 from ....config.logging_config import get_logger
@@ -26,6 +29,8 @@ PREFERENCE = "default_render_device"
 _startup_done = False
 # Cycles retains stale preference entries for disconnected GPUs.
 _discovered_devices = {}
+# Whether this build ships precompiled HIP kernels; None until first checked.
+_hip_kernels = None
 
 
 def preference() -> str:
@@ -44,10 +49,36 @@ def _cycles_preferences():
     return getattr(addon, "preferences", None) if addon is not None else None
 
 
+def hip_kernels_shipped() -> bool:
+    """Does this build carry precompiled Cycles HIP kernels?
+
+    Cycles lists an AMD card under HIP whether or not a kernel exists for it,
+    then fails the render with "HIP binary kernel for this graphics card
+    compute capability (…) not found". Builds configured without
+    ``WITH_CYCLES_HIP_BINARIES`` ship none, so HIP is not a usable backend.
+    """
+    global _hip_kernels
+    if _hip_kernels is None:
+        _hip_kernels = False
+        try:
+            cycles = sys.modules.get("cycles")
+            lib = os.path.join(os.path.dirname(cycles.__file__), "lib")
+            _hip_kernels = any(name.startswith("kernel_gfx") for name in os.listdir(lib))
+        except Exception:
+            pass
+    return _hip_kernels
+
+
+def _usable_type(kind: str) -> bool:
+    return kind in DEVICE_TYPES and (kind != "HIP" or hip_kernels_shipped())
+
+
 def _enabled_devices(cycles_prefs) -> list:
     """Enabled devices belonging to the selected backend and live inventory."""
     devices = []
     chosen = str(getattr(cycles_prefs, "compute_device_type", "NONE"))
+    if not _usable_type(chosen):
+        return devices
     live_ids = _discovered_devices.get(chosen)
     for device in getattr(cycles_prefs, "devices", ()) or ():
         if (chosen in DEVICE_TYPES and device.type == chosen and device.use
@@ -107,7 +138,7 @@ def enable_gpu_device(force: bool = False) -> str:
         # build support, not installed GPUs: OptiX can exist on an AMD machine.
         candidates = dict.fromkeys((current, *DEVICE_TYPES))
         for chosen in candidates:
-            if chosen not in available or chosen not in DEVICE_TYPES:
+            if chosen not in available or not _usable_type(chosen):
                 continue
             try:
                 devices = cycles_prefs.get_devices_for_type(chosen)
@@ -127,6 +158,11 @@ def enable_gpu_device(force: bool = False) -> str:
             _startup_done = True
             logger.info("Cycles compute device: %s (%d device(s))", chosen, len(devices))
             return chosen
+        if current == "HIP" and not hip_kernels_shipped():
+            # A HIP backend without kernels errors on every GPU render; with
+            # no compute device Cycles renders "GPU Compute" scenes on the CPU.
+            cycles_prefs.compute_device_type = "NONE"
+            logger.info("No Cycles HIP kernels in this build; HIP disabled, renders use the CPU")
         _startup_done = True
         logger.debug("No Cycles GPU available; renders stay on the CPU")
         return ""
@@ -152,6 +188,7 @@ def _available_types(cycles_prefs) -> set:
 
 def reset_for_tests() -> None:
     """Forget the once-per-session latch (tests only)."""
-    global _startup_done
+    global _startup_done, _hip_kernels
     _startup_done = False
+    _hip_kernels = None
     _discovered_devices.clear()

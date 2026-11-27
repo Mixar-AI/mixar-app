@@ -202,7 +202,8 @@ def _version_of(binary: str) -> tuple[int, ...] | None:
     if key in _versions:
         return _versions[key]
     try:
-        out = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=15).stdout
+        out = subprocess.run([binary, "--version"], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", timeout=15).stdout
     except (OSError, subprocess.SubprocessError):
         return None
     match = re.match(r"\s*(\d+)\.(\d+)(?:\.(\d+))?", out or "")

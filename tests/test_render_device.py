@@ -52,6 +52,9 @@ def device(monkeypatch):
     monkeypatch.setattr(module, "render_slot", MagicMock())
     module.render_slot.busy.return_value = False
     module.reset_for_tests()
+    # Unit tests model a build that ships HIP kernels unless they say otherwise.
+    module.real_hip_kernels_shipped = module.hip_kernels_shipped
+    monkeypatch.setattr(module, "hip_kernels_shipped", lambda: True)
     return module
 
 
@@ -197,6 +200,49 @@ def test_selects_real_hardware_not_just_compiled_backends(device, backend):
     assert prefs.compute_device_type == backend
     assert device.use_gpu()
     assert not prefs.devices[-1].use
+
+
+def _amd_prefs(device, compute="NONE", use=False):
+    prefs = _cycles_prefs(compute=compute, available=(),
+                          devices=[_device("HIP", use), _device("CPU")])
+    prefs.get_device_types = lambda context: [(name, name, "") for name in device.DEVICE_TYPES]
+    return prefs
+
+
+def test_hip_without_shipped_kernels_is_never_selected(device, monkeypatch):
+    # A build without WITH_CYCLES_HIP_BINARIES fails every HIP render with
+    # "HIP binary kernel for this graphics card ... not found".
+    monkeypatch.setattr(device, "hip_kernels_shipped", lambda: False)
+    prefs = _amd_prefs(device)
+    _install(device, prefs)
+    assert device.enable_gpu_device() == ""
+    assert prefs.compute_device_type == "NONE"
+    assert not prefs.devices[0].use
+    assert not device.use_gpu()
+
+
+def test_stored_hip_without_kernels_is_switched_off(device, monkeypatch):
+    # An earlier session auto-enabled HIP; the next startup must undo it so
+    # "GPU Compute" scenes fall back to the CPU instead of erroring.
+    monkeypatch.setattr(device, "hip_kernels_shipped", lambda: False)
+    prefs = _amd_prefs(device, compute="HIP", use=True)
+    _install(device, prefs)
+    assert not device.use_gpu()
+    assert device.enable_gpu_device() == ""
+    assert prefs.compute_device_type == "NONE"
+
+
+def test_hip_kernel_probe_reads_the_cycles_lib_folder(device, monkeypatch, tmp_path):
+    module = device
+    lib = tmp_path / "cycles" / "lib"
+    lib.mkdir(parents=True)
+    fake_cycles = SimpleNamespace(__file__=str(tmp_path / "cycles" / "__init__.py"))
+    monkeypatch.setitem(module.sys.modules, "cycles", fake_cycles)
+    module.reset_for_tests()
+    assert module.real_hip_kernels_shipped() is False
+    (lib / "kernel_gfx1030.fatbin.zst").write_bytes(b"")
+    module.reset_for_tests()
+    assert module.real_hip_kernels_shipped() is True
 
 
 def test_failing_optix_driver_falls_back_to_cuda(device):

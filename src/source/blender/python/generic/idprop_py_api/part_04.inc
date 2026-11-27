@@ -64,6 +64,7 @@ static PyObject *IDGroup_Iter_New_WithType(BPy_IDProperty *group,
                                            const bool reversed,
                                            PyTypeObject *type)
 {
+  if (group && UNLIKELY(group->prop == nullptr)) { return BPy_IDProperty_raise_removed(); } /* MIXAR-2031 */
   BLI_assert(group ? group->prop->type == IDP_GROUP : true);
   BPy_IDGroup_Iter *iter = PyObject_GC_New(BPy_IDGroup_Iter, type);
   iter->reversed = reversed;
@@ -167,6 +168,7 @@ static PyObject *BPy_Group_ViewItems_iter(BPy_IDGroup_View *self)
 
 static Py_ssize_t BPy_Group_View_len(BPy_IDGroup_View *self)
 {
+  if (self->group) { BPY_IDPROP_CHECK_INT(self->group->prop); } /* MIXAR-2031 */
   if (self->group == nullptr) {
     return 0;
   }
@@ -346,6 +348,7 @@ PyDoc_STRVAR(
     "   :rtype: Any\n");
 static PyObject *BPy_IDGroup_pop(BPy_IDProperty *self, PyObject *args)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   IDProperty *idprop;
   PyObject *pyform;
 

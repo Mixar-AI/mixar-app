@@ -539,12 +539,33 @@ def restore_entry(entry: dict, surface: str = "file_menu") -> bool:
     return restore_deferred(surface)
 
 
+def _purged_bubbles_this_tick() -> bool:
+    """Close live Agent Bubble windows; True when this call closed any.
+
+    Errors and a purge that closed nothing return False so the read-window
+    guard below reports them through its usual refusal."""
+    try:
+        from mixar.modules.agent_bubble.core.bubble_windows import is_agent_bubble_window
+        wm = bpy.context.window_manager
+        if wm is None or not any(is_agent_bubble_window(w) for w in wm.windows):
+            return False
+        from mixar.modules.agent_bubble.core.bubble_lifecycle import close_restored_agent_bubble_windows
+        return bool(close_restored_agent_bubble_windows())
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[RECOVERY] bubble purge before the restore failed: {e}")
+        return False
+
+
 def _restore_now():
     offer = _state["offer"]
     if not offer or not offer.get("target"):
         return None
     target = offer["target"]
     jr = _state["journal"]
+    # Windows: a native read in the same tick as the bubble windows' native
+    # teardown crashes (backend#2018); purge now, read on the next tick.
+    if _purged_bubbles_this_tick():
+        return 0.1
     # Crash-loop guard: record the attempt BEFORE the read. If the read (or
     # the next seconds) crashes, the next launch finds it unconfirmed.
     if jr is not None:

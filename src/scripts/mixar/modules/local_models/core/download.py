@@ -20,7 +20,7 @@ between chunks and inside backoff slices. On top of that, this downloader:
   disk (a server that ignores ``Range`` and answers 200 restarts the
   transfer from scratch, transparently);
 - scales the default deadline by the expected size, because a 17 GB GGUF
-  cannot fit in the job queue's 600 s budget.
+  cannot fit in the job queue's 1800 s budget.
 
 A cancel or a retryable failure keeps the ``.part`` on disk so the next
 call resumes instead of restarting.

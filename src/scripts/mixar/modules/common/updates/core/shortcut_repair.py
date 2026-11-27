@@ -135,7 +135,8 @@ def _run(old_dir, new_dir) -> None:
         done = subprocess.run(  # noqa: S603 - fixed argv, our own script
             [powershell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
              "-EncodedCommand", encoded],
-            env=env, capture_output=True, text=True, timeout=_TIMEOUT_S,
+            env=env, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=_TIMEOUT_S,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), check=False,
         )
     except (OSError, subprocess.SubprocessError) as e:

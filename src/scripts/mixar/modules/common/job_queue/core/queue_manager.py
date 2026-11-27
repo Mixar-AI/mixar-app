@@ -13,7 +13,9 @@ Lifecycle (per job, all callbacks fire on the main thread via api/processor):
 All pending jobs are submitted immediately (the backend handles concurrency
 and queue limits). Once submitted, jobs wait for backend ``job.update`` pushes
 over the agent WebSocket; terminal success reconciles full result data via
-``job.sync`` on that same socket. Download runs on a daemon thread that
+``job.sync`` on that same socket. While that socket is down the watchdog
+polls ``GET /job-queue/jobs/{id}`` instead, so a finished job is never
+stranded behind a push that cannot arrive. Download runs on a daemon thread that
 schedules the import callback back on the main thread — that half of the
 lifecycle lives in ``queue_download.DownloadMixin``.
 """
@@ -61,6 +63,13 @@ _queues: dict = {}
 # active is negligible traffic, and the timer unregisters itself once no job
 # needs reconciling.
 _SYNC_WATCHDOG_INTERVAL = 5.0
+# REST cadence while the agent WebSocket is not connected. Every reconcile
+# path (``job.update`` push, ``job.get``, ``job.sync``) rides that socket, so
+# with it down a job that finished on the backend in five minutes sat in
+# RUNNING_POLL until MAX_POLL_DURATION failed it as "timed out" — and then
+# cancelled a job that had already succeeded. ``GET /job-queue/jobs/{id}``
+# needs no socket; one request per active job every 10 s is cheap.
+_REST_FALLBACK_INTERVAL = 10.0
 _sync_watchdog_registered = False
 _BACKEND_SYNC_STATES = frozenset(
     {
@@ -309,6 +318,25 @@ def _request_backend_job_get(backend_job_id: str) -> bool:
         return False
 
 
+def _rest_poll_fallback(now: float) -> None:
+    """Reconcile RUNNING_POLL jobs over REST while the WebSocket is down.
+
+    Called by the watchdog only when ``job.sync`` could not be sent (no
+    JSON-RPC client, or one that has not completed its handshake). Each job
+    is polled at most once per ``_REST_FALLBACK_INTERVAL``; the response goes
+    through the same parser the socket snapshots use, so DONE starts the
+    download and a backend failure fails the job with its own reason.
+    """
+    for queue in all_queues():
+        for job in queue.snapshot():
+            if job.state != JobState.RUNNING_POLL or not job.backend_job_id:
+                continue
+            if now - job._rest_polled_at < _REST_FALLBACK_INTERVAL:
+                continue
+            job._rest_polled_at = now
+            queue._poll_over_rest(job)
+
+
 def _ensure_sync_watchdog() -> None:
     """Keep active jobs reconciled if an at-most-once job.update push is missed."""
     global _sync_watchdog_registered
@@ -348,7 +376,8 @@ def _ensure_sync_watchdog() -> None:
             _sync_watchdog_registered = False
             return None
         if any(state in _BACKEND_SYNC_STATES for state in states):
-            _request_backend_job_sync()
+            if not _request_backend_job_sync():
+                _rest_poll_fallback(now)
         return _SYNC_WATCHDOG_INTERVAL
 
     _sync_watchdog_registered = True
@@ -927,6 +956,42 @@ class FeatureQueue(DownloadMixin):
 
         custom = job.get_poll_interval()
         return custom if custom > 0 else get_poll_interval(job.poll_count)
+
+    def _poll_over_rest(self, job: Job) -> None:
+        """One ``GET /job-queue/jobs/{id}`` for a job the socket cannot reach."""
+        job.poll_count += 1
+
+        def on_poll_success(response):
+            self._on_poll_success(job, response)
+
+        def on_poll_error(error):
+            self._on_rest_fallback_error(job, error)
+
+        try:
+            job.poll(on_poll_success, on_poll_error)
+        except Exception as e:
+            self._on_rest_fallback_error(job, e)
+
+    def _on_rest_fallback_error(self, job: Job, error) -> None:
+        """A failed fallback poll is retried next interval, never counted.
+
+        The consecutive-error budget in ``_on_poll_error`` was sized for a
+        3-10 s polling loop; with the socket down the network is often the
+        very thing that is flaky, and failing a paid generation after a
+        minute of unreachable backend would be worse than the stranding
+        this fallback exists to fix. MAX_POLL_DURATION stays the only
+        deadline. Auth and 404 keep their existing handling.
+        """
+        if job.state != JobState.RUNNING_POLL:
+            return
+        if (isinstance(error, AuthenticationError)
+                or getattr(error, "status_code", None) == 404):
+            self._on_poll_error(job, error)
+            return
+        logger.warning(
+            "%s REST fallback poll failed for %s (socket down): %s",
+            LOG_PREFIX, job.id, error,
+        )
 
     def _on_poll_success(self, job: Job, response) -> None:
         # Full job.get/job.sync snapshots can arrive while a fast job is still

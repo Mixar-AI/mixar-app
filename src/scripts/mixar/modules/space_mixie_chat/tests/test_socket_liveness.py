@@ -9,6 +9,8 @@ from types import SimpleNamespace
 
 from mixar.modules.space_mixie_chat.constants import (
     WS_ACK_MIN_UPLINK_BPS,
+    WS_ACK_PATIENCE_MAX,
+    WS_ACK_PATIENCE_RESET_S,
     WS_ACK_TIMEOUT,
     WS_LIVENESS_PROBE_GRACE,
     WS_LIVENESS_TIMEOUT,
@@ -26,6 +28,34 @@ def client():
     c.aborted = threading.Event()
     c._ws = SimpleNamespace(sock=None, send=lambda frame: None, shutdown=c.aborted.set)
     return c
+
+
+def reconnect(c):
+    """Play a successful reconnect on the same client, as _do_connect does."""
+    c._diag.begin()
+    c._connected = True
+    c.aborted.clear()
+    c._last_recv_time = c._last_reply_time = time.time()
+    c._patience_since = time.monotonic()
+    c._liveness_probe_started = None
+    c._upload_clear_at = c._last_send_progress = 0.0
+    with c._pending_lock:
+        c._pending_callbacks.clear()
+        c._awaiting_ack.clear()
+
+
+def stall(c, factor=1.0):
+    """A command goes out and nothing comes back: probe, then judge. True = torn down."""
+    c.send_request('agent.chat', {}, lambda value: None, expect_ack=True)
+    sent(c)
+    age(c, WS_ACK_TIMEOUT * factor - 1)
+    assert not socket_liveness.tick(c) and c._liveness_probe_started is None
+    age(c, 2)
+    assert not socket_liveness.tick(c)
+    assert c._liveness_probe_why == 'unanswered'
+    sent(c)
+    age(c, WS_LIVENESS_PROBE_GRACE * factor + 1)
+    return socket_liveness.tick(c)
 
 
 def sent(c):
@@ -253,3 +283,115 @@ def test_writer_declares_a_dead_path_on_time(monkeypatch):
         assert c._diag.current.reason == 'ack_timeout'
     finally:
         stopped.set()
+
+
+def test_a_path_that_keeps_stalling_earns_patience():
+    # Prod 2026-10-25 (Shanghai → us-west-1): the downstream stalled 13–30 s
+    # at a time while the server read every frame; a fixed 8 s + 5 s tore a
+    # live socket down every ~35 s and each reconnect replayed into the stall.
+    c = client()
+    assert stall(c)
+    assert c._diag.current.detail['ack_patience'] == 1.0
+    reconnect(c)
+    c.send_request('agent.chat', {}, lambda value: None, expect_ack=True)
+    sent(c)
+    age(c, WS_ACK_TIMEOUT + 1)  # the old window: no probe yet
+    assert not socket_liveness.tick(c) and c._liveness_probe_started is None
+    age(c, WS_ACK_TIMEOUT)
+    assert not socket_liveness.tick(c)
+    assert c._liveness_probe_why == 'unanswered'
+    sent(c)
+    age(c, WS_LIVENESS_PROBE_GRACE + 1)  # the old grace: still waiting for the reply
+    assert not socket_liveness.tick(c) and not c.aborted.is_set()
+    probe = [rid for rid in c._pending_callbacks if rid.startswith('ping_')][-1]
+    c._last_recv_time = time.time()
+    c._handle_message({'jsonrpc': '2.0', 'id': probe, 'result': {'pong': True}})
+    assert not socket_liveness.tick(c) and not c.aborted.is_set()
+
+
+def test_patience_doubles_per_teardown_up_to_the_cap():
+    c = client()
+    factors = []
+    for _ in range(4):
+        factor = c._ack_patience
+        assert stall(c, factor)
+        factors.append(c._diag.current.detail['ack_patience'])
+        reconnect(c)
+    assert factors == [1.0, 2.0, WS_ACK_PATIENCE_MAX, WS_ACK_PATIENCE_MAX]
+    # Even at the cap a dead path is declared before the idle watchdog would.
+    assert WS_ACK_TIMEOUT * WS_ACK_PATIENCE_MAX < WS_LIVENESS_TIMEOUT
+
+
+def test_a_quiet_span_steps_the_patience_down_one_level():
+    c = client()
+    assert stall(c)
+    reconnect(c)
+    assert stall(c, 2.0)
+    reconnect(c)
+    assert c._ack_patience == WS_ACK_PATIENCE_MAX
+    c._patience_since -= WS_ACK_PATIENCE_RESET_S
+    assert socket_liveness.patience(c) == WS_ACK_PATIENCE_MAX / 2  # one step, not a reset
+    assert socket_liveness.patience(c) == WS_ACK_PATIENCE_MAX / 2  # the span restarts
+    c._patience_since -= WS_ACK_PATIENCE_RESET_S
+    assert socket_liveness.patience(c) == 1.0
+    assert stall(c)  # back on the fast windows
+    assert c._diag.current.detail['ack_patience'] == 1.0
+
+
+def test_an_unanswered_probe_holds_the_step_down_off():
+    c = client()
+    assert stall(c)
+    reconnect(c)
+    c._patience_since -= WS_ACK_PATIENCE_RESET_S - 10
+    c.send_request('agent.chat', {}, lambda value: None, expect_ack=True)
+    sent(c)
+    age(c, WS_ACK_TIMEOUT * 2 + 1)
+    socket_liveness.tick(c)  # the path stalled again: the quiet span restarts
+    assert c._liveness_probe_why == 'unanswered'
+    assert time.monotonic() - c._patience_since < 1
+    assert socket_liveness.patience(c) == 2.0
+
+
+def test_a_probe_keeps_the_grace_it_started_with():
+    c = client()
+    assert stall(c)
+    reconnect(c)
+    c.send_request('agent.chat', {}, lambda value: None, expect_ack=True)
+    sent(c)
+    age(c, WS_ACK_TIMEOUT * 2 + 1)
+    socket_liveness.tick(c)
+    sent(c)
+    c._ack_patience = 1.0  # the session stepped down while the probe was out
+    age(c, WS_LIVENESS_PROBE_GRACE + 1)
+    assert not socket_liveness.tick(c) and not c.aborted.is_set()
+    age(c, WS_LIVENESS_PROBE_GRACE)
+    assert socket_liveness.tick(c)
+    assert c._ack_patience == WS_ACK_PATIENCE_MAX  # raised from the probe's own factor
+
+
+def test_a_due_turn_waits_the_earned_window_too(monkeypatch):
+    monkeypatch.setattr(socket_liveness, 'send_backlog', lambda ws: 0)
+    monkeypatch.setitem(turn_events._commands, 'cmd-1', ('session', None))
+    c = client()
+    c._ack_patience = 2.0
+    socket_liveness.progress(c)
+    age(c, WS_ACK_TIMEOUT + 1)
+    assert not socket_liveness.tick(c) and c._liveness_probe_started is None
+    age(c, WS_ACK_TIMEOUT)
+    socket_liveness.tick(c)
+    assert c._liveness_probe_why == 'unanswered' and c._liveness_probe_factor == 2.0
+
+
+def test_patience_never_slows_the_idle_watchdog():
+    c = client()
+    assert stall(c)
+    reconnect(c)
+    age(c, WS_LIVENESS_TIMEOUT + 1)
+    socket_liveness.tick(c)
+    assert c._liveness_probe_why == 'silence'
+    sent(c)
+    age(c, WS_LIVENESS_PROBE_GRACE + 1)
+    assert socket_liveness.tick(c)
+    assert c._diag.current.reason == 'liveness_timeout'
+    assert c._diag.current.detail['ack_patience'] == 2.0  # the session's factor, reported
+    assert c._ack_patience == 2.0  # a silence teardown says nothing about stalls

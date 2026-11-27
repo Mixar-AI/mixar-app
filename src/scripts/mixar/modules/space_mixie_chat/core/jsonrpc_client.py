@@ -146,6 +146,7 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         # window expires, cleared when traffic arrives (socket_liveness.py).
         self._liveness_probe_started: Optional[float] = None
         self._liveness_probe_why = None
+        self._liveness_probe_factor = 1.0
         self._liveness_lock = threading.Lock()
         # Commands awaiting their answer: request id -> when the frame left (socket_liveness.py).
         self._awaiting_ack: dict[str, list] = {}
@@ -155,6 +156,11 @@ class JSONRPCWebSocketClient(SocketConnection, SocketDispatch, SocketRequests):
         self._last_reply_time = 0.0
         # Until when our sent bytes may still be crossing a slow uplink.
         self._upload_clear_at = 0.0
+        # Fast-probe patience this session's path has earned, and the
+        # monotonic time it last had reason to stay (socket_liveness.patience).
+        # Kept across reconnects: it describes the path, not one socket.
+        self._ack_patience = 1.0
+        self._patience_since = 0.0
 
         # Auth failure backoff
         self._auth = AuthBackoffManager()

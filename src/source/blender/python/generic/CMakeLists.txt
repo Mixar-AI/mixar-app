@@ -15,6 +15,7 @@ set(SRC
   blf_py_api.cc
   bpy_threads.cc
   idprop_py_api.cc
+  idprop_py_liveness.cc
   idprop_py_ui_api.cc
   imbuf_py_api.cc
   imbuf_mixar_movie.cc
@@ -25,6 +26,7 @@ set(SRC
   bl_math_py_api.hh
   blf_py_api.hh
   idprop_py_api.hh
+  idprop_py_liveness.hh
   idprop_py_ui_api.hh
   imbuf_py_api.hh
   py_capi_rna.hh

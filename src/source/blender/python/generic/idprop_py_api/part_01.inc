@@ -18,6 +18,7 @@
 
 #include "idprop_py_api.hh"
 #include "idprop_py_ui_api.hh"
+#include "idprop_py_liveness.hh" /* MIXAR-2031 */
 
 #include "BKE_idprop.hh"
 
@@ -94,6 +95,7 @@ static PyObject *idprop_py_from_idp_group(ID *id, IDProperty *prop, IDProperty *
   group->owner_id = id;
   group->prop = prop;
   group->parent = parent; /* can be nullptr */
+  BPy_IDProperty_liveness_track(&group->prop); /* MIXAR-2031 */
   return reinterpret_cast<PyObject *>(group);
 }
 
@@ -107,6 +109,7 @@ static PyObject *idprop_py_from_idp_array(ID *id, IDProperty *prop)
   BPy_IDProperty *array = PyObject_New(BPy_IDProperty, &BPy_IDArray_Type);
   array->owner_id = id;
   array->prop = prop;
+  BPy_IDProperty_liveness_track(&array->prop); /* MIXAR-2031 */
   return reinterpret_cast<PyObject *>(array);
 }
 
@@ -143,14 +146,26 @@ static PyObject *idprop_py_from_idp_idparray(ID *id, IDProperty *prop)
 /** \name IDProp Group Access
  * \{ */
 
+/* MIXAR-2031 begin */
+/* Groups and arrays share this layout (`prop` second). Untrack before freeing so the release
+ * hook never clears a field of a freed wrapper. */
+static void BPy_IDProperty_dealloc(BPy_IDProperty *self)
+{
+  BPy_IDProperty_liveness_untrack(&self->prop);
+  Py_TYPE(self)->tp_free(reinterpret_cast<PyObject *>(self));
+}
+/* MIXAR-2031 end */
+
 /* use for both array and group */
 static Py_hash_t BPy_IDGroup_hash(BPy_IDProperty *self)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   return Py_HashPointer(self->prop);
 }
 
 static PyObject *BPy_IDGroup_repr(BPy_IDProperty *self)
 {
+  if (UNLIKELY(self->prop == nullptr)) { return PyUnicode_FromString("<bpy id prop: removed>"); } /* MIXAR-2031 */
   return PyUnicode_FromFormat("<bpy id prop: owner=\"%s\", name=\"%s\", address=%p>",
                               self->owner_id ? self->owner_id->name : "<NONE>",
                               self->prop->name,
@@ -261,11 +276,13 @@ PyDoc_STRVAR(
     ":type: str\n");
 static PyObject *BPy_IDGroup_GetName(BPy_IDProperty *self, void * /*closure*/)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   return PyUnicode_FromString(self->prop->name);
 }
 
 static int BPy_IDGroup_SetName(BPy_IDProperty *self, PyObject *value, void * /*closure*/)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   const char *name;
   Py_ssize_t name_len;
 
@@ -312,6 +329,7 @@ static PyGetSetDef BPy_IDGroup_getseters[] = {
 
 static Py_ssize_t BPy_IDGroup_Map_Len(BPy_IDProperty *self)
 {
+  BPY_IDPROP_CHECK_INT(self->prop); /* MIXAR-2031 */
   if (self->prop->type != IDP_GROUP) {
     PyErr_SetString(PyExc_TypeError, "len() of unsized object");
     return -1;
@@ -322,6 +340,7 @@ static Py_ssize_t BPy_IDGroup_Map_Len(BPy_IDProperty *self)
 
 static PyObject *BPy_IDGroup_Map_GetItem(BPy_IDProperty *self, PyObject *item)
 {
+  BPY_IDPROP_CHECK_OBJ(self->prop); /* MIXAR-2031 */
   IDProperty *idprop;
   const char *name;
 

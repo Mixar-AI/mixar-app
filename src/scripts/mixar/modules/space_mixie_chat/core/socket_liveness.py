@@ -18,6 +18,12 @@ WS_ACK_MIN_UPLINK_BPS (uploaded(), since a local proxy or antivirus can hide
 the upload from the kernel), or while a large kernel send backlog keeps
 draining (progress()).
 
+A path that keeps stalling earns patience: every socket torn down for an
+unanswered command doubles both fast windows for the session, up to
+WS_ACK_PATIENCE_MAX; every WS_ACK_PATIENCE_RESET_S without another
+unanswered probe steps it back down one level (patience()). A probe keeps
+the factor it started with, so the grace never shrinks under it.
+
 A reply to the probe (or to anything else we sent) within
 WS_LIVENESS_PROBE_GRACE proves the link alive; a server ping or stream event
 does not, since it proves only the downstream. None means dead: the socket
@@ -39,6 +45,8 @@ from mixar.config.logging_config import get_logger
 
 from ..constants import (
     WS_ACK_MIN_UPLINK_BPS,
+    WS_ACK_PATIENCE_MAX,
+    WS_ACK_PATIENCE_RESET_S,
     WS_ACK_TIMEOUT,
     WS_LIVENESS_PROBE_GRACE,
     WS_LIVENESS_TIMEOUT,
@@ -140,23 +148,41 @@ def _awaiting_result():
         return False
 
 
+def patience(client):
+    """How many times the fast windows this session's path has earned.
+
+    Raised by every unanswered teardown (tick()). Each WS_ACK_PATIENCE_RESET_S
+    since the socket connected, the last unanswered probe or the last step,
+    with no new stall, steps it down one level: a path that stalls now and then
+    keeps the patience that holds its sockets up, a recovered one returns to the
+    fast windows. Monotonic: a wall-clock step must not move it.
+    """
+    since = client._patience_since
+    now = time.monotonic()
+    if client._ack_patience > 1.0 and since and now - since >= WS_ACK_PATIENCE_RESET_S:
+        client._ack_patience = max(1.0, client._ack_patience / 2)
+        client._patience_since = now
+    return client._ack_patience
+
+
 def _trigger(client, now):
     silent = now - _heard(client)
     if silent > WS_LIVENESS_TIMEOUT:
         return 'silence'
+    ack = WS_ACK_TIMEOUT * patience(client)
     # Our last frames may still be uploading: by the slow-uplink clock
     # (uploaded()), or a large kernel backlog still draining (progress()).
     busy_until = max(client._upload_clear_at, client._last_send_progress)
-    if now - busy_until <= WS_ACK_TIMEOUT:
+    if now - busy_until <= ack:
         return None
     with client._pending_lock:
         sent = [t for rid, t in client._awaiting_ack.items()
                 if t is not None and rid in client._pending_callbacks]
-    if sent and now - min(sent) > WS_ACK_TIMEOUT and now - _answered(client) > WS_ACK_TIMEOUT:
+    if sent and now - min(sent) > ack and now - _answered(client) > ack:
         return 'unanswered'
     # Accepted, then the path died before the result (2026-10-15 run, D3):
     # a turn whose result is still due counts as waiting on the server too.
-    if silent > WS_ACK_TIMEOUT and _awaiting_result():
+    if silent > ack and _awaiting_result():
         return 'unanswered'
     return None
 
@@ -179,6 +205,10 @@ def tick(client, starved=False):
                 return False
             client._liveness_probe_started = now
             client._liveness_probe_why = why
+            # The factor this probe was armed with also sizes its grace.
+            client._liveness_probe_factor = client._ack_patience if why == 'unanswered' else 1.0
+            if why == 'unanswered':
+                client._patience_since = time.monotonic()  # a stall: no step down yet
             logger.info(f"No WebSocket traffic for {now - _heard(client):.0f}s, no reply for "
                         f"{now - _answered(client):.0f}s"
                         f"{' while waiting on the server' if why == 'unanswered' else ''}"
@@ -191,17 +221,24 @@ def tick(client, starved=False):
             # live upload).
             client._liveness_probe_started = now
             return False
-        if now - started <= WS_LIVENESS_PROBE_GRACE:
+        why = client._liveness_probe_why
+        factor = client._liveness_probe_factor
+        grace = WS_LIVENESS_PROBE_GRACE * factor
+        if now - started <= grace:
             return False
         client._liveness_probe_started = None
-        why = client._liveness_probe_why
+        session_patience = client._ack_patience
+        if why == 'unanswered':
+            # The next socket on this path waits longer before judging it.
+            client._ack_patience = min(factor * 2, WS_ACK_PATIENCE_MAX)
     silent_s = round(now - _heard(client), 1)
     unanswered_s = round(now - _answered(client), 1)
     logger.warning(f"No reply for {unanswered_s:.0f}s (no traffic at all for {silent_s:.0f}s) and "
-                   f"the liveness probe got no answer in {WS_LIVENESS_PROBE_GRACE:.0f}s — "
+                   f"the liveness probe got no answer in {grace:.0f}s — "
                    f"treating connection as dead")
     client._diag.end('liveness_timeout' if why == 'silence' else 'ack_timeout', silent_s=silent_s,
-                     unanswered_s=unanswered_s, send_backlog=client._send_backlog)
+                     unanswered_s=unanswered_s, send_backlog=client._send_backlog,
+                     ack_patience=session_patience)
     client._connected = False
     abort(client._ws)
     return True

@@ -1441,23 +1441,42 @@ class ExportGLTF2_Base(ConvertGLTF2_Base):
         # Pre-export hook
         export_user_extensions('pre_export_hook', export_settings)
 
+        original_frame = getattr(getattr(context, 'scene', None), 'frame_current', None)
         profile = bpy.app.debug_value == 102
-        if profile:
-            import cProfile
-            import pstats
-            import io
-            from pstats import SortKey
-            pr = cProfile.Profile()
-            pr.enable()
-            res = gltf2_blender_export.save(context, export_settings)
-            pr.disable()
-            s = io.StringIO()
-            sortby = SortKey.TIME
-            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-            ps.print_stats()
-            print(s.getvalue())
-        else:
-            res = gltf2_blender_export.save(context, export_settings)
+        try:
+            if profile:
+                import cProfile
+                import pstats
+                import io
+                from pstats import SortKey
+                pr = cProfile.Profile()
+                pr.enable()
+                try:
+                    res = gltf2_blender_export.save(context, export_settings)
+                finally:
+                    pr.disable()
+                    s = io.StringIO()
+                    sortby = SortKey.TIME
+                    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+                    ps.print_stats()
+                    print(s.getvalue())
+            else:
+                res = gltf2_blender_export.save(context, export_settings)
+        except OSError as err:
+            window = getattr(context, 'window', None)
+            if window is not None and hasattr(window, 'cursor_set'):
+                window.cursor_set('DEFAULT')
+            scene = getattr(context, 'scene', None)
+            if (not export_settings.get('gltf_current_frame')
+                    and original_frame is not None
+                    and scene is not None
+                    and hasattr(scene, 'frame_set')):
+                scene.frame_set(int(original_frame))
+            message = f"glTF export failed: {err}"
+            export_settings['log'].error(message)
+            self.report({'ERROR'}, message)
+            export_settings['log'].flush()
+            return {'CANCELLED'}
 
         # Display popup log, if any
         for message_type, message in export_settings['log'].messages():
