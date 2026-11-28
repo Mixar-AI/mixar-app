@@ -61,13 +61,18 @@ elseif(UNIX)
   list(APPEND LIB ${CURL_LIBRARIES})
   list(APPEND LIB OpenSSL::Crypto)
   list(APPEND INC ${CURL_INCLUDE_DIRS})
-  # Detect libsecret for secure credential storage (matches Python keyring)
+  # libsecret stores the login tokens in the Secret Service (matches Python
+  # keyring). Without it the SSO tokens are never stored and every launch
+  # runs as a guest, so a build without it must not configure.
   pkg_check_modules(LIBSECRET libsecret-1)
-  if(LIBSECRET_FOUND)
-    add_definitions(-DHAVE_LIBSECRET)
-    list(APPEND INC ${LIBSECRET_INCLUDE_DIRS})
-    list(APPEND LIB ${LIBSECRET_LIBRARIES})
+  if(NOT LIBSECRET_FOUND)
+    message(FATAL_ERROR
+      "Mixar authentication requires libsecret development files. "
+      "Install them (Debian/Ubuntu: libsecret-1-dev, Fedora: libsecret-devel) and re-run."
+    )
   endif()
+  list(APPEND INC ${LIBSECRET_INCLUDE_DIRS})
+  list(APPEND LIB ${LIBSECRET_LIBRARIES})
 endif()
 
 if(HAVE_FEENABLEEXCEPT)
@@ -401,9 +406,7 @@ if(WITH_PYTHON_MODULE)
     target_link_libraries(mixar PRIVATE "-framework Security")
   endif()
 
-  # Link libsecret when available (Linux)
-  if(UNIX AND NOT APPLE AND LIBSECRET_FOUND)
-    target_compile_definitions(mixar PRIVATE HAVE_LIBSECRET)
+  if(UNIX AND NOT APPLE)
     target_include_directories(mixar PRIVATE ${LIBSECRET_INCLUDE_DIRS})
     target_link_libraries(mixar PRIVATE ${LIBSECRET_LIBRARIES})
   endif()
@@ -439,9 +442,7 @@ else()
     target_link_libraries(mixar-launcher Pathcch.lib)
   endif()
 
-  # Link libsecret when available (Linux)
-  if(UNIX AND NOT APPLE AND LIBSECRET_FOUND)
-    target_compile_definitions(mixar PRIVATE HAVE_LIBSECRET)
+  if(UNIX AND NOT APPLE)
     target_include_directories(mixar PRIVATE ${LIBSECRET_INCLUDE_DIRS})
     target_link_libraries(mixar PRIVATE ${LIBSECRET_LIBRARIES})
   endif()
