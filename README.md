@@ -66,7 +66,7 @@ For Ubuntu, install the host dependencies used by the Linux build:
 ```bash
 sudo apt-get install -y build-essential cmake gcc-14 g++-14 git git-lfs \
   ninja-build python3-dev python3-venv rsync pkg-config \
-  libcurl4-openssl-dev libdbus-1-dev libegl-dev libgl-dev libice-dev libsm-dev \
+  libcurl4-openssl-dev libdbus-1-dev libegl-dev libgl-dev libice-dev libsecret-1-dev libsm-dev \
   libwayland-dev libx11-dev libxcursor-dev libxext-dev libxi-dev \
   libxinerama-dev libxkbcommon-dev libxrandr-dev libxxf86vm-dev \
   patchelf wayland-protocols xz-utils xvfb zstd

@@ -551,8 +551,10 @@ static bool exchange_desktop_code(const char* code, const char* code_verifier) {
             }
 
             if (at_ok && access_token[0] != '\0') {
-                store_token_to_keyring(access_token);
-                success = true;
+                success = store_token_to_keyring(access_token);
+                if (!success) {
+                    printf("exchange_desktop_code: could not save the access token to the OS credential store.\n");
+                }
                 if (rt_ok && refresh_token[0] != '\0') {
                     store_refresh_token_to_keyring(refresh_token);
                 }
@@ -630,8 +632,10 @@ static bool exchange_desktop_code(const char* code, const char* code_verifier) {
             }
 
             if (at_ok && access_token[0] != '\0') {
-                store_token_to_keyring(access_token);
-                success = true;
+                success = store_token_to_keyring(access_token);
+                if (!success) {
+                    printf("exchange_desktop_code: could not save the access token to the OS credential store.\n");
+                }
                 if (rt_ok && refresh_token[0] != '\0') {
                     store_refresh_token_to_keyring(refresh_token);
                 }

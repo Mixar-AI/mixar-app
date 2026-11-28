@@ -20,7 +20,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #else
 // Linux
-#ifdef HAVE_LIBSECRET
 #include <libsecret/secret.h>
 
 /* Mixar 5.2 port: creator code stays in the global namespace; blender::
@@ -28,7 +27,6 @@
  * first — only system headers may precede this point). */
 namespace blender {}
 using namespace blender;
-#endif
 #endif
 
 static const char* SERVICE_NAME = "MixarSafeStorage";
@@ -55,7 +53,6 @@ static const char* WIN_REFRESH_TARGET_NAME = "RefreshToken@MixarSafeStorage";
 #endif
 
 #ifdef __linux__
-#ifdef HAVE_LIBSECRET
 // Schema for libsecret to match Python keyring's SecretService backend
 static const SecretSchema mixar_schema = {
     "org.freedesktop.Secret.Generic",
@@ -66,7 +63,6 @@ static const SecretSchema mixar_schema = {
         {NULL, SECRET_SCHEMA_ATTRIBUTE_STRING}
     }
 };
-#endif
 #endif
 
 // Helper to securely zero memory before freeing
@@ -143,7 +139,6 @@ bool store_token_to_keyring(const char* token) {
 
 #else
     // Linux: Use libsecret to match Python keyring's SecretService backend
-#ifdef HAVE_LIBSECRET
     GError* error = NULL;
     gboolean result = secret_password_store_sync(
         &mixar_schema,
@@ -161,11 +156,6 @@ bool store_token_to_keyring(const char* token) {
         return false;
     }
     return result == TRUE;
-#else
-    // libsecret not available at compile time
-    (void)token;
-    return false;
-#endif
 #endif
 }
 
@@ -259,7 +249,6 @@ char* get_token_from_keyring() {
 
 #else
     // Linux: Use libsecret to match Python keyring's SecretService backend
-#ifdef HAVE_LIBSECRET
     GError* error = NULL;
     gchar* password = secret_password_lookup_sync(
         &mixar_schema,
@@ -284,10 +273,6 @@ char* get_token_from_keyring() {
         return token;
     }
     return NULL;
-#else
-    // libsecret not available at compile time
-    return NULL;
-#endif
 #endif
 }
 
@@ -327,7 +312,6 @@ bool delete_token_from_keyring() {
 
 #else
     // Linux: Use libsecret to match Python keyring's SecretService backend
-#ifdef HAVE_LIBSECRET
     GError* error = NULL;
     gboolean result = secret_password_clear_sync(
         &mixar_schema,
@@ -344,10 +328,6 @@ bool delete_token_from_keyring() {
         return not_found;
     }
     return true;  // No error = success
-#else
-    // libsecret not available at compile time
-    return false;
-#endif
 #endif
 }
 
@@ -411,7 +391,6 @@ bool store_refresh_token_to_keyring(const char* token) {
 
 #else
     // Linux: Use libsecret
-#ifdef HAVE_LIBSECRET
     GError* error = NULL;
     gboolean result = secret_password_store_sync(
         &mixar_schema,
@@ -429,10 +408,6 @@ bool store_refresh_token_to_keyring(const char* token) {
         return false;
     }
     return result == TRUE;
-#else
-    (void)token;
-    return false;
-#endif
 #endif
 }
 
@@ -516,7 +491,6 @@ char* get_refresh_token_from_keyring() {
 
 #else
     // Linux: Use libsecret
-#ifdef HAVE_LIBSECRET
     GError* error = NULL;
     gchar* password = secret_password_lookup_sync(
         &mixar_schema,
@@ -540,9 +514,6 @@ char* get_refresh_token_from_keyring() {
         return token;
     }
     return NULL;
-#else
-    return NULL;
-#endif
 #endif
 }
 
@@ -580,7 +551,6 @@ bool delete_refresh_token_from_keyring() {
 
 #else
     // Linux: Use libsecret
-#ifdef HAVE_LIBSECRET
     GError* error = NULL;
     gboolean result = secret_password_clear_sync(
         &mixar_schema,
@@ -596,9 +566,6 @@ bool delete_refresh_token_from_keyring() {
         return not_found;
     }
     return true;  // No error = success
-#else
-    return false;
-#endif
 #endif
 }
 
